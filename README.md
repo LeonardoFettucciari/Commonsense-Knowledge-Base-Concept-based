@@ -1,1 +1,1 @@
-#Commonsense Knowledge Base: proof on concept
+# Commonsense Knowledge Base: proof on concept
