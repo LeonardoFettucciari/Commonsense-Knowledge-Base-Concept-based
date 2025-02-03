@@ -1,6 +1,4 @@
 from datasets import load_dataset
-import csv
-from nltk.corpus import wordnet
 import os
 import argparse
 
