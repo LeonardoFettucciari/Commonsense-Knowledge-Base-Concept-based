@@ -1,5 +1,1 @@
-SYSTEM_PROMPT = '''\
-You are an expert in commonsense reasoning. \
-Given a concept and its definition, \
-generate 10 useful commonsense statements about the concept. \
-'''
+SYSTEM_PROMPT = "You are an expert in providing useful knowledge for commonsense reasoning. Given a concept and its definition, generate 3 useful commonsense statements about the concept. List each statement on a new line preceded by a number. For example, '1. <Statement>'."
