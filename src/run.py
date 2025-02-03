@@ -88,7 +88,7 @@ raw_statements = [[statements.split("\n\n1")[1].split("\n",10)[:10] for statemen
 cleaned_statements = [[s.split(". ", 1)[1] for statements in sample for s in statements] for sample in raw_statements]
 
 # Save output to file
-relative_path = os.path.join("outputs", f"{model_name}.tsv")
+relative_path = os.path.join("outputs", f"{model_name.split("/")[1]}.tsv")
 with open(relative_path, mode="w", newline="", encoding="utf-8") as file:
     fieldnames = ['id',
                   'question',
@@ -99,7 +99,7 @@ with open(relative_path, mode="w", newline="", encoding="utf-8") as file:
                   'unique_words',
                   'wordnet_synsets',
                   'wordnet_definitions',
-                  
+
                   'gold_truth',]
         
     tsv_writer = csv.writer(file, delimiter="\t")
