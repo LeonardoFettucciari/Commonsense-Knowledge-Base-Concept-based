@@ -17,7 +17,7 @@ This project processes the Commonsense QA dataset by extracting key concepts usi
 Ensure you have the following dependencies installed:
 
 ```bash
-pip install datasets nltk tqdm google-generativeai babelscape
+pip install -e .
 ```
 
 Additionally, download NLTK WordNet data:
