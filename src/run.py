@@ -20,7 +20,7 @@ args = parser.parse_args()
 
 # Load Data
 eval_data = load_dataset("tau/commonsense_qa")['validation']
-samples = eval_data.shuffle(seed=42).select(range(100))
+samples = eval_data.shuffle(seed=42).select(range(10))
 
 # Bundle question + choices together
 formatted_samples = []
