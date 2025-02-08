@@ -31,6 +31,7 @@ login(hf_token)
 # Device
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
 # Train data
 train_data = load_dataset("tau/commonsense_qa")['train']
 examples = train_data.shuffle(seed=SEED).select(range(NUM_EXAMPLES))
@@ -79,8 +80,7 @@ for model_index, model_name in enumerate(MODEL_LIST, 1):
     answers_fewshot_with_knowledge_k5 = []
     answers_fewshot_with_knowledge_k10 = []
     
-    print(len(samples))
-    print(len(all_samples_knowledge))
+
     # Iterate over the samples
     iterator = tqdm.tqdm(
         enumerate(zip(samples, all_samples_knowledge)),
@@ -162,9 +162,9 @@ for model_index, model_name in enumerate(MODEL_LIST, 1):
 
         answers_fewshot.append(answer_fewshot)
         answers_fewshot_with_knowledge_k1.append(answer_fewshot_with_knowledge_k1)
-        answers_fewshot_with_knowledge_k1.append(answer_fewshot_with_knowledge_k3)
-        answers_fewshot_with_knowledge_k1.append(answer_fewshot_with_knowledge_k5)
-        answers_fewshot_with_knowledge_k1.append(answer_fewshot_with_knowledge_k10)
+        answers_fewshot_with_knowledge_k3.append(answer_fewshot_with_knowledge_k3)
+        answers_fewshot_with_knowledge_k5.append(answer_fewshot_with_knowledge_k5)
+        answers_fewshot_with_knowledge_k10.append(answer_fewshot_with_knowledge_k10)
 
         # Append the ground truth for computing metrics later
         ground_truths.append(sample["answerKey"])
@@ -228,12 +228,10 @@ for model_index, model_name in enumerate(MODEL_LIST, 1):
         answers_fewshot_with_knowledge_k5,
         answers_fewshot_with_knowledge_k10,
         )
-
+    
     # Free up resources
     del model
     torch.cuda.empty_cache()
-
-
     
     model_metrics = {
         'model_name': model_name,
@@ -245,11 +243,10 @@ for model_index, model_name in enumerate(MODEL_LIST, 1):
 
         'accuracy_fewshot': metrics['accuracy_fewshot'],
         'accuracy_fewshot_with_knowledge_k1': metrics['accuracy_fewshot_with_knowledge_k1'],
-        'accuracy_fewshot_with_knowledge_k1': metrics['accuracy_fewshot_with_knowledge_k3'],
-        'accuracy_fewshot_with_knowledge_k1': metrics['accuracy_fewshot_with_knowledge_k5'],
-        'accuracy_fewshot_with_knowledge_k1': metrics['accuracy_fewshot_with_knowledge_k10'],
+        'accuracy_fewshot_with_knowledge_k3': metrics['accuracy_fewshot_with_knowledge_k3'],
+        'accuracy_fewshot_with_knowledge_k5': metrics['accuracy_fewshot_with_knowledge_k5'],
+        'accuracy_fewshot_with_knowledge_k10': metrics['accuracy_fewshot_with_knowledge_k10'],
     }
-
     metrics_output.append(model_metrics)
     
 # Write metrics

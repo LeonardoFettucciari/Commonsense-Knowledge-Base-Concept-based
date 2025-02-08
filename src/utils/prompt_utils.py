@@ -4,6 +4,7 @@ from src.prompts.prompts import (SYSTEM_ZERO_SHOT, SYSTEM_ZERO_SHOT_WITH_KNOWLED
                              SYSTEM_FEW_SHOT, SYSTEM_FEW_SHOT_WITH_KNOWLEDGE)
 from settings.constants import TOP_K
 
+
 def prepare_prompt(sample,
                    examples=[],
                    knowledge=[],

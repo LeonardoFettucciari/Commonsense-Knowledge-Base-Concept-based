@@ -1,6 +1,3 @@
-import csv
-import os
-import re
 import torch
 import random
 from datasets import load_dataset
@@ -9,7 +6,7 @@ from sentence_transformers import SentenceTransformer
 from sentence_transformers.util import paraphrase_mining, semantic_search
 
 from src.utils.stdout_utils import read_kb_statements
-from settings.constants import SEED, NUM_SAMPLES, TOP_K
+from settings.constants import SEED
 
 
 # Set seed for repeatable runs
@@ -31,12 +28,12 @@ def retriever(queries, passages, top_k, model_name="intfloat/e5-base-v2"):
     passages_input = [f"passage: {s}" for s in passages]
 
 
-    # Generate embeddings for questions and KB
+    # Generate embeddings for questions
     queries_embeddings = model.encode(queries_input, normalize_embeddings=True)
+
+    # Generate embeddings for KB (if not already done)
     if passages_embeddings is None:
-        print("Initializing KB embeddings...")
         passages_embeddings = model.encode(passages_input, normalize_embeddings=True)
-    print("KB embeddings ready.")
 
     # Compute cosine similarity and extract top-k statements from KB for each question
     all_top_k_scores = semantic_search(queries_embeddings, passages_embeddings, top_k=top_k)

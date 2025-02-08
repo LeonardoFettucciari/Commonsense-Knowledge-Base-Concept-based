@@ -1,4 +1,4 @@
-id	question	choices	knowledge	gold_truth	answer_zeroshot	answer_zeroshot_with_knowledge	answer_fewshot	answer_fewshot_with_knowledge
+id	question	choices	knowledge	gold_truth	answer_zeroshot	answer_zeroshot_with_knowledge_k1	answer_zeroshot_with_knowledge_k3	answer_zeroshot_with_knowledge_k5	answer_zeroshot_with_knowledge_k10	answer_fewshot	answer_fewshot_with_knowledge_k1	answer_fewshot_with_knowledge_k3	answer_fewshot_with_knowledge_k5	answer_fewshot_with_knowledge_k10
 bdcfbe2132295d437e4c5701085f19c0	If you are prone to postpone work what will you have to do in order to finish on time?	"A. eat
 B. hasten
 C. antedate
@@ -12,7 +12,7 @@ The assigned time for an activity should account for potential unforeseen delays
 The assigned time for an activity should account for potential unforeseen delays or complications to ensure sufficient time for completion.
 Construction timelines and budgets are frequently impacted by unforeseen circumstances, such as weather delays, material shortages, or changes in design specifications.  Contingency planning and flexible management are essential for mitigating these risks.
 Advancing a deadline might require extra effort and possibly compromise on some aspects of the project to meet the new, earlier date.
-Time is a finite resource; once spent, it cannot be recovered, so prioritize tasks and avoid wasting it on unproductive activities."	B	D	D	D	D
+Time is a finite resource; once spent, it cannot be recovered, so prioritize tasks and avoid wasting it on unproductive activities."	B	D	D	D	D	D	D	D	D	D	D
 1510f5183095466e4fe41b82501a9dd0	What is a person who is good at sports considered?	"A. lazy
 B. own house
 C. talented
@@ -26,7 +26,7 @@ Professional athletes in a sport typically have specialized skills and undergo r
 Sports often involve physical exertion and require training to achieve peak performance.
 The term ""sport"" in this context doesn't refer to athletic activities, but rather to people, usually wealthy individuals, who come to Maine for leisure and recreation during the summer.
 Sports often involve specialized equipment and facilities, the availability of which can influence participation rates and skill development.
-A fielder's position on the field is strategically determined based on the batter's tendencies and the game situation; different positions require different skills and responsibilities."	C	C	C	C	C
+A fielder's position on the field is strategically determined based on the batter's tendencies and the game situation; different positions require different skills and responsibilities."	C	C	C	C	C	C	C	C	C	C	C
 273d0134e8ce53d4ebcf41ca7fde02af	Where could you find hundreds of thousands of home?	"A. field
 B. neighborhood
 C. star can
@@ -40,7 +40,7 @@ The concept of ""home"" can be both physical (a house or apartment) and emotiona
 The concept of ""home"" often implies a sense of belonging, security, and nurture, regardless of the physical structure involved.  A person might feel more at home in a supportive community than in a luxurious but isolating mansion.
 While a home is often a physical place, the feeling of ""home"" can be associated with people, memories, and even abstract concepts like a sense of community or belonging.
 Different types of homes exist (e.g., family homes, nursing homes, group homes) each with varying levels of care and support tailored to the specific needs of their residents.
-The size and structure of a house usually reflects the needs and resources of its inhabitants; a large family might need a larger house than a single person."	D	D	D	D	D
+The size and structure of a house usually reflects the needs and resources of its inhabitants; a large family might need a larger house than a single person."	D	D	D	D	D	D	D	D	D	D	D
 bbe0a1ad733e5699f991ff91b3712a6f	Why would you take a bus to work?	"A. commute
 B. flying
 C. get somewhere
@@ -54,7 +54,7 @@ Buses are generally larger and slower than cars, requiring more space to maneuve
 Bus travel is generally cheaper than air travel, especially for shorter distances.
 Buses are typically used for public transportation, carrying multiple passengers along a fixed route.
 Proper bussing techniques, such as carrying multiple plates carefully and stacking dishes strategically, are crucial to prevent accidents and maintain a clean and organized workspace.
-The provided definition of a ""bus"" is incorrect.  A bus is a large motor vehicle carrying many passengers.  Therefore, commonsense statements based on that *incorrect* definition would be misleading.  To provide useful commonsense statements, I will use the correct definition of a bus."	A	A	A	A	A
+The provided definition of a ""bus"" is incorrect.  A bus is a large motor vehicle carrying many passengers.  Therefore, commonsense statements based on that *incorrect* definition would be misleading.  To provide useful commonsense statements, I will use the correct definition of a bus."	A	A	A	A	A	A	A	A	A	A	A
 9d97e2bb458d93a8bafe4380b08727e3	Where is there a telephone book in almost every room?	"A. at hotel
 B. house
 C. library
@@ -68,7 +68,7 @@ Cupboards are typically found in kitchens, bathrooms, and bedrooms to store vari
 Rooms are usually connected to other rooms or areas within a building via doors or hallways, facilitating movement between spaces.
 The pages of a book are usually sequentially numbered or ordered, allowing for easy navigation and reference to specific information.
 Telephones require a power source, either a wired connection to the electrical grid or a battery, to function.
-Telephones require a power source or battery to function, either directly or indirectly through a connection to a power grid."	A	A	A	B	B
+Telephones require a power source or battery to function, either directly or indirectly through a connection to a power grid."	A	A	A	D	A	A	B	B	B	B	B
 b1d5cdbf8ef7b3954a6a352bd4df5866	The merchant wanted to open in a high-traffic space, where did he rent space?	"A. mall
 B. business
 C. store
@@ -82,7 +82,7 @@ Cities tend to be centers of commerce and employment, attracting people from sur
 A merchant's success depends on factors such as location, product selection, marketing, and managing operating costs effectively.
 Because plazas are designed to be aesthetically pleasing and offer a variety of amenities, people often spend leisure time there, in addition to shopping and dining.
 Merchants are responsible for acquiring inventory, pricing their goods competitively, and providing customer service to generate profit.
-Towns usually have a central business district, often containing shops and services for the local residents."	A	A	A	A	A
+Towns usually have a central business district, often containing shops and services for the local residents."	A	A	A	A	A	A	A	A	A	A	A
 faa0aa438b94c19be8ff52ee80d9e298	The car was going from Alabama to New York, what was its goal?	"A. head north
 B. speed up
 C. heading north
@@ -96,7 +96,7 @@ Access to and from the car is likely to be challenging, requiring specialized eq
 Something described as ""new"" is generally understood to be of recent origin, typically within the last few decades or less, depending on the context.  A ""new"" car is different from a ""new"" historical theory.
 Alabama's location on the Gulf Coast significantly impacts its economy, leading to industries like fishing, shipping, and tourism.
 Cars are typically used for personal transportation, carrying passengers and/or cargo.
-Due to its agricultural history and current industrial development, Alabama's population distribution is likely uneven, with higher concentrations in urban areas and along transportation corridors."	A	A	A	E	E
+Due to its agricultural history and current industrial development, Alabama's population distribution is likely uneven, with higher concentrations in urban areas and along transportation corridors."	A	A	A	A	A	A	E	E	A	E	E
 fb35c7aa5694bab2cde4b7257bfae003	What kind of status is the bald eagle given?	"A. outside
 B. world
 C. protection
@@ -110,7 +110,7 @@ The use of an eagle as a logo for a corporation or organization typically aims t
 Eagles are typically found in areas with ample prey such as fish, small mammals, and other birds, often near bodies of water or mountainous regions.
 The rarity of eagles makes them significant achievements, often celebrated by golfers and remembered in their scorecards.
 An eagle is a rare and impressive feat in golf, signifying exceptional skill and precision on a single hole.
-That definition of ""eagle"" is incorrect.  An eagle in golf is scoring two strokes under par on a single hole, not shooting two strokes under par for the entire round.  Given the correct definition, here are three commonsense statements:"	C	C	C	C	C
+That definition of ""eagle"" is incorrect.  An eagle in golf is scoring two strokes under par on a single hole, not shooting two strokes under par for the entire round.  Given the correct definition, here are three commonsense statements:"	C	C	C	C	C	C	C	C	C	C	C
 69335eb9bc5b7b5df840c38a086bf8b2	He was beginning to worry they wouldn't get on the ride before closing, they had been standing in queue for a long what?	"A. frustration
 B. waiting
 C. hair
@@ -124,7 +124,7 @@ People typically line up when there's a limited resource or service, such as buy
 A ride typically implies movement from one place to another, whether it's a short distance or a long journey.
 A queue hairstyle is typically longer and requires regular maintenance, such as brushing and potentially braiding or tying to keep it neat.
 Long queues often indicate high demand or a bottleneck in the system, potentially suggesting a need for improved efficiency or additional resources.
-A ride can be planned in advance or spontaneous, depending on the circumstances."	D	B	B	B	B
+A ride can be planned in advance or spontaneous, depending on the circumstances."	D	B	B	B	B	B	B	B	B	B	B
 5a6559db6bae37e3a8af7350be212219	The weasel ran up away from danger, somebody joked only our first president could get him down from the what?	"A. washington dc
 B. ladder
 C. natural history museum
@@ -138,4 +138,4 @@ Weasels are predators, meaning they hunt and kill other animals for food, typica
 While being first can be advantageous, it also carries increased pressure and scrutiny, as the leader is often the target of attention and criticism.
 Weasels have a musky odor used for marking territory and attracting mates, but this scent can also be a deterrent to potential predators or competitors.  The strength of the scent can vary depending on the species and the individual weasel.
 The definition of ""first"" is context-dependent; what constitutes ""first"" in one situation (e.g., first to arrive) might be irrelevant or differently defined in another (e.g., first in line of succession).
-Something described as ""first"" often implies novelty, precedence, or a pioneering achievement in its field or category."	D	D	D	D	D
+Something described as ""first"" often implies novelty, precedence, or a pioneering achievement in its field or category."	D	D	D	D	D	D	D	D	D	D	D
