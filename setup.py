@@ -103,7 +103,7 @@ setuptools.setup(
     name="CKB",
     version=VERSION["VERSION"],
     author="Leonardo Fettuccari",
-    author_email="",
+    author_email="fettucciari.1858879@studenti.uniroma1.it",
     description="Commonsense Knowledge Base",
     long_description=long_description,
     long_description_content_type="text/markdown",

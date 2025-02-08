@@ -4,7 +4,7 @@ import os
 import argparse
 from transformers import set_seed
 import random
-from utils.model_utils import get_ner_pipeline, load_gemini_model, get_answers
+from utils.model_utils import get_ner_pipeline, load_gemini_model, get_statements
 from utils.data_utils import extract_unique_words, wordnet_concepts_extraction
 from utils.stdout_utils import save_output_to_file
 from settings.prompts import SYSTEM_PROMPT
@@ -56,7 +56,7 @@ output_path = os.path.join("outputs", f"{model_name.split("/")[1]}.tsv")
 llm = load_gemini_model(model_name, generation_config, system_instruction, api_key)
 
 # Get answers
-all_outputs = get_answers(llm, synsets_all_samples, definitions_all_samples)
+all_outputs = get_statements(llm, synsets_all_samples, definitions_all_samples)
 
 save_output_to_file(output_path,
                     samples,

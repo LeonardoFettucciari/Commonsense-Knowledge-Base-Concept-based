@@ -1,4 +1,5 @@
 import csv
+import re
 
 def save_output_to_file(relative_path,
                         samples,
@@ -36,3 +37,11 @@ def save_output_to_file(relative_path,
                 "\n".join("\n".join(o["statements"]) for o in outputs),
             ]
             tsv_writer.writerow(row_list)
+
+def read_kb_statements(input_path):
+    kb = []
+    with open(input_path, newline='', encoding='utf-8') as file:
+        reader = csv.DictReader(file, delimiter='\t')
+        for row in reader:
+            kb.extend([s for s in re.split(r'\n+', row['statements']) if len(s.strip()) > 0])
+    return kb
