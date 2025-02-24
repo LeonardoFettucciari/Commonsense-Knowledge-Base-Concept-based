@@ -1,5 +1,6 @@
 datasets
-nltk 
+nltk
+jsonlines
 tqdm 
 google-generativeai
 sentence_transformers~=3.4.1

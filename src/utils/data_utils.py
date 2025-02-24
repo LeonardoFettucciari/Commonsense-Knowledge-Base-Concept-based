@@ -24,3 +24,11 @@ def wordnet_concepts_extraction(unique_words_all_samples):
         definitions_all_samples.append(definitions_sample)
 
     return synsets_all_samples, definitions_all_samples
+
+def get_all_wordnet_synsets(pos):
+    return list(wordnet.all_synsets(pos=pos))
+
+def from_words_to_synsets(list_of_words):
+    flatten_list = [w for words in list_of_words for w in words]
+    flatten_list = list(set(flatten_list))
+    return [s for word in flatten_list for s in wordnet.synsets(word) if wordnet.synsets(word)]
