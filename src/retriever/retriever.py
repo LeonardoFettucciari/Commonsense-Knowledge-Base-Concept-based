@@ -5,7 +5,6 @@ from transformers import set_seed
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.util import paraphrase_mining, semantic_search
 
-from src.utils.stdout_utils import read_kb_statements
 from settings.constants import SEED
 
 

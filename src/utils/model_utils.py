@@ -7,8 +7,8 @@ import json
 
 def get_model_settings(config_path):
     with open(config_path) as f:
-        setting = json.load(f)
-    return setting
+        settings = json.load(f)
+    return settings
 
 # NER model
 def get_ner_pipeline(model_name):
@@ -59,6 +59,19 @@ def get_statements(llm, synsets_all_samples, definitions_all_samples):
         all_outputs.append(sample_output)
     return all_outputs
 
+def truncate_inputs(inputs, model_name):
+    if model_name == "meta-llama/Llama-3.2-3B-Instruct":
+        return inputs[:, :-1]
+    elif model_name == "meta-llama/Llama-3.1-8B-Instruct":
+        return inputs[:, :-1]
+    elif model_name == "Qwen/Qwen2.5-1.5B-Instruct":
+        return inputs[:, :-2]
+    elif model_name == "Qwen/Qwen2.5-7B-Instruct":
+        return inputs[:, :-2]
+    else:
+        return inputs[:, :-1]
+    
+
 # Retriever
 
 import torch
@@ -66,36 +79,22 @@ import re
 def generate_text(model,
                   tokenizer,
                   prompt,
-                  model_name,
-                  max_new_tokens=512,
                   system=True,
                   device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
-    # Convert to chat template
-    messages = []
-    if system:
-        messages.append({"role": "system", "content": prompt.pop(0)})
-        
-    for turn_id, turn in enumerate(prompt):
-        if turn_id % 2 == 0:
-            messages.append({"role": "user", "content": turn})
-        else:
-            messages.append({"role": "assistant", "content": turn})
+    
+    # Retrieve model configuration parameters
+    settings = get_model_settings("settings/generic_llm_config.json")["generation_config"]
+    if prompt.cot:
+        max_new_tokens = settings["max_new_tokens_cot"]
+    else:
+        max_new_tokens = settings["max_new_tokens"]
 
-    inputs = tokenizer.apply_chat_template(messages, return_tensors="pt").to(device)
+    # Convert to chat template
+    inputs = tokenizer.apply_chat_template(prompt.messages, return_tensors="pt").to(device)
 
     # Truncate depending on model used
-    if model_name == "meta-llama/Llama-3.2-3B-Instruct":
-        inputs = inputs[:, :-1]
-    elif model_name == "meta-llama/Llama-3.1-8B-Instruct":
-        inputs = inputs[:, :-1]
-    elif model_name == "Qwen/Qwen2.5-1.5B-Instruct":
-        inputs = inputs[:, :-2]
-    elif model_name == "Qwen/Qwen2.5-7B-Instruct":
-        inputs = inputs[:, :-2]
-    else:
-        inputs = inputs[:, :-1]
-
-
+    inputs = truncate_inputs(inputs, model.model_name)
+    
     # Create the attention mask.
     attention_mask = torch.ones_like(inputs).to(device)
 
@@ -109,12 +108,12 @@ def generate_text(model,
         attention_mask=attention_mask,
         pad_token_id=tokenizer.pad_token_id,
         max_new_tokens=max_new_tokens,
-        do_sample=False,
-        temperature=0.0,
-        top_p=1.0,
-        num_beams=1,
-        output_scores=True,
-        return_dict_in_generate=True,
+        do_sample=settings["do_sample"],
+        temperature=settings["temperature"],
+        top_p=settings["top_p"],
+        num_beams=settings["num_beams"],
+        output_scores=settings["output_scores"],
+        return_dict_in_generate=settings["return_dict_in_generate"],
     )
 
     # Decode the generated text.
@@ -129,13 +128,11 @@ def generate_text(model,
 def get_answers(model,
                 tokenizer,
                 prompt,
-                model_name,
-                max_new_tokens=512,
                 system=True,
                 device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
     
     # Generate alternative labels with whitespaces in front.
-    labels = ['A', 'B', 'C', 'D', 'E']
+    labels = ['A', 'B', 'C', 'D']
     labels.extend([f" {label}" for label in labels])
 
     # Generate text using the model.
@@ -143,8 +140,6 @@ def get_answers(model,
         model=model,
         tokenizer=tokenizer,
         prompt=prompt,
-        model_name=model_name,
-        max_new_tokens=max_new_tokens,
         system=system,
         device=device
     )
@@ -158,7 +153,7 @@ def get_answers(model,
     # Get the label IDs.
     label_ids = [tokenizer.encode(label, add_special_tokens=False)[0] for label in labels]
 
-    # Get the probability of each label (A, B, C, D, E) and its variants.
+    # Get the probability of each label and its variants.
     answer = [probabilities[label_id].item() for label_id in label_ids]
 
 

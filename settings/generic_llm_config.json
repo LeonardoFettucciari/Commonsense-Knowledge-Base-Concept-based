@@ -1,0 +1,12 @@
+{
+    "generation_config": {
+        "max_new_tokens": 1,
+        "max_new_tokens_cot": 8192,
+        "do_sample": false,
+        "temperature": 0.0, 
+        "top_p": 1.0,
+        "num_beams": 1,
+        "output_scores": true,
+        "return_dict_in_generate": true
+    }
+}

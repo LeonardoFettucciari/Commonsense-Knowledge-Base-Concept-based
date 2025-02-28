@@ -1,3 +1,5 @@
+from argparse import ArgumentParser
+from typing import Optional
 import csv
 import os
 import torch
@@ -11,247 +13,150 @@ from dotenv import load_dotenv
 from huggingface_hub import login
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
-from src.utils.stdout_utils import read_kb_statements
+from src.utils.stdout_utils import load_kb_statements, csv_to_dict
 from src.retriever.retriever import retriever
-from src.utils.prompt_utils import prepare_prompt
-from src.utils.model_utils import get_answers
+from src.utils.prompt_utils import prepare_prompt_input_data
+from src.utils.model_utils import get_model_settings, get_answers
 from src.utils.metrics_utils import compute_metrics
-from settings.constants import SEED, NUM_SAMPLES, TOP_K, MODEL_LIST, NUM_EXAMPLES
+from src.prompts.llama_prompts import LlamaPrompt
+from settings.constants import SEED, MODEL_LIST
+
 
 # Set seed for repeatable runs
 torch.manual_seed(SEED)
 random.seed(SEED)
 set_seed(SEED)
 
-# Authentication for gated models e.g. LLama
-load_dotenv()
-hf_token = os.getenv("HF_TOKEN")
-login(hf_token)
+def run_inference(
+    output_dir: str,
+    kb_path: str,
+    limit_samples: Optional[int] = None,
+    top_k: Optional[int] = None
+):
+    print("Current Working Directory:", os.getcwd())
+    # Authentication for gated models e.g. LLama
+    load_dotenv()
+    hf_token = os.getenv("HF_TOKEN")
+    login(hf_token)
 
-# Device
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-# Train data
-train_data = load_dataset("tau/commonsense_qa")['train']
-examples = train_data.shuffle(seed=SEED).select(range(NUM_EXAMPLES))
-examples_questions = [example['question'] for example in examples]
-
-# Validation data
-eval_data = load_dataset("tau/commonsense_qa")['validation']
-samples = eval_data.shuffle(seed=SEED).select(range(NUM_SAMPLES))
-questions = [sample['question'] for sample in samples]
-
-kb_path = os.path.join("outputs", "gemini-1.5-flash.tsv")
-kb_statements = read_kb_statements(kb_path)
-
-# Retrieve top_k statements for each question
-all_samples_knowledge = retriever(questions, kb_statements, TOP_K)
-all_examples_knowledge = retriever(examples_questions, kb_statements, TOP_K)
+    # Device
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
-# Main
-metrics_output = []
-for model_index, model_name in enumerate(MODEL_LIST, 1):
-    print(f"Using model #{model_index}: {model_name}")
+    # Data
+    data = load_dataset("allenai/openbookqa")
+    test_data = data['test']
+    all_samples = test_data.shuffle(seed=SEED).select(range(limit_samples or len(test_data)))
+    all_examples = csv_to_dict(os.path.join("data", "fewshot_examples.csv"))
 
-    # Load model and tokenizer
-    model = AutoModelForCausalLM.from_pretrained(
-            model_name,
-            device_map=device,
-            trust_remote_code=True,
-            torch_dtype=torch.bfloat16,
+    # KB
+    kb_statements = load_kb_statements(kb_path, isJson=True)
+
+    # Retrieve top_k statements for each question
+    questions = [sample['question_stem'] for sample in all_samples]
+    examples_questions = [example['question_stem'] for example in all_examples]
+    all_samples_knowledge = retriever(questions, kb_statements, top_k)
+    all_examples_knowledge = retriever(examples_questions, kb_statements, top_k)
+
+    # Main
+    all_metrics_output = []
+    for model_index, model_name in enumerate(MODEL_LIST, 1):
+        print(f"Using model {model_index}/{len(MODEL_LIST)}: {model_name}")
+
+        # Load model and tokenizer
+        model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                device_map=device,
+                trust_remote_code=True,
+                torch_dtype=torch.bfloat16,
+            )
+        model.model_name = model_name
+        tokenizer = AutoTokenizer.from_pretrained(
+                model_name, trust_remote_code=True, padding_side="left"
+            )
+        
+
+        # Inizialize lists for computing metrics later
+        ground_truths = []
+        answers = [] 
+        
+        # Iterate over the samples
+        iterator = tqdm.tqdm(
+            enumerate(zip(all_samples, all_samples_knowledge)),
+            total=len(all_samples),
+            desc="Generating Answers...",
         )
-    tokenizer = AutoTokenizer.from_pretrained(
-            model_name, trust_remote_code=True, padding_side="left"
-        )
-    
-    # Inizialize lists for computing metrics later
-    ground_truths = []
-    answers_zeroshot = []
-    answers_zeroshot_with_knowledge_k1 = []
-    answers_zeroshot_with_knowledge_k3 = []
-    answers_zeroshot_with_knowledge_k5 = []
-    answers_zeroshot_with_knowledge_k10 = []
-
-    answers_fewshot = []
-    answers_fewshot_with_knowledge_k1 = []
-    answers_fewshot_with_knowledge_k3 = []
-    answers_fewshot_with_knowledge_k5 = []
-    answers_fewshot_with_knowledge_k10 = []
-    
-
-    # Iterate over the samples
-    iterator = tqdm.tqdm(
-        enumerate(zip(samples, all_samples_knowledge)),
-        total=len(samples),
-        desc="Generating Answers...",
-    )
-    
-    full_output = []
-    for i, (sample, sample_knowledge) in iterator:
-
-        # Build prompts
-        prompt_zeroshot =                   prepare_prompt(sample,
-                                                        zero_shot=True)
         
-        prompt_zeroshot_with_knowledge_k1 = prepare_prompt(sample,
-                                                        knowledge=sample_knowledge,
-                                                        zero_shot=True, with_knowledge=True, top_k=1)
+        all_samples_output = []
+        for i, (sample, sample_knowledge) in iterator:
+
+            # Build prompts
+            prompts = []
+            input_data = prepare_prompt_input_data(sample, sample_knowledge, all_examples, all_examples_knowledge)
+            prompts.append(LlamaPrompt(input_data=input_data[0], zero_shot=True))
+            prompts.append(LlamaPrompt(input_data=input_data[1], few_shot=True))
+            prompts.append(LlamaPrompt(input_data=input_data[2], zero_shot=True, cot=True))            
+            prompts.append(LlamaPrompt(input_data=input_data[3], few_shot=True, cot=True))
+            prompts.append(LlamaPrompt(input_data=input_data[4], zero_shot=True, knowledge=True))            
+            prompts.append(LlamaPrompt(input_data=input_data[5], few_shot=True, knowledge=True))
+            answers.extend([[] for _ in range(len(prompts))])
+            
+            # Generate answers
+            for i, prompt in enumerate(prompts):
+                answers[i].append(get_answers(model, tokenizer, prompt)[1])
+
+            # Append the ground truth for computing metrics later
+            ground_truths.append(sample["answerKey"])
+
+            # Prepare output information for sample
+            o = {}
+            o['id'] = sample["id"]
+            o['question'] = sample["question_stem"]
+            o['choices'] = "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])])
+            o['gold_truth'] = sample['answerKey']
+            o['knowledge'] = "\n".join(sample_knowledge)  
+            for i, (answer, prompt) in enumerate(zip(answers, prompts)):
+                sample_output = o
+                sample_output[prompt.name] = answer
+                all_samples_output[i].append(sample_output)  
+
+        # Free up resources
+        del model
+        torch.cuda.empty_cache()      
         
-        prompt_zeroshot_with_knowledge_k3 = prepare_prompt(sample,
-                                                        knowledge=sample_knowledge,
-                                                        zero_shot=True, with_knowledge=True, top_k=3)
+
+        # Save model output
+        model_output_path = os.path.join(f"{output_dir}",f"{model_name.split('/')[1]}", "obqa")
+        os.makedirs(model_output_path, exist_ok=True)
+        for sample_output, prompt in zip(all_samples_output, prompts):
+            model_results_path = os.path.join(model_output_path,f"{prompt.name}.tsv")
+            with open(model_results_path, mode="w", newline="", encoding="utf-8") as file:
+                tsv_writer = csv.DictWriter(file, fieldnames=sample_output[0].keys(), delimiter="\t")
+                tsv_writer.writeheader()
+                tsv_writer.writerows(sample_output)
+
+
+        # Metrics
+        metrics_output = {'model_name': model_name}
+        metrics = compute_metrics(ground_truths, answers)
+        for m, p in zip(metrics, prompts):
+            metrics_output[f"accuracy_{p.name}"] = m
+        all_metrics_output.append(metrics_output)
+
         
-        prompt_zeroshot_with_knowledge_k5 = prepare_prompt(sample,
-                                                        knowledge=sample_knowledge,
-                                                        zero_shot=True, with_knowledge=True, top_k=5)
-        
-        prompt_zeroshot_with_knowledge_k10 = prepare_prompt(sample,
-                                                        knowledge=sample_knowledge,
-                                                        zero_shot=True, with_knowledge=True, top_k=10)
-
-        prompt_fewshot =                    prepare_prompt(sample,
-                                                        examples,
-                                                        few_shot=True)
-        
-        prompt_fewshot_with_knowledge_k1 =  prepare_prompt(sample,
-                                                        examples,
-                                                        knowledge=sample_knowledge,
-                                                        examples_knowledge=all_examples_knowledge,
-                                                        few_shot=True, with_knowledge=True, top_k=1)
-        
-        prompt_fewshot_with_knowledge_k3 =  prepare_prompt(sample,
-                                                        examples,
-                                                        knowledge=sample_knowledge,
-                                                        examples_knowledge=all_examples_knowledge,
-                                                        few_shot=True, with_knowledge=True, top_k=3)
-        
-        prompt_fewshot_with_knowledge_k5 =  prepare_prompt(sample,
-                                                        examples,
-                                                        knowledge=sample_knowledge,
-                                                        examples_knowledge=all_examples_knowledge,
-                                                        few_shot=True, with_knowledge=True, top_k=5)
-        
-        prompt_fewshot_with_knowledge_k10 =  prepare_prompt(sample,
-                                                        examples,
-                                                        knowledge=sample_knowledge,
-                                                        examples_knowledge=all_examples_knowledge,
-                                                        few_shot=True, with_knowledge=True, top_k=10)
-
-        # Generate answers
-        _, answer_zeroshot =                    get_answers(model, tokenizer, prompt_zeroshot, model_name, max_new_tokens=1, device=device)
-        _, answer_zeroshot_with_knowledge_k1 =  get_answers(model, tokenizer, prompt_zeroshot_with_knowledge_k1, model_name, max_new_tokens=1, device=device)
-        _, answer_zeroshot_with_knowledge_k3 =  get_answers(model, tokenizer, prompt_zeroshot_with_knowledge_k3, model_name, max_new_tokens=1, device=device)
-        _, answer_zeroshot_with_knowledge_k5 =  get_answers(model, tokenizer, prompt_zeroshot_with_knowledge_k5, model_name, max_new_tokens=1, device=device)
-        _, answer_zeroshot_with_knowledge_k10 = get_answers(model, tokenizer, prompt_zeroshot_with_knowledge_k10, model_name, max_new_tokens=1, device=device)
-
-        _, answer_fewshot =                     get_answers(model, tokenizer, prompt_fewshot, model_name, max_new_tokens=1, device=device)
-        _, answer_fewshot_with_knowledge_k1 =   get_answers(model, tokenizer, prompt_fewshot_with_knowledge_k1, model_name, max_new_tokens=1, device=device)
-        _, answer_fewshot_with_knowledge_k3 =   get_answers(model, tokenizer, prompt_fewshot_with_knowledge_k3, model_name, max_new_tokens=1, device=device)
-        _, answer_fewshot_with_knowledge_k5 =   get_answers(model, tokenizer, prompt_fewshot_with_knowledge_k5, model_name, max_new_tokens=1, device=device)
-        _, answer_fewshot_with_knowledge_k10 =  get_answers(model, tokenizer, prompt_fewshot_with_knowledge_k10, model_name, max_new_tokens=1, device=device)
-
-
-        # Append answers for computing metrics later
-        answers_zeroshot.append(answer_zeroshot)
-        answers_zeroshot_with_knowledge_k1.append(answer_zeroshot_with_knowledge_k1)
-        answers_zeroshot_with_knowledge_k3.append(answer_zeroshot_with_knowledge_k3)
-        answers_zeroshot_with_knowledge_k5.append(answer_zeroshot_with_knowledge_k5)
-        answers_zeroshot_with_knowledge_k10.append(answer_zeroshot_with_knowledge_k10)
-
-        answers_fewshot.append(answer_fewshot)
-        answers_fewshot_with_knowledge_k1.append(answer_fewshot_with_knowledge_k1)
-        answers_fewshot_with_knowledge_k3.append(answer_fewshot_with_knowledge_k3)
-        answers_fewshot_with_knowledge_k5.append(answer_fewshot_with_knowledge_k5)
-        answers_fewshot_with_knowledge_k10.append(answer_fewshot_with_knowledge_k10)
-
-        # Append the ground truth for computing metrics later
-        ground_truths.append(sample["answerKey"])
-
-
-        # Get information about the sample
-        sample_output = {}
-        sample_output['id'] = sample["id"]
-        sample_output['question'] = sample["question"]
-        sample_output['choices'] = "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])])
-        sample_output['gold_truth'] = sample['answerKey']
-        sample_output['knowledge'] = "\n".join(sample_knowledge)  
-
-        sample_output['answer_zeroshot'] = answer_zeroshot
-        sample_output['answer_zeroshot_with_knowledge_k1'] = answer_zeroshot_with_knowledge_k1
-        sample_output['answer_zeroshot_with_knowledge_k3'] = answer_zeroshot_with_knowledge_k3
-        sample_output['answer_zeroshot_with_knowledge_k5'] = answer_zeroshot_with_knowledge_k5
-        sample_output['answer_zeroshot_with_knowledge_k10'] = answer_zeroshot_with_knowledge_k10
-
-        sample_output['answer_fewshot'] = answer_fewshot
-        sample_output['answer_fewshot_with_knowledge_k1'] = answer_fewshot_with_knowledge_k1
-        sample_output['answer_fewshot_with_knowledge_k3'] = answer_fewshot_with_knowledge_k3
-        sample_output['answer_fewshot_with_knowledge_k5'] = answer_fewshot_with_knowledge_k5
-        sample_output['answer_fewshot_with_knowledge_k10'] = answer_fewshot_with_knowledge_k10
-
-        full_output.append(sample_output)        
-
-    # Save output
-    model_results_path = os.path.join("outputs",f"{model_name.split('/')[1]}.tsv")
-
-    with open(model_results_path, mode="w", newline="", encoding="utf-8") as file:
-        # Re-arrange output columns order as preferred
-        fieldnames = ['id', 'question', 'choices',
-                      'knowledge',
-                      'gold_truth',
-                      
-                      'answer_zeroshot', 'answer_zeroshot_with_knowledge_k1',
-                      'answer_zeroshot_with_knowledge_k3', 'answer_zeroshot_with_knowledge_k5',
-                      'answer_zeroshot_with_knowledge_k10',
-                      'answer_fewshot', 'answer_fewshot_with_knowledge_k1',
-                      'answer_fewshot_with_knowledge_k3', 'answer_fewshot_with_knowledge_k5',
-                      'answer_fewshot_with_knowledge_k10',]
-        
-        tsv_writer = csv.DictWriter(file, fieldnames=fieldnames, delimiter="\t")
+    # Write metrics
+    metrics_output_path = os.path.join(f"{output_dir}", "metrics.tsv")
+    with open(metrics_output_path, mode="w", newline="", encoding="utf-8") as file:
+        tsv_writer = csv.DictWriter(file, fieldnames=all_metrics_output[0].keys(), delimiter="\t")
         tsv_writer.writeheader()
-        tsv_writer.writerows(full_output)
+        tsv_writer.writerows(all_metrics_output)
 
-    # Metrics
-    metrics = compute_metrics(
-        ground_truths,
-
-        answers_zeroshot,
-        answers_zeroshot_with_knowledge_k1,
-        answers_zeroshot_with_knowledge_k3,
-        answers_zeroshot_with_knowledge_k5,
-        answers_zeroshot_with_knowledge_k10,
-
-        answers_fewshot,
-        answers_fewshot_with_knowledge_k1,
-        answers_fewshot_with_knowledge_k3,
-        answers_fewshot_with_knowledge_k5,
-        answers_fewshot_with_knowledge_k10,
-        )
-    
-    # Free up resources
-    del model
-    torch.cuda.empty_cache()
-    
-    model_metrics = {
-        'model_name': model_name,
-        'accuracy_zeroshot': metrics['accuracy_zeroshot'],
-        'accuracy_zeroshot_with_knowledge_k1': metrics['accuracy_zeroshot_with_knowledge_k1'],
-        'accuracy_zeroshot_with_knowledge_k3': metrics['accuracy_zeroshot_with_knowledge_k3'],
-        'accuracy_zeroshot_with_knowledge_k5': metrics['accuracy_zeroshot_with_knowledge_k5'],
-        'accuracy_zeroshot_with_knowledge_k10': metrics['accuracy_zeroshot_with_knowledge_k10'],
-
-        'accuracy_fewshot': metrics['accuracy_fewshot'],
-        'accuracy_fewshot_with_knowledge_k1': metrics['accuracy_fewshot_with_knowledge_k1'],
-        'accuracy_fewshot_with_knowledge_k3': metrics['accuracy_fewshot_with_knowledge_k3'],
-        'accuracy_fewshot_with_knowledge_k5': metrics['accuracy_fewshot_with_knowledge_k5'],
-        'accuracy_fewshot_with_knowledge_k10': metrics['accuracy_fewshot_with_knowledge_k10'],
-    }
-    metrics_output.append(model_metrics)
-    
-# Write metrics
-metrics_output_path = os.path.join("outputs", "metrics.tsv")
-with open(metrics_output_path, mode="w", newline="", encoding="utf-8") as file:
-    tsv_writer = csv.DictWriter(file, fieldnames=metrics_output[0].keys(), delimiter="\t")
-    tsv_writer.writeheader()
-    tsv_writer.writerows(metrics_output)
+if __name__ == "__main__":
+    # Initialize parser for reading input api-key later
+    parser = ArgumentParser(description="Creation of CKB with Gemini")
+    parser.add_argument("--output_dir", type=str, required=True, help="Path to store the Knowledge Base.")
+    parser.add_argument("--kb_path", type=str, required=True, help="Path to the Knowledge Base file.")
+    parser.add_argument("--limit_samples", type=int, required=False, help="Maximum number of samples to consider (default: all).")
+    parser.add_argument("--top_k", type=int, required=False, default=10, help="Maximum number of statements to retrieve per sample (default: 10).")
+    args = parser.parse_args()
+    run_inference(**vars(args))
