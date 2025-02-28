@@ -1,0 +1,54 @@
+
+
+PROMPT zeroshot:
+
+{'role': 'system', 'content': 'You are an expert in question answering. Given a question and a set of choices, provide the correct answer.'}
+{'role': 'user', 'content': 'Question:\nLive birth is exemplified in\n\nChoices:\nA. snakes slithering out of eggs\nB. a calf emerging from a mother giraffe\nC. owlets pecking out of their encasement\nD. sea turtles emerging from their shells'}
+
+
+PROMPT fewshot:
+
+{'role': 'system', 'content': 'You are an expert in question answering. Given a question and a set of choices, provide the correct answer. You are given a few examples that will show you how to answer.'}
+{'role': 'user', 'content': 'Example 1:\n\nQuestion:\nA side effect of having a Husky as a pet is that when she sheds\n\nChoices:\nA. the dog enjoys being washed out\nB. washing all the fur is easy\nC. it takes hours to vacuum all of the fur\nD. the fur is still attached to the skin'}
+{'role': 'assistant', 'content': 'Answer: C'}
+{'role': 'user', 'content': 'Example 2:\n\nQuestion:\nA bicycle may be used for\n\nChoices:\nA. rain\nB. cats\nC. coffee grinding\nD. elephants'}
+{'role': 'assistant', 'content': 'Answer: C'}
+{'role': 'user', 'content': 'Example 3:\n\nQuestion:\nFreezing point is best represented by\n\nChoices:\nA. ice sculpture\nB. glass of water\nC. flowing rivers\nD. water falls'}
+{'role': 'assistant', 'content': 'Answer: A'}
+{'role': 'user', 'content': 'Question:\nLive birth is exemplified in\n\nChoices:\nA. snakes slithering out of eggs\nB. a calf emerging from a mother giraffe\nC. owlets pecking out of their encasement\nD. sea turtles emerging from their shells'}
+
+
+PROMPT zeroshot_cot:
+
+{'role': 'system', 'content': 'You are an expert in commonsense question answering and reasoning. Given a question and a set of choices, provide a reasoning process for answering the question and then the correct answer.'}
+{'role': 'user', 'content': 'Question:\nLive birth is exemplified in\n\nChoices:\nA. snakes slithering out of eggs\nB. a calf emerging from a mother giraffe\nC. owlets pecking out of their encasement\nD. sea turtles emerging from their shells'}
+
+
+PROMPT fewshot_cot:
+
+{'role': 'system', 'content': 'You are an expert in commonsense question answering and reasoning. Given a question and a set of choices, provide a reasoning process for answering the question and then the correct answer. You are given a few examples that will show you how to answer.'}
+{'role': 'user', 'content': 'Example 1:\n\nQuestion:\nA side effect of having a Husky as a pet is that when she sheds\n\nChoices:\nA. the dog enjoys being washed out\nB. washing all the fur is easy\nC. it takes hours to vacuum all of the fur\nD. the fur is still attached to the skin'}
+{'role': 'assistant', 'content': "Reasoning:\nLet's think step by step. We need to find what the problem is when a Husky sheds. The dog may or may not enjoy being washed out, this does not seem to be a consistent side effect of when the dog sheds. A Husky is a dog with a lot of fur. So it can' t be easy to wash it all. It is true that it would take a long time to vacuum all of the fur. Fur still attached to the skin may happen, but it is not a direct side effect of when the dog sheds, but somethinf that may happen.\n\nAnswer: C"}
+{'role': 'user', 'content': 'Example 2:\n\nQuestion:\nA bicycle may be used for\n\nChoices:\nA. rain\nB. cats\nC. coffee grinding\nD. elephants'}
+{'role': 'assistant', 'content': 'Reasoning:\nA bycicle is a vehicle. However no choice talks about using it for reaching places. In case of rain bycicles are not usually used. Cats or elephants are animals and bycicles are not used for animals. Thinking about the actual mechanism of a bycicle, we can infer that it may be used for a different purpouse from the original one and that is using the pedals movement for grinding coffee.\n\nAnswer: C'}
+{'role': 'user', 'content': 'Example 3:\n\nQuestion:\nFreezing point is best represented by\n\nChoices:\nA. ice sculpture\nB. glass of water\nC. flowing rivers\nD. water falls'}
+{'role': 'assistant', 'content': 'Reasoning:\nFreezing point is best represented by ice, since all other options represent the liquid state of water, whereas ice sculpture represents the solid state of water which is indeed ice.\n\nAnswer: A'}
+{'role': 'user', 'content': 'Question:\nLive birth is exemplified in\n\nChoices:\nA. snakes slithering out of eggs\nB. a calf emerging from a mother giraffe\nC. owlets pecking out of their encasement\nD. sea turtles emerging from their shells'}
+
+
+PROMPT zeroshot_with_knowledge:
+
+{'role': 'system', 'content': 'You are an expert in question answering. Given a question, a set of choices and a set of useful statements for answering the question, provide the correct answer.'}
+{'role': 'user', 'content': "Question:\nLive birth is exemplified in\n\nChoices:\nA. snakes slithering out of eggs\nB. a calf emerging from a mother giraffe\nC. owlets pecking out of their encasement\nD. sea turtles emerging from their shells\n\nKnowledge:\nBirth typically involves the emergence of a living being from its parent(s).\nBirth typically involves the emergence of a living being from its parent(s).\nBirth typically involves the emergence of a baby from its mother's womb.\nBirth typically involves the emergence of a baby from its mother's womb.\nBirth is often associated with significant emotional and physical changes for both the newborn and its parent(s).\nBirth is a significant life event, marking the beginning of an individual's life.\nBirth is a significant life event, marking the beginning of an individual's life.\nBirth is the beginning of an individual's life.\nBirth is the beginning of an individual's life.\nThe act of birth marks a transition from a dependent state to an independent existence."}
+
+
+PROMPT fewshot_with_knowledge:
+
+{'role': 'system', 'content': 'You are an expert in question answering. Given a question, a set of choices and a set of useful statements for answering the question, provide the correct answer. You are given a few examples that will show you how to answer.'}
+{'role': 'user', 'content': "Example 1:\n\nQuestion:\nA side effect of having a Husky as a pet is that when she sheds\n\nChoices:\nA. the dog enjoys being washed out\nB. washing all the fur is easy\nC. it takes hours to vacuum all of the fur\nD. the fur is still attached to the skin\n\nKnowledge:\nShedding is a natural process where animals lose old fur and grow new fur.\nShedding is a natural process where animals lose old fur and grow new fur.\nFur can be shed seasonally, with animals growing thicker fur in winter and shedding it in summer.\nShedding can be a natural process or a result of damage or disease.\nLoss of a tail can impact an animal's ability to maintain balance and perform certain functions.\nDamage to an animal's coat, such as cuts or parasites, can indicate underlying health problems.\nShedding is a natural process for many animals.\nFur can be shed seasonally, allowing animals to adapt to changing temperatures.\nShedding usually involves the removal of an outer layer or covering.\nA dog that bays excessively might have underlying anxiety or territorial issues."}
+{'role': 'assistant', 'content': 'Answer: C'}
+{'role': 'user', 'content': 'Example 2:\n\nQuestion:\nA bicycle may be used for\n\nChoices:\nA. rain\nB. cats\nC. coffee grinding\nD. elephants\n\nKnowledge:\nBicycles are typically used for personal transportation, recreation, and exercise.\nBicycles are typically used for personal transportation over short to medium distances.\nBicycles are typically used for personal transportation over short to medium distances.\nBicycles are typically used for personal transportation over short to medium distances.\nBicycles are typically used for personal transportation over short to medium distances.\nRiding a bicycle can be a good form of exercise.\nRiding a bicycle can be a good form of exercise.\nRiding a bicycle can be a good form of exercise.\nRiding a bicycle can be a good form of exercise.\nRiding a bicycle can be a good form of exercise.'}
+{'role': 'assistant', 'content': 'Answer: C'}
+{'role': 'user', 'content': "Example 3:\n\nQuestion:\nFreezing point is best represented by\n\nChoices:\nA. ice sculpture\nB. glass of water\nC. flowing rivers\nD. water falls\n\nKnowledge:\nDifferent substances have different freezing points.\nThe freezing point of water is 0 degrees Celsius or 32 degrees Fahrenheit.\nThe boiling and freezing points of water can be affected by factors like pressure and the presence of dissolved substances.\nZero degrees Celsius is the freezing point of water.\nWater freezes at 0 degrees centigrade and boils at 100 degrees centigrade at standard atmospheric pressure.\nDifferent substances freeze at different temperatures.\nIce is formed when water freezes below 0 degrees Celsius (32 degrees Fahrenheit).\nThe extent of freezing's effectiveness depends on the temperature and duration of exposure.\nThe melting point of a substance is the temperature at which it changes from solid to liquid.\nThe freezing point of a liquid can be lowered by adding solutes."}
+{'role': 'assistant', 'content': 'Answer: A'}
+{'role': 'user', 'content': "Question:\nLive birth is exemplified in\n\nChoices:\nA. snakes slithering out of eggs\nB. a calf emerging from a mother giraffe\nC. owlets pecking out of their encasement\nD. sea turtles emerging from their shells\n\nKnowledge:\nBirth typically involves the emergence of a living being from its parent(s).\nBirth typically involves the emergence of a living being from its parent(s).\nBirth typically involves the emergence of a baby from its mother's womb.\nBirth typically involves the emergence of a baby from its mother's womb.\nBirth is often associated with significant emotional and physical changes for both the newborn and its parent(s).\nBirth is a significant life event, marking the beginning of an individual's life.\nBirth is a significant life event, marking the beginning of an individual's life.\nBirth is the beginning of an individual's life.\nBirth is the beginning of an individual's life.\nThe act of birth marks a transition from a dependent state to an independent existence."}

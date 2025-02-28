@@ -1,0 +1,306 @@
+
+
+PROMPT zeroshot:
+
+[system]
+You are an expert in question answering. Given a question and a set of choices, provide the correct answer.
+[/system]
+[user]
+Question:
+Live birth is exemplified in
+
+Choices:
+A. snakes slithering out of eggs
+B. a calf emerging from a mother giraffe
+C. owlets pecking out of their encasement
+D. sea turtles emerging from their shells
+[/user]
+
+
+PROMPT fewshot:
+
+[system]
+You are an expert in question answering. Given a question and a set of choices, provide the correct answer. You are given a few examples that will show you how to answer.
+[/system]
+[user]
+Example 1:
+
+Question:
+A side effect of having a Husky as a pet is that when she sheds
+
+Choices:
+A. the dog enjoys being washed out
+B. washing all the fur is easy
+C. it takes hours to vacuum all of the fur
+D. the fur is still attached to the skin
+[/user]
+[assistant]
+Answer: C
+[/assistant]
+[user]
+Example 2:
+
+Question:
+A bicycle may be used for
+
+Choices:
+A. rain
+B. cats
+C. coffee grinding
+D. elephants
+[/user]
+[assistant]
+Answer: C
+[/assistant]
+[user]
+Example 3:
+
+Question:
+Freezing point is best represented by
+
+Choices:
+A. ice sculpture
+B. glass of water
+C. flowing rivers
+D. water falls
+[/user]
+[assistant]
+Answer: A
+[/assistant]
+[user]
+Question:
+Live birth is exemplified in
+
+Choices:
+A. snakes slithering out of eggs
+B. a calf emerging from a mother giraffe
+C. owlets pecking out of their encasement
+D. sea turtles emerging from their shells
+[/user]
+
+
+PROMPT zeroshot_cot:
+
+[system]
+You are an expert in commonsense question answering and reasoning. Given a question and a set of choices, provide a reasoning process for answering the question and then the correct answer.
+[/system]
+[user]
+Question:
+Live birth is exemplified in
+
+Choices:
+A. snakes slithering out of eggs
+B. a calf emerging from a mother giraffe
+C. owlets pecking out of their encasement
+D. sea turtles emerging from their shells
+[/user]
+
+
+PROMPT fewshot_cot:
+
+[system]
+You are an expert in commonsense question answering and reasoning. Given a question and a set of choices, provide a reasoning process for answering the question and then the correct answer. You are given a few examples that will show you how to answer.
+[/system]
+[user]
+Example 1:
+
+Question:
+A side effect of having a Husky as a pet is that when she sheds
+
+Choices:
+A. the dog enjoys being washed out
+B. washing all the fur is easy
+C. it takes hours to vacuum all of the fur
+D. the fur is still attached to the skin
+[/user]
+[assistant]
+Reasoning:
+Let's think step by step. We need to find what the problem is when a Husky sheds. The dog may or may not enjoy being washed out, this does not seem to be a consistent side effect of when the dog sheds. A Husky is a dog with a lot of fur. So it can' t be easy to wash it all. It is true that it would take a long time to vacuum all of the fur. Fur still attached to the skin may happen, but it is not a direct side effect of when the dog sheds, but somethinf that may happen.
+
+Answer: C
+[/assistant]
+[user]
+Example 2:
+
+Question:
+A bicycle may be used for
+
+Choices:
+A. rain
+B. cats
+C. coffee grinding
+D. elephants
+[/user]
+[assistant]
+Reasoning:
+A bycicle is a vehicle. However no choice talks about using it for reaching places. In case of rain bycicles are not usually used. Cats or elephants are animals and bycicles are not used for animals. Thinking about the actual mechanism of a bycicle, we can infer that it may be used for a different purpouse from the original one and that is using the pedals movement for grinding coffee.
+
+Answer: C
+[/assistant]
+[user]
+Example 3:
+
+Question:
+Freezing point is best represented by
+
+Choices:
+A. ice sculpture
+B. glass of water
+C. flowing rivers
+D. water falls
+[/user]
+[assistant]
+Reasoning:
+Freezing point is best represented by ice, since all other options represent the liquid state of water, whereas ice sculpture represents the solid state of water which is indeed ice.
+
+Answer: A
+[/assistant]
+[user]
+Question:
+Live birth is exemplified in
+
+Choices:
+A. snakes slithering out of eggs
+B. a calf emerging from a mother giraffe
+C. owlets pecking out of their encasement
+D. sea turtles emerging from their shells
+[/user]
+
+
+PROMPT zeroshot_with_knowledge:
+
+[system]
+You are an expert in question answering. Given a question, a set of choices and a set of useful statements for answering the question, provide the correct answer.
+[/system]
+[user]
+Question:
+Live birth is exemplified in
+
+Choices:
+A. snakes slithering out of eggs
+B. a calf emerging from a mother giraffe
+C. owlets pecking out of their encasement
+D. sea turtles emerging from their shells
+
+Knowledge:
+Birth typically involves the emergence of a living being from its parent(s).
+Birth typically involves the emergence of a living being from its parent(s).
+Birth typically involves the emergence of a baby from its mother's womb.
+Birth typically involves the emergence of a baby from its mother's womb.
+Birth is often associated with significant emotional and physical changes for both the newborn and its parent(s).
+Birth is a significant life event, marking the beginning of an individual's life.
+Birth is a significant life event, marking the beginning of an individual's life.
+Birth is the beginning of an individual's life.
+Birth is the beginning of an individual's life.
+The act of birth marks a transition from a dependent state to an independent existence.
+[/user]
+
+
+PROMPT fewshot_with_knowledge:
+
+[system]
+You are an expert in question answering. Given a question, a set of choices and a set of useful statements for answering the question, provide the correct answer. You are given a few examples that will show you how to answer.
+[/system]
+[user]
+Example 1:
+
+Question:
+A side effect of having a Husky as a pet is that when she sheds
+
+Choices:
+A. the dog enjoys being washed out
+B. washing all the fur is easy
+C. it takes hours to vacuum all of the fur
+D. the fur is still attached to the skin
+
+Knowledge:
+Shedding is a natural process where animals lose old fur and grow new fur.
+Shedding is a natural process where animals lose old fur and grow new fur.
+Fur can be shed seasonally, with animals growing thicker fur in winter and shedding it in summer.
+Shedding can be a natural process or a result of damage or disease.
+Loss of a tail can impact an animal's ability to maintain balance and perform certain functions.
+Damage to an animal's coat, such as cuts or parasites, can indicate underlying health problems.
+Shedding is a natural process for many animals.
+Fur can be shed seasonally, allowing animals to adapt to changing temperatures.
+Shedding usually involves the removal of an outer layer or covering.
+A dog that bays excessively might have underlying anxiety or territorial issues.
+[/user]
+[assistant]
+Answer: C
+[/assistant]
+[user]
+Example 2:
+
+Question:
+A bicycle may be used for
+
+Choices:
+A. rain
+B. cats
+C. coffee grinding
+D. elephants
+
+Knowledge:
+Bicycles are typically used for personal transportation, recreation, and exercise.
+Bicycles are typically used for personal transportation over short to medium distances.
+Bicycles are typically used for personal transportation over short to medium distances.
+Bicycles are typically used for personal transportation over short to medium distances.
+Bicycles are typically used for personal transportation over short to medium distances.
+Riding a bicycle can be a good form of exercise.
+Riding a bicycle can be a good form of exercise.
+Riding a bicycle can be a good form of exercise.
+Riding a bicycle can be a good form of exercise.
+Riding a bicycle can be a good form of exercise.
+[/user]
+[assistant]
+Answer: C
+[/assistant]
+[user]
+Example 3:
+
+Question:
+Freezing point is best represented by
+
+Choices:
+A. ice sculpture
+B. glass of water
+C. flowing rivers
+D. water falls
+
+Knowledge:
+Different substances have different freezing points.
+The freezing point of water is 0 degrees Celsius or 32 degrees Fahrenheit.
+The boiling and freezing points of water can be affected by factors like pressure and the presence of dissolved substances.
+Zero degrees Celsius is the freezing point of water.
+Water freezes at 0 degrees centigrade and boils at 100 degrees centigrade at standard atmospheric pressure.
+Different substances freeze at different temperatures.
+Ice is formed when water freezes below 0 degrees Celsius (32 degrees Fahrenheit).
+The extent of freezing's effectiveness depends on the temperature and duration of exposure.
+The melting point of a substance is the temperature at which it changes from solid to liquid.
+The freezing point of a liquid can be lowered by adding solutes.
+[/user]
+[assistant]
+Answer: A
+[/assistant]
+[user]
+Question:
+Live birth is exemplified in
+
+Choices:
+A. snakes slithering out of eggs
+B. a calf emerging from a mother giraffe
+C. owlets pecking out of their encasement
+D. sea turtles emerging from their shells
+
+Knowledge:
+Birth typically involves the emergence of a living being from its parent(s).
+Birth typically involves the emergence of a living being from its parent(s).
+Birth typically involves the emergence of a baby from its mother's womb.
+Birth typically involves the emergence of a baby from its mother's womb.
+Birth is often associated with significant emotional and physical changes for both the newborn and its parent(s).
+Birth is a significant life event, marking the beginning of an individual's life.
+Birth is a significant life event, marking the beginning of an individual's life.
+Birth is the beginning of an individual's life.
+Birth is the beginning of an individual's life.
+The act of birth marks a transition from a dependent state to an independent existence.
+[/user]

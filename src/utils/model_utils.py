@@ -114,6 +114,7 @@ def generate_text(model,
         num_beams=settings["num_beams"],
         output_scores=settings["output_scores"],
         return_dict_in_generate=settings["return_dict_in_generate"],
+        add_generation_prompt=settings["add_generation_prompt"]
     )
 
     # Decode the generated text.
