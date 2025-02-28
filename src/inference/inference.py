@@ -14,7 +14,7 @@ from huggingface_hub import login
 from transformers import AutoTokenizer, AutoModelForCausalLM
 
 from src.utils.stdout_utils import load_kb_statements, csv_to_dict
-from src.retriever.retriever import retriever
+from src.retriever.retriever import Retriever
 from src.utils.prompt_utils import prepare_prompt_input_data
 from src.utils.model_utils import get_model_settings, get_answers
 from src.utils.metrics_utils import compute_metrics
@@ -55,8 +55,10 @@ def run_inference(
     # Retrieve top_k statements for each question
     questions = [sample['question_stem'] for sample in all_samples]
     examples_questions = [example['question_stem'] for example in all_examples]
-    all_samples_knowledge = retriever(questions, kb_statements, top_k)
-    all_examples_knowledge = retriever(examples_questions, kb_statements, top_k)
+    retriever = Retriever()
+    retriever.initialize(passages=kb_statements)
+    all_samples_knowledge = retriever.retrieve(queries=questions, top_k=top_k)
+    all_examples_knowledge = retriever.retrieve(queries=examples_questions, top_k=top_k)
 
     # Main
     all_metrics_output = []
