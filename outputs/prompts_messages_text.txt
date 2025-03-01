@@ -167,7 +167,7 @@ D. sea turtles emerging from their shells
 [/user]
 
 
-PROMPT zeroshot_with_knowledge:
+PROMPT zeroshot_with_knowledge_top_1:
 
 [system]
 You are an expert in question answering. Given a question, a set of choices and a set of useful statements for answering the question, provide the correct answer.
@@ -183,20 +183,11 @@ C. owlets pecking out of their encasement
 D. sea turtles emerging from their shells
 
 Knowledge:
-Birth is often associated with significant emotional experiences for both the newborn and its family.
 Birth often involves medical professionals, especially in developed countries.
-Birth is the beginning of an individual's life.
-Birth typically involves the emergence of a living being from its parent(s).
-Birth is often associated with significant emotional and physical changes for both the newborn and its parent(s).
-The act of birth marks a transition from a dependent state to an independent existence.
-Birth is a significant life event, marking the beginning of an individual's life.
-Births can occur in hospitals, birthing centers, or at home.
-Giving birth is a process that typically involves pain and physical exertion.
-Birth typically involves the emergence of a baby from its mother's womb.
 [/user]
 
 
-PROMPT fewshot_with_knowledge:
+PROMPT fewshot_with_knowledge_top_1:
 
 [system]
 You are an expert in question answering. Given a question, a set of choices and a set of useful statements for answering the question, provide the correct answer. You are given a few examples that will show you how to answer.
@@ -214,15 +205,6 @@ C. it takes hours to vacuum all of the fur
 D. the fur is still attached to the skin
 
 Knowledge:
-Overfeeding a pet can lead to it becoming unhealthily fat.
-Loss of a tail can impact an animal's ability to maintain balance and perform certain functions.
-A dog that bays excessively might have underlying anxiety or territorial issues.
-Many animals that live in polar regions have thick fur or blubber for insulation.
-A build-up of shed skin can be a sign of a health problem.
-Animals shed to get rid of parasites.
-Shedding is a natural process where animals lose old fur and grow new fur.
-Fur can be shed seasonally, with animals growing thicker fur in winter and shedding it in summer.
-Damage to a face can impair an animal's ability to see, smell, or eat.
 Animals shed their coats seasonally to adapt to changes in temperature.
 [/user]
 [assistant]
@@ -241,15 +223,106 @@ C. coffee grinding
 D. elephants
 
 Knowledge:
-Riding a bicycle can be a good form of exercise.
+Bicycles are typically used for personal transportation, recreation, and exercise.
+[/user]
+[assistant]
+Answer: C
+[/assistant]
+[user]
+Example 3:
+
+Question:
+Freezing point is best represented by
+
+Choices:
+A. ice sculpture
+B. glass of water
+C. flowing rivers
+D. water falls
+
+Knowledge:
+The extent of freezing's effectiveness depends on the temperature and duration of exposure.
+[/user]
+[assistant]
+Answer: A
+[/assistant]
+[user]
+Question:
+Live birth is exemplified in
+
+Choices:
+A. snakes slithering out of eggs
+B. a calf emerging from a mother giraffe
+C. owlets pecking out of their encasement
+D. sea turtles emerging from their shells
+
+Knowledge:
+Birth often involves medical professionals, especially in developed countries.
+[/user]
+
+
+PROMPT zeroshot_with_knowledge_top_3:
+
+[system]
+You are an expert in question answering. Given a question, a set of choices and a set of useful statements for answering the question, provide the correct answer.
+[/system]
+[user]
+Question:
+Live birth is exemplified in
+
+Choices:
+A. snakes slithering out of eggs
+B. a calf emerging from a mother giraffe
+C. owlets pecking out of their encasement
+D. sea turtles emerging from their shells
+
+Knowledge:
+Birth often involves medical professionals, especially in developed countries.
+Births can occur in hospitals, birthing centers, or at home.
+Birth is often associated with significant emotional and physical changes for both the newborn and its parent(s).
+[/user]
+
+
+PROMPT fewshot_with_knowledge_top_3:
+
+[system]
+You are an expert in question answering. Given a question, a set of choices and a set of useful statements for answering the question, provide the correct answer. You are given a few examples that will show you how to answer.
+[/system]
+[user]
+Example 1:
+
+Question:
+A side effect of having a Husky as a pet is that when she sheds
+
+Choices:
+A. the dog enjoys being washed out
+B. washing all the fur is easy
+C. it takes hours to vacuum all of the fur
+D. the fur is still attached to the skin
+
+Knowledge:
+Animals shed their coats seasonally to adapt to changes in temperature.
+A dog that bays excessively might have underlying anxiety or territorial issues.
+Fur can be shed seasonally, with animals growing thicker fur in winter and shedding it in summer.
+[/user]
+[assistant]
+Answer: C
+[/assistant]
+[user]
+Example 2:
+
+Question:
+A bicycle may be used for
+
+Choices:
+A. rain
+B. cats
+C. coffee grinding
+D. elephants
+
+Knowledge:
+Bicycles are typically used for personal transportation, recreation, and exercise.
 Bicycles are a common mode of transportation for short to medium distances.
-A bicycle needs regular maintenance, such as tire inflation and lubrication, to function properly.
-Bicycles are typically used for personal transportation over short to medium distances.
-The effectiveness of a vehicle depends on its suitability for the intended purpose.  A bicycle is a good vehicle for short-distance travel, but not for long-haul cargo.
-To maintain balance while riding a bicycle, you need to adjust your weight and steering.
-Safety equipment, like a helmet, is recommended when riding a bicycle.
-Riding a bicycle requires balance and coordination.
-Safety equipment, such as a helmet, is recommended when riding a bicycle.
 A bicycle typically has two wheels, pedals, and handlebars.
 [/user]
 [assistant]
@@ -268,16 +341,9 @@ C. flowing rivers
 D. water falls
 
 Knowledge:
-Zero degrees Celsius is the freezing point of water.
-Different substances freeze at different temperatures.
-Ice is formed when water freezes below 0 degrees Celsius (32 degrees Fahrenheit).
-The melting point of a substance is the temperature at which it changes from solid to liquid.
-Different substances have different freezing points.
-The freezing point of water is 0 degrees Celsius or 32 degrees Fahrenheit.
-Water freezes at 0 degrees centigrade and boils at 100 degrees centigrade at standard atmospheric pressure.
-The freezing point of a liquid can be lowered by adding solutes.
 The extent of freezing's effectiveness depends on the temperature and duration of exposure.
-The boiling and freezing points of water can be affected by factors like pressure and the presence of dissolved substances.
+Different substances freeze at different temperatures.
+The freezing point of a liquid can be lowered by adding solutes.
 [/user]
 [assistant]
 Answer: A
@@ -293,14 +359,7 @@ C. owlets pecking out of their encasement
 D. sea turtles emerging from their shells
 
 Knowledge:
-Birth is often associated with significant emotional experiences for both the newborn and its family.
 Birth often involves medical professionals, especially in developed countries.
-Birth is the beginning of an individual's life.
-Birth typically involves the emergence of a living being from its parent(s).
-Birth is often associated with significant emotional and physical changes for both the newborn and its parent(s).
-The act of birth marks a transition from a dependent state to an independent existence.
-Birth is a significant life event, marking the beginning of an individual's life.
 Births can occur in hospitals, birthing centers, or at home.
-Giving birth is a process that typically involves pain and physical exertion.
-Birth typically involves the emergence of a baby from its mother's womb.
+Birth is often associated with significant emotional and physical changes for both the newborn and its parent(s).
 [/user]

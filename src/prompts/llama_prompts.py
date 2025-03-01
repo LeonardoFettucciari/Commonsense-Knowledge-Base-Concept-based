@@ -42,7 +42,7 @@ class LlamaPrompt(Prompt):
             self.fewshot(input_data)
 
     def zeroshot(self, input_data: dict):
-        self.name = "zeroshot"
+        self.name = input_data.get("prompt_name", "zeroshot")
         system_string = input_data["system_instruction"]
         self.messages.append({"role": "system", "content": system_string})
         question = input_data["question"]
@@ -54,7 +54,7 @@ class LlamaPrompt(Prompt):
         
 
     def zeroshot_with_knowledge(self, input_data: dict):
-        self.name = "zeroshot_with_knowledge"
+        self.name = input_data.get("prompt_name", "zeroshot_with_knowledge")
         system_string = input_data["system_instruction"]
         self.messages.append({"role": "system", "content": system_string})
         question = input_data["question"]
@@ -66,7 +66,7 @@ class LlamaPrompt(Prompt):
         #self.messages.append({"role": "assistant", "content": assistant_string})
         
     def zeroshot_cot(self, input_data: dict):
-        self.name = "zeroshot_cot"
+        self.name = input_data.get("prompt_name", "zeroshot_cot")
         self.cot = True
         system_string = input_data["system_instruction"]
         self.messages.append({"role": "system", "content": system_string})
@@ -79,7 +79,7 @@ class LlamaPrompt(Prompt):
         
 
     def fewshot(self, input_data: dict):
-        self.name = "fewshot"
+        self.name = input_data.get("prompt_name", "fewshot")
         system_string = input_data["system_instruction"]
         self.messages.append({"role": "system", "content": system_string})
 
@@ -103,7 +103,7 @@ class LlamaPrompt(Prompt):
         
 
     def fewshot_with_knowledge(self, input_data: dict):
-        self.name = "fewshot_with_knowledge"
+        self.name = input_data.get("prompt_name", "fewshot_with_knowledge")
         system_string = input_data["system_instruction"]
         self.messages.append({"role": "system", "content": system_string})
 
@@ -130,7 +130,7 @@ class LlamaPrompt(Prompt):
         #self.messages.append({"role": "assistant", "content": assistant_string})
         
     def fewshot_cot(self, input_data: dict):
-        self.name = "fewshot_cot"
+        self.name = input_data.get("prompt_name", "fewshot_cot")
         self.cot = True
         system_string = input_data["system_instruction"]
         self.messages.append({"role": "system", "content": system_string})

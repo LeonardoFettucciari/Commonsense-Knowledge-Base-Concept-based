@@ -1,5 +1,5 @@
 from argparse import ArgumentParser
-from typing import Optional
+from typing import List, Optional
 import csv
 import os
 import torch
@@ -31,34 +31,46 @@ def run_inference(
     output_dir: str,
     kb_path: str,
     limit_samples: Optional[int] = None,
-    top_k: Optional[int] = None
+    top_k_list: Optional[List[int]] = None
 ):
     print("Current Working Directory:", os.getcwd())
+
+    print("Authenticating with Hugging Face...")
     # Authentication for gated models e.g. LLama
     load_dotenv()
     hf_token = os.getenv("HF_TOKEN")
     login(hf_token)
+    print("Authenticated with Hugging Face.")
 
+    print("Setting device...")
     # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
+    print("Device set to:", device)
 
     # Data
+    print("Loading data...")
     data = load_dataset("allenai/openbookqa")
     test_data = data['test']
-    all_samples = test_data.shuffle(seed=SEED).select(range(limit_samples or len(test_data)))
+    limit_samples = limit_samples or len(test_data)
+    all_samples = test_data.shuffle(seed=SEED).select(range(limit_samples))
     all_examples = csv_to_dict(os.path.join("data", "fewshot_examples.csv"))
+    print("Data loaded.")
 
+    print("Loading Knowledge Base...")
     # KB
     kb_statements = load_kb_statements(kb_path, isJson=True)
+    print("Knowledge Base loaded.")
 
-    # Retrieve top_k statements for each question
+    # Retrieve max_k statements for each question
+    print("Retrieving statements for questions...")
+    max_k = max(top_k_list)
     questions = [sample['question_stem'] for sample in all_samples]
     examples_questions = [example['question_stem'] for example in all_examples]
     retriever = Retriever()
     retriever.initialize(passages=kb_statements)
-    all_samples_knowledge = retriever.retrieve(queries=questions, top_k=top_k)
-    all_examples_knowledge = retriever.retrieve(queries=examples_questions, top_k=top_k)
+    all_samples_knowledge = retriever.retrieve(queries=questions, top_k=max_k)
+    all_examples_knowledge = retriever.retrieve(queries=examples_questions, top_k=max_k)
+    print("Statements retrieved.")
 
     # Main
     all_metrics_output = []
@@ -86,30 +98,36 @@ def run_inference(
         iterator = tqdm.tqdm(
             enumerate(zip(all_samples, all_samples_knowledge)),
             total=len(all_samples),
-            desc="Generating Answers...",
+            desc="Running inference...",
         )
         
         all_samples_output = []
         for i, (sample, sample_knowledge) in iterator:
 
             # Build prompts
+            print("Building prompts...")
             prompts = []
-            input_data = prepare_prompt_input_data(sample, sample_knowledge, all_examples, all_examples_knowledge)
+            input_data = prepare_prompt_input_data(sample, sample_knowledge, all_examples, all_examples_knowledge, top_k_list)
             prompts.append(LlamaPrompt(input_data=input_data[0], zero_shot=True))
             prompts.append(LlamaPrompt(input_data=input_data[1], few_shot=True))
             prompts.append(LlamaPrompt(input_data=input_data[2], zero_shot=True, cot=True))            
             prompts.append(LlamaPrompt(input_data=input_data[3], few_shot=True, cot=True))
-            prompts.append(LlamaPrompt(input_data=input_data[4], zero_shot=True, knowledge=True))            
-            prompts.append(LlamaPrompt(input_data=input_data[5], few_shot=True, knowledge=True))
+            for i in range(1, len(top_k_list), 2):
+                prompts.append(LlamaPrompt(input_data=input_data[3+i], zero_shot=True, knowledge=True))            
+                prompts.append(LlamaPrompt(input_data=input_data[3+i+1], few_shot=True, knowledge=True))
             answers.extend([[] for _ in range(len(prompts))])
+            print("Prompts built.")
             
             # Generate answers
+            print("Generating answers...")
             for i, prompt in enumerate(prompts):
                 answers[i].append(get_answers(model, tokenizer, prompt)[1])
+            print("Answers generated.")
 
             # Append the ground truth for computing metrics later
             ground_truths.append(sample["answerKey"])
 
+            print("Preparing output...")
             # Prepare output information for sample
             o = {}
             o['id'] = sample["id"]
@@ -121,13 +139,17 @@ def run_inference(
                 sample_output = o
                 sample_output[prompt.name] = answer
                 all_samples_output[i].append(sample_output)  
+            print("Output prepared.")
 
+        print("Freeing up resources...")
         # Free up resources
         del model
         torch.cuda.empty_cache()      
+        print("Resources freed.")
         
 
         # Save model output
+        print("Writing model output...")
         model_output_path = os.path.join(f"{output_dir}",f"{model_name.split('/')[1]}", "obqa")
         os.makedirs(model_output_path, exist_ok=True)
         for sample_output, prompt in zip(all_samples_output, prompts):
@@ -136,22 +158,26 @@ def run_inference(
                 tsv_writer = csv.DictWriter(file, fieldnames=sample_output[0].keys(), delimiter="\t")
                 tsv_writer.writeheader()
                 tsv_writer.writerows(sample_output)
+        print("Model output written.")
 
-
+        print("Computing model metrics...")
         # Metrics
         metrics_output = {'model_name': model_name}
         metrics = compute_metrics(ground_truths, answers)
         for m, p in zip(metrics, prompts):
             metrics_output[f"accuracy_{p.name}"] = m
         all_metrics_output.append(metrics_output)
+        print("Model metrics computed.")
 
-        
+    
     # Write metrics
+    print("Writing metrics...")
     metrics_output_path = os.path.join(f"{output_dir}", "metrics.tsv")
     with open(metrics_output_path, mode="w", newline="", encoding="utf-8") as file:
         tsv_writer = csv.DictWriter(file, fieldnames=all_metrics_output[0].keys(), delimiter="\t")
         tsv_writer.writeheader()
         tsv_writer.writerows(all_metrics_output)
+    print("Metrics written.")
 
 if __name__ == "__main__":
     # Initialize parser for reading input api-key later
@@ -159,6 +185,6 @@ if __name__ == "__main__":
     parser.add_argument("--output_dir", type=str, required=True, help="Path to store the Knowledge Base.")
     parser.add_argument("--kb_path", type=str, required=True, help="Path to the Knowledge Base file.")
     parser.add_argument("--limit_samples", type=int, required=False, help="Maximum number of samples to consider (default: all).")
-    parser.add_argument("--top_k", type=int, required=False, default=10, help="Maximum number of statements to retrieve per sample (default: 10).")
+    parser.add_argument("--top_k_list", type=int, nargs="+", required=False, default=[1, 3, 5, 10], help="List of values of k, statements to inject in prompts with knowledge. (default: 1 3 5 10).")
     args = parser.parse_args()
     run_inference(**vars(args))
