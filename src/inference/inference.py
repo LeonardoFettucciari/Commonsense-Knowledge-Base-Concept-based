@@ -112,7 +112,7 @@ def run_inference(
             prompts.append(LlamaPrompt(input_data=input_data[1], few_shot=True))
             prompts.append(LlamaPrompt(input_data=input_data[2], zero_shot=True, cot=True))            
             prompts.append(LlamaPrompt(input_data=input_data[3], few_shot=True, cot=True))
-            for i in range(1, len(top_k_list), 2):
+            for i in range(1, 2*len(top_k_list), 2):
                 prompts.append(LlamaPrompt(input_data=input_data[3+i], zero_shot=True, knowledge=True))            
                 prompts.append(LlamaPrompt(input_data=input_data[3+i+1], few_shot=True, knowledge=True))
             answers.extend([[] for _ in range(len(prompts))])
