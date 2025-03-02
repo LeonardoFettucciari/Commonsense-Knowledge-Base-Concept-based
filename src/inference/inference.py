@@ -17,7 +17,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 from src.utils.stdout_utils import load_kb_statements, csv_to_dict
 from src.retriever.retriever import Retriever
 from src.utils.prompt_utils import prepare_prompt_input_data
-from src.utils.model_utils import get_model_settings, get_answers
+from src.utils.model_utils import get_model_settings, generate_text
 from src.utils.metrics_utils import compute_metrics
 from src.prompts.llama_prompts import LlamaPrompt
 from settings.constants import SEED, MODEL_LIST
@@ -119,7 +119,7 @@ def run_inference(
             
             # Generate answers
             for j, prompt in enumerate(prompts):
-                answers[j].append(get_answers(model, tokenizer, prompt)[1])
+                answers[j].append(generate_text(model, tokenizer, prompt, device))
 
             # Append the ground truth for computing metrics later
             ground_truths.append(sample["answerKey"])

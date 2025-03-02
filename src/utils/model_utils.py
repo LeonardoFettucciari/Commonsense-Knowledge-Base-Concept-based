@@ -4,7 +4,9 @@ import google.generativeai as genai
 from tqdm import tqdm
 import re
 import json
+import torch
 
+# Load model settings
 def get_model_settings(config_path):
     with open(config_path) as f:
         settings = json.load(f)
@@ -71,11 +73,7 @@ def truncate_inputs(inputs, model_name):
     else:
         return inputs[:, :-1]
     
-
-# Retriever
-
-import torch
-import re
+# Generate text
 def generate_text(model,
                   tokenizer,
                   prompt,
@@ -83,10 +81,6 @@ def generate_text(model,
     
     # Retrieve model configuration parameters
     settings = get_model_settings("settings/generic_llm_config.json")["generation_config"]
-    if prompt.cot:
-        max_new_tokens = settings["max_new_tokens_cot"]
-    else:
-        max_new_tokens = settings["max_new_tokens"]
 
     # Convert to chat template
     inputs = tokenizer.apply_chat_template(prompt.messages, return_tensors="pt", add_generation_prompt=settings["add_generation_prompt"]).to(device)
@@ -106,7 +100,7 @@ def generate_text(model,
         inputs,
         attention_mask=attention_mask,
         pad_token_id=tokenizer.pad_token_id,
-        max_new_tokens=max_new_tokens,
+        max_new_tokens=settings["max_new_tokens"],
         do_sample=settings["do_sample"],
         temperature=settings["temperature"],
         top_p=settings["top_p"],
@@ -121,41 +115,4 @@ def generate_text(model,
         skip_special_tokens=True,
     )
 
-    return model_outputs, generated_text
-
-
-def get_answers(model,
-                tokenizer,
-                prompt,
-                system=True,
-                device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
-    
-    # Generate alternative labels with whitespaces in front.
-    labels = ['A', 'B', 'C', 'D']
-    labels.extend([f" {label}" for label in labels])
-
-    # Generate text using the model.
-    model_outputs, raw_generated_answer = generate_text(
-        model=model,
-        tokenizer=tokenizer,
-        prompt=prompt,
-        device=device
-    )
-
-    # Get the probabilities of the first token.
-    probabilities = torch.log_softmax(model_outputs.scores[-1], dim=-1)[0]
-
-    # Check that the labels are in the tokenizer's vocabulary.
-    labels = [label for label in labels if len(tokenizer.tokenize(label)) == 1]
-
-    # Get the label IDs.
-    label_ids = [tokenizer.encode(label, add_special_tokens=False)[0] for label in labels]
-
-    # Get the probability of each label and its variants.
-    answer = [probabilities[label_id].item() for label_id in label_ids]
-
-    # Get the label with the highest probability.
-    answer = labels[answer.index(max(answer))]
-    answer = answer.lstrip()
-
-    return raw_generated_answer, answer
+    return generated_text
