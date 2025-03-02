@@ -83,7 +83,7 @@ def generate_text(model,
     settings = get_model_settings("settings/generic_llm_config.json")["generation_config"]
 
     # Convert to chat template
-    inputs = tokenizer.apply_chat_template(prompt.messages, return_tensors="pt", add_generation_prompt=settings["add_generation_prompt"]).to(device)
+    inputs = tokenizer.apply_chat_template(prompt.messages, return_tensors="pt", add_generation_prompt=True).to(device)
 
     # Truncate depending on model used
     #inputs = truncate_inputs(inputs, model.model_name)
