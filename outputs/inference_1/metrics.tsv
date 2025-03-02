@@ -1,0 +1,5 @@
+model_name	accuracy_zeroshot	accuracy_fewshot	accuracy_zeroshot_cot	accuracy_fewshot_cot	accuracy_zeroshot_with_knowledge_top_1	accuracy_fewshot_with_knowledge_top_1	accuracy_zeroshot_with_knowledge_top_3	accuracy_fewshot_with_knowledge_top_3	accuracy_zeroshot_with_knowledge_top_5	accuracy_fewshot_with_knowledge_top_5	accuracy_zeroshot_with_knowledge_top_10	accuracy_fewshot_with_knowledge_top_10	accuracy_zeroshot_with_knowledge_top_20	accuracy_fewshot_with_knowledge_top_20
+meta-llama/Llama-3.2-3B-Instruct	0.0	0.3333333333333333	0.0	0.3333333333333333	0.0	0.6666666666666666	0.0	0.3333333333333333	0.0	0.3333333333333333	0.0	0.3333333333333333	0.3333333333333333	0.0
+meta-llama/Llama-3.1-8B-Instruct	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0
+Qwen/Qwen2.5-1.5B-Instruct	0.0	0.0	0.0	0.0	0.0	0.0	0.3333333333333333	0.0	0.0	0.0	0.0	0.0	0.3333333333333333	0.0
+Qwen/Qwen2.5-7B-Instruct	0.0	0.3333333333333333	0.0	0.3333333333333333	0.0	0.3333333333333333	0.0	0.3333333333333333	0.0	0.3333333333333333	0.0	0.3333333333333333	0.0	0.6666666666666666

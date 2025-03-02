@@ -79,7 +79,6 @@ import re
 def generate_text(model,
                   tokenizer,
                   prompt,
-                  system=True,
                   device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
     
     # Retrieve model configuration parameters
@@ -90,10 +89,10 @@ def generate_text(model,
         max_new_tokens = settings["max_new_tokens"]
 
     # Convert to chat template
-    inputs = tokenizer.apply_chat_template(prompt.messages, return_tensors="pt").to(device)
+    inputs = tokenizer.apply_chat_template(prompt.messages, return_tensors="pt", add_generation_prompt=settings["add_generation_prompt"]).to(device)
 
     # Truncate depending on model used
-    inputs = truncate_inputs(inputs, model.model_name)
+    #inputs = truncate_inputs(inputs, model.model_name)
     
     # Create the attention mask.
     attention_mask = torch.ones_like(inputs).to(device)
@@ -114,7 +113,6 @@ def generate_text(model,
         num_beams=settings["num_beams"],
         output_scores=settings["output_scores"],
         return_dict_in_generate=settings["return_dict_in_generate"],
-        add_generation_prompt=settings["add_generation_prompt"]
     )
 
     # Decode the generated text.
@@ -141,7 +139,6 @@ def get_answers(model,
         model=model,
         tokenizer=tokenizer,
         prompt=prompt,
-        system=system,
         device=device
     )
 
@@ -156,7 +153,6 @@ def get_answers(model,
 
     # Get the probability of each label and its variants.
     answer = [probabilities[label_id].item() for label_id in label_ids]
-
 
     # Get the label with the highest probability.
     answer = labels[answer.index(max(answer))]
