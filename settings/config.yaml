@@ -1,0 +1,33 @@
+seed: 150
+
+# Prompts settings
+prompts:
+    top_k_list: [1, 3, 5, 10, 20]
+
+# Datasets
+obqa:
+    dataset_name: "obqa"
+    dataset_path: "allenai/openbookqa"
+    split: "test"
+    subset: "main"
+    max_samples:
+    shuffle: true
+
+obqa_fewshot:
+    dataset_name: "obqa_fewshot"
+    dataset_path: "data/obqa/fewshot_examples.csv"
+    max_samples:
+    shuffle: true
+
+# Knowledge Base
+kb:
+    kb_name: "obqa_test_gemini-1.5-flash"
+    kb_path: "data/ckb_data=obqa_split=test_model=gemini-1.5-flash.jsonl"
+
+# Retriever
+retriever:
+    model_name: "intfloat/e5-base-v2"
+    
+
+
+

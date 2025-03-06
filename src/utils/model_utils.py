@@ -5,12 +5,31 @@ from tqdm import tqdm
 import re
 import json
 import torch
+from transformers import AutoTokenizer, AutoModelForCausalLM
+from src.utils.io_utils import load_json
+
 
 # Load model settings
 def get_model_settings(config_path):
     with open(config_path) as f:
         settings = json.load(f)
     return settings
+
+def load_model_and_tokenizer(model_name, device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
+    model = AutoModelForCausalLM.from_pretrained(
+            model_name,
+            device_map=device,
+            trust_remote_code=True,
+            torch_dtype=torch.bfloat16,
+        )
+    model.model_name = model_name #TODO remove?
+    tokenizer = AutoTokenizer.from_pretrained(
+            model_name,
+            trust_remote_code=True,
+            padding_side="left"
+        )
+    return model, tokenizer
+
 
 # NER model
 def get_ner_pipeline(model_name):
@@ -77,16 +96,15 @@ def truncate_inputs(inputs, model_name):
 def generate_text(model,
                   tokenizer,
                   prompt,
+                  config_path="settings/model_config.json",
                   device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
     
     # Retrieve model configuration parameters
-    settings = get_model_settings("settings/generic_llm_config.json")["generation_config"]
+
+    config = load_json(config_path)["generation_config"]
 
     # Convert to chat template
     inputs = tokenizer.apply_chat_template(prompt.messages, return_tensors="pt", add_generation_prompt=True).to(device)
-
-    # Truncate depending on model used
-    #inputs = truncate_inputs(inputs, model.model_name)
     
     # Create the attention mask.
     attention_mask = torch.ones_like(inputs).to(device)
@@ -98,15 +116,15 @@ def generate_text(model,
     # Generate text using the model.
     model_outputs = model.generate(
         inputs,
-        attention_mask=attention_mask,
-        pad_token_id=tokenizer.pad_token_id,
-        max_new_tokens=settings["max_new_tokens"],
-        do_sample=settings["do_sample"],
-        temperature=settings["temperature"],
-        top_p=settings["top_p"],
-        num_beams=settings["num_beams"],
-        output_scores=settings["output_scores"],
-        return_dict_in_generate=settings["return_dict_in_generate"],
+        attention_mask          =attention_mask,
+        pad_token_id            =tokenizer.pad_token_id,
+        max_new_tokens          =config.get("max_new_tokens", 512),
+        do_sample               =config.get("do_sample", False),
+        temperature             =config.get("temperature", 0.0),
+        top_p                   =config.get("top_p", 1.0),
+        num_beams               =config.get("num_beams", 1),
+        output_scores           =config.get("output_scores", True),
+        return_dict_in_generate =config.get("return_dict_in_generate", True),
     )
 
     # Decode the generated text.

@@ -1,46 +1,53 @@
 from settings.prompts import (SYSTEM_ZEROSHOT, SYSTEM_ZEROSHOT_WITH_KNOWLEDGE, SYSTEM_ZEROSHOT_COT,
                               SYSTEM_FEWSHOT, SYSTEM_FEWSHOT_WITH_KNOWLEDGE, SYSTEM_FEWSHOT_COT)
+from src.prompts.llama_prompt import LlamaPrompt
 
-def prepare_prompt_input_data(sample, sample_knowledge, fewshot_examples, fewshot_knowledge, top_k_list):
-  input_data = []
-  input_data.append({
-                    "system_instruction": SYSTEM_ZEROSHOT,
-                    "question": sample["question_stem"],
-                    "choices": "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]),
-                })
-  
-  input_data.append({
-                    "system_instruction": SYSTEM_FEWSHOT,
-                    "question": sample["question_stem"],
-                    "choices": "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]),
-                    "fewshot_examples": fewshot_examples
-                })
-  input_data.append({
-                    "system_instruction": SYSTEM_ZEROSHOT_COT,
-                    "question": sample["question_stem"],
-                    "choices": "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]),
-                })
-  input_data.append({
-                    "system_instruction": SYSTEM_FEWSHOT_COT,
-                    "question": sample["question_stem"],
-                    "choices": "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]),
-                    "fewshot_examples": fewshot_examples
-                })
-  for k in top_k_list:
-    input_data.append({
-                        "prompt_name": f"zeroshot_with_knowledge_top_{k}",
-                        "system_instruction": SYSTEM_ZEROSHOT_WITH_KNOWLEDGE,
-                        "question": sample["question_stem"],
-                        "choices": "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]),
-                        "knowledge": sample_knowledge[:k]
-                    })
-    input_data.append({
-                        "prompt_name": f"fewshot_with_knowledge_top_{k}",
-                        "system_instruction": SYSTEM_FEWSHOT_WITH_KNOWLEDGE,
-                        "question": sample["question_stem"],
-                        "choices": "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]),
-                        "knowledge": sample_knowledge[:k],
-                        "fewshot_examples": fewshot_examples,
-                        "fewshot_knowledge": [inner[:k] for inner in fewshot_knowledge],
-                    })
-  return input_data
+def build_prompts(sample, prompt_types, prompt_config, fewshot_examples=[]):
+    prompts = []
+
+    for p_type in prompt_types:
+        if p_type == "zeroshot" or p_type == "all":
+            prompts.append(LlamaPrompt( name="zeroshot",
+                                        system_instruction=SYSTEM_ZEROSHOT,
+                                        sample=sample,
+                                        ))
+            
+        if p_type == "zeroshot_cot" or p_type == "all":
+            prompts.append(LlamaPrompt( name="zeroshot_cot",
+                                        system_instruction=SYSTEM_ZEROSHOT_COT,
+                                        sample=sample,
+                                        cot=True,
+                                        ))
+            
+        if p_type == "zeroshot_with_knowledge" or p_type == "all":
+            for k in prompt_config["top_k_list"]:
+                prompts.append(LlamaPrompt( name=f"zeroshot_with_knowledge_{k}",
+                                            system_instruction=SYSTEM_ZEROSHOT_WITH_KNOWLEDGE,
+                                            sample=sample,
+                                            top_k=k,
+                                            ))
+            
+        if p_type == "fewshot" or p_type == "all":
+            prompts.append(LlamaPrompt( name="fewshot",
+                                        system_instruction=SYSTEM_FEWSHOT,
+                                        sample=sample,
+                                        fewshot_examples=fewshot_examples,
+                                        ))
+            
+        if p_type == "fewshot_cot" or p_type == "all":
+            prompts.append(LlamaPrompt( name="fewshot_cot",
+                                        system_instruction=SYSTEM_FEWSHOT_COT,
+                                        sample=sample,
+                                        fewshot_examples=fewshot_examples,
+                                        cot=True,
+                                        ))
+            
+        if p_type == "fewshot_with_knowledge" or p_type == "all":
+            for k in prompt_config["top_k_list"]:
+                prompts.append(LlamaPrompt( name=f"fewshot_with_knowledge_{k}",
+                                            system_instruction=SYSTEM_FEWSHOT_WITH_KNOWLEDGE,
+                                            sample=sample,
+                                            fewshot_examples=fewshot_examples,
+                                            top_k=k,
+                                            ))
+    return prompts
