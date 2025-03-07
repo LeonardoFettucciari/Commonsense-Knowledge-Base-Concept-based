@@ -109,6 +109,8 @@ def generate_text(model,
     # Create the attention mask.
     attention_mask = torch.ones_like(inputs).to(device)
 
+    #inputs_text = tokenizer.apply_chat_template(prompt.messages, tokenize=False, add_generation_prompt=True) TO REMOVE
+    
     # Ensure pad_token_id is set
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = tokenizer.eos_token_id

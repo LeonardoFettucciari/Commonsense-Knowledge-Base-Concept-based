@@ -77,7 +77,7 @@ def inference(
         ground_truths.append(sample["answerKey"])
 
     # Save model output
-    dataset_output_path = os.path.join(output_dir, dataset_name, model_name)
+    dataset_output_path = os.path.join(output_dir, config["kb"]["kb_name"], DATASET_NAME_TO_TAG[dataset_name], model_name.split('/')[1])
     os.makedirs(dataset_output_path, exist_ok=True)
     for prompt_name, output in outputs.items():
         model_results_path = os.path.join(dataset_output_path, f"{prompt_name}.tsv")
@@ -93,7 +93,7 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", type=str, required=True, help="Model name from Hugging Face.")
     parser.add_argument("--dataset_name", type=str, required=True, help="Dataset name from Hugging Face.")
     parser.add_argument("--config_path", default="settings/config.yaml", type=str, required=False, help="Path to the config file.")
-    parser.add_argument("--output_dir", default="outputs/inference/1", type=str, required=False, help="Path to store the outputs.")
+    parser.add_argument("--output_dir", default="outputs/inference/", type=str, required=False, help="Path to store the outputs.")
     parser.add_argument("--prompt_types", default=["all"], type=str, nargs='+', required=False, help="List of prompt types to use.")
 
     args = parser.parse_args()

@@ -21,7 +21,7 @@ obqa_fewshot:
 
 # Knowledge Base
 kb:
-    kb_name: "obqa_test_gemini-1.5-flash"
+    kb_name: "ckb_data=obqa_split=test_model=gemini-1.5-flash"
     kb_path: "data/ckb_data=obqa_split=test_model=gemini-1.5-flash.jsonl"
 
 # Retriever

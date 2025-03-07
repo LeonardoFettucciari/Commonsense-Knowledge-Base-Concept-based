@@ -4,4 +4,9 @@ CKB.egg-info
 outputs/**/*
 !outputs/.gitkeep
 !outputs/**/
-
+models/**/*
+!models/.gitkeep
+!models/**/
+data/**/*
+!data/.gitkeep
+!data/**/

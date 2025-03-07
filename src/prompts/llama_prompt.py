@@ -28,13 +28,13 @@ class LlamaPrompt(Prompt):
         self.top_k = top_k
         self.cot = cot
 
-        self.messages = []
-
-        self._format_input()
+        self.messages = self._format_input()
+        self.text = self._messages_to_text()
 
     def _format_input(self):
         # 0. System instruction
-        self.messages.append({"role": "system", "content": self.system_instruction})
+        messages = []
+        messages.append({"role": "system", "content": self.system_instruction})
 
         # 1. Fewshots
         if self.fewshot_examples:
@@ -59,8 +59,8 @@ class LlamaPrompt(Prompt):
                     ex_user_string = f'Example {i}:\n\nQuestion:\n{ex_question}\n\nChoices:\n{ex_choices}'
                     ex_assistant_string = f'Answer: {ex_answer}'
                     
-                self.messages.append({"role": "user", "content": ex_user_string})
-                self.messages.append({"role": "assistant", "content": ex_assistant_string})
+                messages.append({"role": "user", "content": ex_user_string})
+                messages.append({"role": "assistant", "content": ex_assistant_string})
 
         # 2. Final shot
         question = self.sample["question"]
@@ -74,4 +74,11 @@ class LlamaPrompt(Prompt):
         else:
             user_string = f'Question:\n{question}\n\nChoices:\n{choices}'
 
-        self.messages.append({"role": "user", "content": user_string})   
+        messages.append({"role": "user", "content": user_string})  
+
+        return messages 
+    
+    def _messages_to_text(self):
+        # Prompt plain text only, without system instruction
+        return "\n\n".join([m["content"] for m in self.messages if m["role"] != "system"])
+        

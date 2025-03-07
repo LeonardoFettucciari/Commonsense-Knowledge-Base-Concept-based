@@ -104,10 +104,10 @@ def prepare_output(sample, prompt, answer):
         "question": sample["question"],
         "choices": "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]),
         "gold_truth": sample['answerKey'],
-        f"{prompt.name}": answer,
+        "model_output": answer,
     }
-
     if(prompt.top_k):
-        output['knowledge'] = "\n".join(sample['kb_statements'][:prompt.top_k])
-        
+        output['kb_statements'] = "\n".join(sample['kb_statements'][:prompt.top_k])
+    output["prompt"] = prompt.text
+
     return output

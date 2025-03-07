@@ -3,4 +3,7 @@ nltk
 jsonlines
 tqdm 
 google-generativeai
-sentence_transformers~=3.4.1
+sentence_transformers
+xfinder
+torch
+transformers
