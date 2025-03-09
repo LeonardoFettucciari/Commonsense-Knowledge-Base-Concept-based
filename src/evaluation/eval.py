@@ -3,14 +3,26 @@ import csv
 import json
 import argparse
 import statistics
+from natsort import natsorted
 from xfinder.eval import Evaluator
 from tqdm import tqdm
+from huggingface_hub import snapshot_download
+from src.utils.io_utils import jsonl_to_tsv, bundle_json
 
 def xfinder_setup(model_name, model_dir):
+    model_path = f"{model_dir}/IAAR-Shanghai/{model_name}"
+    
+    # Ensure the model is fully downloaded or resume if incomplete
+    snapshot_download(
+        repo_id=f"IAAR-Shanghai/{model_name}",
+        resume_download=True,
+        local_dir=model_path
+    )
+
     evaluator = Evaluator(
         model_name=model_name,
-        inference_mode="local",  # Inference mode, 'local' or 'api'
-        model_path_or_url=f"{model_dir}/IAAR-Shanghai/{model_name}",
+        inference_mode="local",
+        model_path_or_url=model_path,
     )
     return evaluator
 
@@ -39,7 +51,7 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
             model_output = row.get("model_output", None)
             gold_truth = row.get("gold_truth", None)
             
-            answer_range = [elem.split(". ") for elem in choices]
+            answer_range = [elem.split(". ") for elem in choices.split('\n')]
             
             result_llama = xfinder_evaluator_llama.evaluate_single_item(
                 question=prompt,
@@ -69,33 +81,54 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
             writer.writerow(row)
         
         json.dump({
+            "file_name": input_file.split('/')[-1],
             "xfinder_avg_accuracy_llama": statistics.mean(xfinder_accuracies_llama),
             "xfinder_avg_accuracy_qwen": statistics.mean(xfinder_accuracies_qwen)
         }, f_out_json)
 
+
 def main(args):
     input_dir = args.input_dir
     output_dir = args.output_dir
-    model_dir = args.model_dir
+    model_dir = args.model_dir    
     
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
-    
-    
+
+    # Download and setup models
     xfinder_evaluator_qwen = xfinder_setup("xFinder-qwen1505", model_dir)
     xfinder_evaluator_llama = xfinder_setup("xFinder-llama38it", model_dir)
     
-    
+    # Scan all files inside input_dir
     for file in os.listdir(input_dir):
-        filename, _ = os.path.splitext(os.path.basename(file))
-        output_path = os.path.join(output_dir, f"xFinder|{filename}.tsv")
-        output_path_json = os.path.join(output_dir, f"xFinder|{filename}.json")
-        evaluate(os.path.join(input_dir, file), output_path, output_path_json, xfinder_evaluator_llama, xfinder_evaluator_qwen)
+        file_path = os.path.join(input_dir, file)  
+        if os.path.isfile(file_path):  
+            filename, _ = os.path.splitext(os.path.basename(file))
+            output_path = os.path.join(output_dir, f"xFinder|{filename}.tsv")
+            output_path_json = os.path.join(output_dir, f"xFinder|{filename}.json")
+            # Run evaluation on selected file            
+            evaluate(os.path.join(input_dir, file),
+                     output_path,
+                     output_path_json,
+                     xfinder_evaluator_llama,
+                     xfinder_evaluator_qwen)
+        
+    # Write summary file for accuracy of all prompts types i.e. zeroshot-accuracy, etc.
+    accuracy_summary_output_name = f"xFinder|accuracies.jsonl"
+    bundle_json(output_dir, accuracy_summary_output_name)
+    jsonl_to_tsv(os.path.join(output_dir, accuracy_summary_output_name))
+    
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate models on MCQA with xFinder")
     parser.add_argument('--input_dir', help='Directory containing the output of the models on the MCQA task.')
     parser.add_argument('--output_dir', help='Directory to save the evaluation results.')
-    parser.add_argument('--model_dir', help='Directory to save the evaluation models.')
+    parser.add_argument('--model_dir', default='models', help='Directory to save the evaluation models.')
     args = parser.parse_args()
+
+    # Default value for --output_dir
+    if args.output_dir is None:
+        args.output_dir = os.path.join(args.input_dir, "accuracy")
+
     main(args)

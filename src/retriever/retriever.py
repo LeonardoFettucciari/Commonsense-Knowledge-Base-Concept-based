@@ -29,7 +29,7 @@ class Retriever:
     def retrieve(self, query, top_k):
         qe = self._encode_query(query)
               
-        # Compute cosine similarity and extract top-k statements from KB for each question
+        # Compute cosine similarity and extract top-k statements from ckb for each question
         hits_per_iteration = top_k  
         retrieved_statements = set()
         while len(retrieved_statements) < top_k:

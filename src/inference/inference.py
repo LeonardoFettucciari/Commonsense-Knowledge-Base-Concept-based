@@ -10,7 +10,7 @@ import tqdm
 from datasets import load_dataset
 from transformers import set_seed
 
-from src.utils.io_utils import load_kb_statements, prepare_output, load_yaml
+from src.utils.io_utils import load_ckb_statements, prepare_output, load_yaml
 from src.retriever.retriever import Retriever
 from src.utils.model_utils import get_model_settings, generate_text, load_model_and_tokenizer
 from src.datasets.dataset_loader import QADataset
@@ -24,6 +24,7 @@ def inference(
     dataset_name: str,
     config_path: str,
     output_dir: str,
+    ckb_path: str,
     prompt_types: List[str],
 ):
     # Load configuration file
@@ -37,12 +38,12 @@ def inference(
     fewshot_dataset = QADataset(config[f"{DATASET_NAME_TO_TAG[dataset_name]}_fewshot"])
 
     # Load knowledge base
-    kb_statements = load_kb_statements(config["kb"])
+    ckb_statements = load_ckb_statements(ckb_path)
 
     # Retrieve top_k statements for each query (i.e. question + choices)
-    retriever = Retriever(kb_statements, config["retriever"])
-    eval_dataset.add_kb_statements_to_samples(retriever, max(config["prompts"]["top_k_list"]))
-    fewshot_dataset.add_kb_statements_to_samples(retriever, max(config["prompts"]["top_k_list"]))
+    retriever = Retriever(ckb_statements, config["retriever"])
+    eval_dataset.add_ckb_statements_to_samples(retriever, max(config["prompts"]["top_k_list"]))
+    fewshot_dataset.add_ckb_statements_to_samples(retriever, max(config["prompts"]["top_k_list"]))
 
     # Main
     model, tokenizer = load_model_and_tokenizer(model_name)
@@ -58,7 +59,6 @@ def inference(
     ground_truths = []
     answers = defaultdict(list)
     outputs = defaultdict(list)
-
     
     for i, sample in iterator:
 
@@ -77,11 +77,11 @@ def inference(
         ground_truths.append(sample["answerKey"])
 
     # Save model output
-    dataset_output_path = os.path.join(output_dir, config["kb"]["kb_name"], DATASET_NAME_TO_TAG[dataset_name], model_name.split('/')[1])
-    os.makedirs(dataset_output_path, exist_ok=True)
+    model_output_path = os.path.join(output_dir, os.path.basename(ckb_path), DATASET_NAME_TO_TAG[dataset_name], model_name.split('/')[1])
+    os.makedirs(model_output_path, exist_ok=True)
     for prompt_name, output in outputs.items():
-        model_results_path = os.path.join(dataset_output_path, f"{prompt_name}.tsv")
-        with open(model_results_path, mode="w", newline="", encoding="utf-8") as file:
+        prompt_results_output_path = os.path.join(model_output_path, f"{prompt_name}.tsv")
+        with open(prompt_results_output_path, mode="w", newline="", encoding="utf-8") as file:
             tsv_writer = csv.DictWriter(file, fieldnames=output[0].keys(), delimiter="\t")
             tsv_writer.writeheader()
             tsv_writer.writerows(output)
@@ -92,10 +92,10 @@ if __name__ == "__main__":
     parser = ArgumentParser(description="Creation of CKB with Gemini")
     parser.add_argument("--model_name", type=str, required=True, help="Model name from Hugging Face.")
     parser.add_argument("--dataset_name", type=str, required=True, help="Dataset name from Hugging Face.")
+    parser.add_argument("--ckb_path", type=str, required=True, help="Path to the Knowledge Base file.")
     parser.add_argument("--config_path", default="settings/config.yaml", type=str, required=False, help="Path to the config file.")
     parser.add_argument("--output_dir", default="outputs/inference/", type=str, required=False, help="Path to store the outputs.")
     parser.add_argument("--prompt_types", default=["all"], type=str, nargs='+', required=False, help="List of prompt types to use.")
-
     args = parser.parse_args()
 
     # Replace eventual aliases

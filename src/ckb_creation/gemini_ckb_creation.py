@@ -17,7 +17,7 @@ torch.manual_seed(42)
 random.seed(42)
 set_seed(42)
 
-def create_kb(
+def create_ckb(
     config_path: str,
     api_key: str,
     output_dir: str,
@@ -25,7 +25,7 @@ def create_kb(
 ):
     
     eval_data = load_dataset("allenai/openbookqa")['test']
-    samples = eval_data.shuffle(seed=42) # .select(range(10))
+    samples = eval_data.shuffle(seed=42)
 
     # Bundle question + choices together
     formatted_samples = []
@@ -42,6 +42,7 @@ def create_kb(
     unique_words_all_samples = extract_unique_words(ner_results)
     wordnet_synsets = from_words_to_synsets(unique_words_all_samples)
 
+    # Get model settings
     settings = get_model_settings(config_path)
     model_name = settings["model_name"]
     generation_config = settings["generation_config"]
@@ -99,4 +100,4 @@ if __name__ == "__main__":
     parser.add_argument("--output_dir", type=str, required=True, help="Path to store the Knowledge Base.")
     parser.add_argument("--limit_samples", type=int, required=False, help="Maximum number of synsets to consider.")
     args = parser.parse_args()
-    create_kb(**vars(args))
+    create_ckb(**vars(args))
