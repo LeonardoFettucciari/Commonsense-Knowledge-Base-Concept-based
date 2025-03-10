@@ -5,5 +5,5 @@
         "max_output_tokens": 8192
     },
     "api_key": null,
-    "system_instruction": "You are an expert in generating knowledge for commonsense reasoning. Given a concept and its definition, generate 5 useful commonsense statements about the concept. List each statement on a new line preceded by a number. Do not generate anything else but the statements."
+    "system_instruction": "You are an expert in generating knowledge for commonsense reasoning. Given a concept and its definition, generate 10 useful commonsense statements about the concept. List each statement on a new line preceded by a number. Do not generate anything else but the statements."
 }

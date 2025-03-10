@@ -24,23 +24,23 @@ def create_kb(
     limit_samples: Optional[int] = None
 ):
     
-    eval_data = load_dataset("allenai/openbookqa")['test']
-    samples = eval_data.shuffle(seed=42) # .select(range(10))
+    # eval_data = load_dataset("allenai/openbookqa")['test']
+    # samples = eval_data.shuffle(seed=42) # .select(range(10))
 
-    # Bundle question + choices together
-    formatted_samples = []
-    for sample in samples:
-        question = sample['question_stem']
-        choices = " ".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])])
-        formatted_samples.append(f"{question} {choices}")
+    # # Bundle question + choices together
+    # formatted_samples = []
+    # for sample in samples:
+    #     question = sample['question_stem']
+    #     choices = " ".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])])
+    #     formatted_samples.append(f"{question} {choices}")
 
-    # Run NER pipeline
-    ner_pipeline = get_ner_pipeline("Babelscape/cner-base")
-    ner_results = ner_pipeline(formatted_samples)
+    # # Run NER pipeline
+    # ner_pipeline = get_ner_pipeline("Babelscape/cner-base")
+    # ner_results = ner_pipeline(formatted_samples)
 
-    # Extract unique words
-    unique_words_all_samples = extract_unique_words(ner_results)
-    wordnet_synsets = from_words_to_synsets(unique_words_all_samples)
+    # # Extract unique words
+    # unique_words_all_samples = extract_unique_words(ner_results)
+    # wordnet_synsets = from_words_to_synsets(unique_words_all_samples)
 
     settings = get_model_settings(config_path)
     model_name = settings["model_name"]
@@ -54,18 +54,18 @@ def create_kb(
         api_key
     )
 
-    # wordnet_synsets = get_all_wordnet_synsets(pos=NOUN)
+    wordnet_synsets = get_all_wordnet_synsets(pos=NOUN)
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
     
     output_path = os.path.join(
         output_dir, 
-        f"ckb|data=obqa|split=test|model={model_name}.jsonl"
+        f"ckb|data=wordnet|model={model_name}.jsonl"
     )
 
     with jsonlines.open(output_path, "w") as fout:
-        for i, synset in tqdm(enumerate(wordnet_synsets)):
+        for i, synset in tqdm(enumerate(wordnet_synsets), total=len(wordnet_synsets)):
             if i == limit_samples:
                 break
             synset_name = synset.name()
