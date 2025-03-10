@@ -10,3 +10,4 @@ models/**/*
 data/**/*
 !data/.gitkeep
 !data/**/
+cache
