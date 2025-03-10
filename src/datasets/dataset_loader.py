@@ -2,6 +2,7 @@ import random
 from torch.utils.data import Dataset
 import os, csv, json
 from datasets import load_dataset
+from tqdm import tqdm
 from src.utils.io_utils import load_local_file
 from src.retriever.retriever import Retriever
 
@@ -14,13 +15,7 @@ class QADataset(Dataset):
         
         self.dataset = self._load_dataset_from_path()
         self.samples = self._extract_samples_data()
-    
-    def add_kb_statements_to_samples(self, retriever:Retriever, top_k):
-        for sample in self.samples:
-            question = sample["question"]
-            choices = " ".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])])
-            query = f"{question} {choices}"
-            sample["kb_statements"] = retriever.retrieve(query=query, top_k=top_k)
+
 
     def _load_dataset_from_path(self):
         # Try to load from local file

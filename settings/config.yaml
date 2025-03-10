@@ -1,8 +1,5 @@
+# Generic settings
 seed: 150
-
-# Prompts settings
-prompts:
-    top_k_list: [1, 3, 5, 10, 20]
 
 # Datasets
 obqa:
@@ -19,10 +16,6 @@ obqa_fewshot:
     max_samples:
     shuffle: true
 
-# Knowledge Base
-kb:
-    kb_name: "ckb_data=obqa_split=test_model=gemini-1.5-flash"
-    kb_path: "data/ckb_data=obqa_split=test_model=gemini-1.5-flash.jsonl"
 
 # Retriever
 retriever:

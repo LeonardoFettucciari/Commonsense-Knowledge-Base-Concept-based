@@ -2,7 +2,7 @@ from settings.prompts import (SYSTEM_ZEROSHOT, SYSTEM_ZEROSHOT_WITH_KNOWLEDGE, S
                               SYSTEM_FEWSHOT, SYSTEM_FEWSHOT_WITH_KNOWLEDGE, SYSTEM_FEWSHOT_COT)
 from src.prompts.llama_prompt import LlamaPrompt
 
-def build_prompts(sample, prompt_types, prompt_config, fewshot_examples=[]):
+def build_prompts(sample, prompt_types, top_k_values, fewshot_examples=[]):
     prompts = []
 
     for p_type in prompt_types:
@@ -20,7 +20,7 @@ def build_prompts(sample, prompt_types, prompt_config, fewshot_examples=[]):
                                         ))
             
         if p_type == "zeroshot_with_knowledge" or p_type == "all":
-            for k in prompt_config["top_k_list"]:
+            for k in top_k_values:
                 prompts.append(LlamaPrompt( name=f"zeroshot_with_knowledge_{k}",
                                             system_instruction=SYSTEM_ZEROSHOT_WITH_KNOWLEDGE,
                                             sample=sample,
@@ -43,7 +43,7 @@ def build_prompts(sample, prompt_types, prompt_config, fewshot_examples=[]):
                                         ))
             
         if p_type == "fewshot_with_knowledge" or p_type == "all":
-            for k in prompt_config["top_k_list"]:
+            for k in top_k_values:
                 prompts.append(LlamaPrompt( name=f"fewshot_with_knowledge_{k}",
                                             system_instruction=SYSTEM_FEWSHOT_WITH_KNOWLEDGE,
                                             sample=sample,
