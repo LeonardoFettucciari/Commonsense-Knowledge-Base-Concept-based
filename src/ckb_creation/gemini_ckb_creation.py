@@ -24,13 +24,8 @@ def create_ckb(
     limit_samples: Optional[int] = None
 ):
     
-<<<<<<< HEAD
     # eval_data = load_dataset("allenai/openbookqa")['test']
     # samples = eval_data.shuffle(seed=42) # .select(range(10))
-=======
-    eval_data = load_dataset("allenai/openbookqa")['test']
-    samples = eval_data.shuffle(seed=42)
->>>>>>> deb29b276d366045147caf8455853177b5690e9e
 
     # # Bundle question + choices together
     # formatted_samples = []
