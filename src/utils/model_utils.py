@@ -115,6 +115,7 @@ def generate_text(model,
     if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = tokenizer.eos_token_id
 
+    model.eval()
     # Generate text using the model.
     model_outputs = model.generate(
         inputs,

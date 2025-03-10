@@ -29,6 +29,7 @@ def inference(
     output_dir: str,
     ckb_path: str,
     prompt_types: List[str],
+    top_k_values: List[str],
 ):
     logging.info("Starting inference process...")
     logging.info(f"Loading configuration from: {config_path}")
@@ -52,8 +53,6 @@ def inference(
     # Initialize retriever and retrieve statements
     logging.info("Initializing retriever and retrieving statements for dataset samples.")
     retriever = Retriever(ckb_statements, config["retriever"])
-    eval_dataset.add_ckb_statements_to_samples(retriever, max(config["prompts"]["top_k_list"]))
-    fewshot_dataset.add_ckb_statements_to_samples(retriever, max(config["prompts"]["top_k_list"]))
 
     # Load model and tokenizer
     logging.info(f"Loading model and tokenizer: {model_name}")
@@ -76,8 +75,11 @@ def inference(
     for i, sample in iterator:
         logging.debug(f"Processing sample {i+1}/{len(eval_dataset.samples)}")
 
+        # Retrieve statements for given sample
+        retriever.add_ckb_statements_to_sample(sample, max(top_k_values))
+
         # Build prompts
-        prompts = build_prompts(sample, prompt_types, config["prompts"], fewshot_examples=fewshot_dataset.samples)
+        prompts = build_prompts(sample, prompt_types, top_k_values, fewshot_examples=fewshot_dataset.samples)
         
         # Generate answers
         for prompt in prompts:
@@ -111,6 +113,8 @@ if __name__ == "__main__":
     parser.add_argument("--config_path", default="settings/config.yaml", type=str, required=False, help="Path to the config file.")
     parser.add_argument("--output_dir", default="outputs/inference/", type=str, required=False, help="Path to store the outputs.")
     parser.add_argument("--prompt_types", default="all", type=str, required=False, help="Comma-separated list of prompt types to use.")
+    parser.add_argument("--top_k_values", default="1,3,5,10,20", type=str, required=False, help="Comma-separated list of prompt types to use.")
+
     args = parser.parse_args()
 
     # Replace eventual aliases
@@ -119,6 +123,8 @@ if __name__ == "__main__":
 
     # Convert prompt types into list
     args.prompt_types = args.prompt_types.split(",")
+    # Convert top_k_values into list
+    args.top_k_values = [int(val) for val in args.top_k_values.split(",")]
 
     logging.info("Launching inference script...")
     inference(**vars(args))
