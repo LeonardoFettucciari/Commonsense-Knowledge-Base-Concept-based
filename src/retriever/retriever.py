@@ -1,26 +1,32 @@
 import torch
 import random
+import logging
 from sentence_transformers import SentenceTransformer
-from sentence_transformers.util import paraphrase_mining, semantic_search
+from sentence_transformers.util import semantic_search
 
 
 class Retriever:
     def __init__(self, passages, retriever_config):
         self.rc = retriever_config
         self.model_name = self.rc["model_name"]
+        logging.info(f"Initializing Retriever with model: {self.model_name}")
         self.model = SentenceTransformer(self.model_name)
         self.passages = passages
         self.passages_embeddings = self._encode_passages()
 
     def _encode_passages(self):
-        if(self.model_name == "intfloat/e5-base-v2"):
+        logging.info("Encoding passages...")
+        if self.model_name == "intfloat/e5-base-v2":
             passages_input = [f"passage: {s}" for s in self.passages]
-            return self.model.encode(passages_input, normalize_embeddings=True)
+            embeddings = self.model.encode(passages_input, normalize_embeddings=True)
+            logging.info(f"Encoded {len(self.passages)} passages.")
+            return embeddings
         else:
             raise ValueError(f"Model {self.model_name} not supported.")
         
     def _encode_query(self, query):
-        if(self.model_name == "intfloat/e5-base-v2"):
+        logging.debug(f"Encoding query: {query}")
+        if self.model_name == "intfloat/e5-base-v2":
             query_input = [f"query: {query}"]
             return self.model.encode(query_input, normalize_embeddings=True)
         else:
@@ -36,14 +42,12 @@ class Retriever:
             hits = semantic_search(qe, self.passages_embeddings, top_k=hits_per_iteration)[0]
             for hit in hits:
                 retrieved_statements.add(self.passages[hit['corpus_id']])
-                if(len(retrieved_statements) == top_k):
+                if len(retrieved_statements) == top_k:
                     break
             hits_per_iteration *= 2 # Increase the number of hits to retrieve if top-k statements are not unique
         
         return list(retrieved_statements)
     
     def retrieve_all(self, queries, top_k):
+        logging.info(f"Retrieving passages for {len(queries)} queries.")
         return [self.retrieve(query, top_k) for query in queries]
-
-
-

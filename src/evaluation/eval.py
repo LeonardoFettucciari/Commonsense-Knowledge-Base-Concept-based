@@ -3,14 +3,18 @@ import csv
 import json
 import argparse
 import statistics
+import logging
 from natsort import natsorted
 from xfinder.eval import Evaluator
 from tqdm import tqdm
 from huggingface_hub import snapshot_download
 from src.utils.io_utils import jsonl_to_tsv, bundle_json
 
+logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+
 def xfinder_setup(model_name, model_dir):
     model_path = f"{model_dir}/IAAR-Shanghai/{model_name}"
+    logging.info(f"Setting up xFinder model: {model_name} at {model_path}")
     
     # Ensure the model is fully downloaded or resume if incomplete
     snapshot_download(
@@ -27,6 +31,7 @@ def xfinder_setup(model_name, model_dir):
     return evaluator
 
 def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=None, xfinder_evaluator_qwen=None):
+    logging.info(f"Evaluating file: {input_file}")
     with open(input_file) as csvfile, open(output_path, "w") as f_out, open(output_path_json, "w") as f_out_json:
         reader = csv.DictReader(csvfile, delimiter='\t')
         fieldnames = reader.fieldnames  # Dynamically get column names
@@ -45,11 +50,15 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
         xfinder_accuracies_llama = []
         xfinder_accuracies_qwen = []
         
-        for row in tqdm(reader):
+        for row in tqdm(reader, desc=f"Processing {input_file}"):
             prompt = row.get("prompt", None)
             choices = row.get("choices", None)
             model_output = row.get("model_output", None)
             gold_truth = row.get("gold_truth", None)
+            
+            if not choices:
+                logging.warning(f"Skipping row due to missing choices: {row}")
+                continue
             
             answer_range = [elem.split(". ") for elem in choices.split('\n')]
             
@@ -69,23 +78,29 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
                 correct_answer=gold_truth,
             )
             
+            xfinder_accuracies_llama.append(result_llama[-1])
+            xfinder_accuracies_qwen.append(result_qwen[-1])
+
             row.update({
                 "xfinder_extracted_answer_llama": result_llama[-3],
                 "xfinder_acc_llama": result_llama[-1],
                 "xfinder_extracted_answer_qwen": result_qwen[-3],
                 "xfinder_acc_qwen": result_qwen[-1]
             })
-            
-            xfinder_accuracies_llama.append(result_llama[-1])
-            xfinder_accuracies_qwen.append(result_qwen[-1])
+
+            row.pop("prompt", None) # Remove prompt field if present
             writer.writerow(row)
         
+        avg_accuracy_llama = statistics.mean(xfinder_accuracies_llama)
+        avg_accuracy_qwen = statistics.mean(xfinder_accuracies_qwen)
+        logging.info(f"Average xFinder accuracy for LLaMA: {avg_accuracy_llama}")
+        logging.info(f"Average xFinder accuracy for Qwen: {avg_accuracy_qwen}")
+        
         json.dump({
-            "file_name": input_file.split('/')[-1],
-            "xfinder_avg_accuracy_llama": statistics.mean(xfinder_accuracies_llama),
-            "xfinder_avg_accuracy_qwen": statistics.mean(xfinder_accuracies_qwen)
+            "file_name": os.path.basename(input_file),
+            "xfinder_avg_accuracy_llama": avg_accuracy_llama,
+            "xfinder_avg_accuracy_qwen": avg_accuracy_qwen
         }, f_out_json)
-
 
 def main(args):
     input_dir = args.input_dir
@@ -94,6 +109,8 @@ def main(args):
     
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
+    logging.info(f"Processing input directory: {input_dir}")
+    logging.info(f"Saving results to: {output_dir}")
 
     # Download and setup models
     xfinder_evaluator_qwen = xfinder_setup("xFinder-qwen1505", model_dir)
@@ -103,6 +120,7 @@ def main(args):
     for file in os.listdir(input_dir):
         file_path = os.path.join(input_dir, file)  
         if os.path.isfile(file_path):  
+            logging.info(f"Processing file: {file}")
             filename, _ = os.path.splitext(os.path.basename(file))
             output_path = os.path.join(output_dir, f"xFinder|{filename}.tsv")
             output_path_json = os.path.join(output_dir, f"xFinder|{filename}.json")
@@ -117,8 +135,7 @@ def main(args):
     accuracy_summary_output_name = f"xFinder|accuracies.jsonl"
     bundle_json(output_dir, accuracy_summary_output_name)
     jsonl_to_tsv(os.path.join(output_dir, accuracy_summary_output_name))
-    
-
+    logging.info("Evaluation process completed.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate models on MCQA with xFinder")

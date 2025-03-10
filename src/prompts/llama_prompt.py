@@ -51,8 +51,8 @@ class LlamaPrompt(Prompt):
                     ex_assistant_string = f'Reasoning:\n{ex_reasoning}\n\nAnswer: {ex_answer}'
 
                 elif self.top_k:
-                    ex_kb_statements = "\n".join(example["kb_statements"][:self.top_k])
-                    ex_user_string = f'Example {i}:\n\nQuestion:\n{ex_question}\n\nChoices:\n{ex_choices}\n\nKnowledge:\n{ex_kb_statements}'
+                    ex_ckb_statements = "\n".join(example["ckb_statements"][:self.top_k])
+                    ex_user_string = f'Example {i}:\n\nQuestion:\n{ex_question}\n\nChoices:\n{ex_choices}\n\nKnowledge:\n{ex_ckb_statements}'
                     ex_assistant_string = f'Answer: {ex_answer}'
 
                 else:
@@ -69,8 +69,8 @@ class LlamaPrompt(Prompt):
         if self.cot:
             user_string = f'Question:\n{question}\n\nChoices:\n{choices}'
         elif self.top_k:
-            kb_statements = "\n".join(self.sample["kb_statements"][:self.top_k])
-            user_string = f'Question:\n{question}\n\nChoices:\n{choices}\n\nKnowledge:\n{kb_statements}'
+            ckb_statements = "\n".join(self.sample["ckb_statements"][:self.top_k])
+            user_string = f'Question:\n{question}\n\nChoices:\n{choices}\n\nKnowledge:\n{ckb_statements}'
         else:
             user_string = f'Question:\n{question}\n\nChoices:\n{choices}'
 
