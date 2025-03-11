@@ -76,20 +76,12 @@ class Retriever:
             raise ValueError(f"Model {self.model_name} not supported.")
 
     def retrieve(self, query, top_k):
-        qe = self._encode_query(query)
-        
-        # Compute cosine similarity and extract top-k statements from ckb for each question
-        hits_per_iteration = top_k
-        retrieved_statements = set()
-        while len(retrieved_statements) < top_k:
-            hits = semantic_search(qe, self.passages_embeddings, top_k=hits_per_iteration)[0]
-            for hit in hits:
-                retrieved_statements.add(self.passages[hit['corpus_id']])
-                if len(retrieved_statements) == top_k:
-                    break
-            hits_per_iteration *= 2  # Increase the number of hits if top-k statements are not unique
-
-        return list(retrieved_statements)
+        question_embeddings = self._encode_query(query)
+        retrieved_statements = []
+        top_k_statements = semantic_search(question_embeddings, self.passages_embeddings, top_k=top_k)[0]
+        for statement in top_k_statements:
+            retrieved_statements.append(self.passages[statement['corpus_id']])
+        return retrieved_statements
 
     def add_ckb_statements_to_sample(self, sample, top_k):
         question = sample["question"]

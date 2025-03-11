@@ -97,17 +97,13 @@ def generate_text(model,
 
     # Convert to chat template
     inputs = tokenizer.apply_chat_template(prompt.messages, return_tensors="pt", add_generation_prompt=True).to(device)
-    
-    # Create the attention mask.
+
     attention_mask = torch.ones_like(inputs).to(device)
-
-    #inputs_text = tokenizer.apply_chat_template(prompt.messages, tokenize=False, add_generation_prompt=True) TO REMOVE
     
-
     # Generate text using the model.
     model_outputs = model.generate(
         inputs,
-        #attention_mask          =attention_mask,
+        attention_mask          =attention_mask,
         pad_token_id            =tokenizer.pad_token_id,
         max_new_tokens          =config.get("max_new_tokens", 512),
         do_sample               =config.get("do_sample", False),

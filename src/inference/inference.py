@@ -4,20 +4,14 @@ from collections import defaultdict
 from typing import List
 import csv
 import os
-import torch
-import random
-import transformers
 import tqdm
-from datasets import load_dataset
-from transformers import set_seed
 
 from src.utils.io_utils import load_ckb_statements, prepare_output, load_yaml
 from src.retriever.retriever import Retriever
-from src.utils.model_utils import get_model_settings, generate_text, load_model_and_tokenizer
+from src.utils.model_utils import generate_text, load_model_and_tokenizer
 from src.datasets.dataset_loader import QADataset
-from src.utils.random_utils import set_seed_forall
 from src.utils.prompt_utils import build_prompts
-from settings.aliases import PROMPT_TYPE_ALIASES, MODEL_NAME_TO_TAG, MODEL_TAG_TO_NAME, DATASET_NAME_TO_TAG, DATASET_TAG_TO_NAME
+from settings.aliases import PROMPT_TYPE_ALIASES, MODEL_TAG_TO_NAME, DATASET_NAME_TO_TAG, DATASET_TAG_TO_NAME
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
