@@ -22,12 +22,16 @@ def load_model_and_tokenizer(model_name, device=torch.device("cuda" if torch.cud
             trust_remote_code=True,
             torch_dtype=torch.bfloat16,
         )
-    model.model_name = model_name #TODO remove?
+
     tokenizer = AutoTokenizer.from_pretrained(
             model_name,
             trust_remote_code=True,
             padding_side="left"
         )
+    
+    # Ensure pad_token_id is set
+    tokenizer.pad_token = tokenizer.eos_token
+    tokenizer.pad_token_id = tokenizer.eos_token_id
     return model, tokenizer
 
 
@@ -79,18 +83,6 @@ def get_statements(llm, synsets_all_samples, definitions_all_samples):
         sample_output = get_statement(llm, synsets_list, definitions_list)
         all_outputs.append(sample_output)
     return all_outputs
-
-def truncate_inputs(inputs, model_name):
-    if model_name == "meta-llama/Llama-3.2-3B-Instruct":
-        return inputs[:, :-1]
-    elif model_name == "meta-llama/Llama-3.1-8B-Instruct":
-        return inputs[:, :-1]
-    elif model_name == "Qwen/Qwen2.5-1.5B-Instruct":
-        return inputs[:, :-2]
-    elif model_name == "Qwen/Qwen2.5-7B-Instruct":
-        return inputs[:, :-2]
-    else:
-        return inputs[:, :-1]
     
 # Generate text
 def generate_text(model,
@@ -111,21 +103,15 @@ def generate_text(model,
 
     #inputs_text = tokenizer.apply_chat_template(prompt.messages, tokenize=False, add_generation_prompt=True) TO REMOVE
     
-    # Ensure pad_token_id is set
-    if tokenizer.pad_token_id is None:
-        tokenizer.pad_token_id = tokenizer.eos_token_id
 
-    model.eval()
     # Generate text using the model.
     model_outputs = model.generate(
         inputs,
-        attention_mask          =attention_mask,
+        #attention_mask          =attention_mask,
         pad_token_id            =tokenizer.pad_token_id,
         max_new_tokens          =config.get("max_new_tokens", 512),
         do_sample               =config.get("do_sample", False),
         temperature             =config.get("temperature", 0.0),
-        top_p                   =config.get("top_p", 1.0),
-        num_beams               =config.get("num_beams", 1),
         output_scores           =config.get("output_scores", True),
         return_dict_in_generate =config.get("return_dict_in_generate", True),
     )

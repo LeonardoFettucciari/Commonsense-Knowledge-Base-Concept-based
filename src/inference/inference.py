@@ -31,13 +31,14 @@ def inference(
     prompt_types: List[str],
     top_k_values: List[str],
 ):
+
     logging.info("Starting inference process...")
     logging.info(f"Loading configuration from: {config_path}")
     config = load_yaml(config_path)
 
     # Set seed for reproducibility
     logging.info(f"Setting seed: {config['seed']}")
-    set_seed_forall(config['seed'])
+    #set_seed_forall(config['seed'])
 
     # Load datasets
     logging.info(f"Loading dataset: {dataset_name}")
