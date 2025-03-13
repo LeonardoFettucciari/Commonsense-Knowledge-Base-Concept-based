@@ -93,6 +93,7 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
                 "xfinder_acc_qwen": result_qwen[-1]
             })
 
+            row = {k: v for k, v in row.items() if k is not None}
             writer.writerow(row)
         
         avg_accuracy_llama = statistics.mean(xfinder_accuracies_llama)

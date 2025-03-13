@@ -43,7 +43,7 @@ def cleanup_pipeline(input_path, output_dir, steps):
         data = step(data)
 
     # Save final output
-    output_path = os.path.join(output_dir, f"cleaned_{len(steps)}_steps_{os.path.basename(input_path)}")
+    output_path = os.path.join(output_dir, os.path.basename(input_path))
     save_jsonl(data, output_path)
     
 
