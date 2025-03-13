@@ -8,7 +8,7 @@ from natsort import natsorted
 from xfinder.eval import Evaluator
 from tqdm import tqdm
 from huggingface_hub import snapshot_download
-from src.utils.io_utils import jsonl_to_tsv, bundle_json
+from src.utils.io_utils import write_accuracy_summary
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
@@ -35,7 +35,12 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
     with open(input_file) as csvfile, open(output_path, "w") as f_out, open(output_path_json, "w") as f_out_json:
         reader = csv.DictReader(csvfile, delimiter='\t')
         fieldnames = reader.fieldnames  # Dynamically get column names
-        
+
+        # Remove prompt field from the output file
+        # it is only used for computing metrics in xFinder
+        if "prompt" in fieldnames:
+            fieldnames.remove("prompt")
+
         # Add xFinder output columns
         extended_fieldnames = fieldnames + [
             "xfinder_extracted_answer_llama", 
@@ -88,7 +93,6 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
                 "xfinder_acc_qwen": result_qwen[-1]
             })
 
-            row.pop("prompt", None) # Remove prompt field if present
             writer.writerow(row)
         
         avg_accuracy_llama = statistics.mean(xfinder_accuracies_llama)
@@ -96,8 +100,9 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
         logging.info(f"Average xFinder accuracy for LLaMA: {avg_accuracy_llama}")
         logging.info(f"Average xFinder accuracy for Qwen: {avg_accuracy_qwen}")
         
+        # Write temporary JSON file that will be used later for summary
         json.dump({
-            "file_name": os.path.basename(input_file),
+            "prompt_type": os.path.splitext(os.path.basename(input_file))[0].split("prompt=")[1],
             "xfinder_avg_accuracy_llama": avg_accuracy_llama,
             "xfinder_avg_accuracy_qwen": avg_accuracy_qwen
         }, f_out_json)
@@ -119,29 +124,38 @@ def main(args):
     # Scan all files inside input_dir
     for file in os.listdir(input_dir):
         file_path = os.path.join(input_dir, file)  
-        if os.path.isfile(file_path):  
+        if os.path.isfile(file_path):
             logging.info(f"Processing file: {file}")
             filename, _ = os.path.splitext(os.path.basename(file))
+            
+            # Define temporary output files
             output_path = os.path.join(output_dir, f"xFinder|{filename}.tsv")
             output_path_json = os.path.join(output_dir, f"xFinder|{filename}.json")
-            # Run evaluation on selected file            
-            evaluate(os.path.join(input_dir, file),
+            
+            # Check for the final results file (xFinder_accuracy|FILE_PREFIX.jsonl)
+            prefix_part = file.split("prompt=")[0] + "prompt="
+            final_results_path = os.path.join(output_dir, f"xFinder_accuracy|{prefix_part}.jsonl")
+            if os.path.exists(final_results_path) and not args.overwrite:
+                logging.info(f"Skipping {file} as final result file {final_results_path} already exists. Use --overwrite to force re-computation.")
+                continue
+
+            # Run evaluation on the selected file            
+            evaluate(file_path,
                      output_path,
                      output_path_json,
                      xfinder_evaluator_llama,
                      xfinder_evaluator_qwen)
         
-    # Write summary file for accuracy of all prompts types i.e. zeroshot-accuracy, etc.
-    accuracy_summary_output_name = f"xFinder|accuracies.jsonl"
-    bundle_json(output_dir, accuracy_summary_output_name)
-    jsonl_to_tsv(os.path.join(output_dir, accuracy_summary_output_name))
+    # Write summary file for accuracy of all prompt types (e.g., zeroshot-accuracy, etc.)
+    write_accuracy_summary(output_dir)
     logging.info("Evaluation process completed.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate models on MCQA with xFinder")
-    parser.add_argument('--input_dir', help='Directory containing the output of the models on the MCQA task.')
-    parser.add_argument('--output_dir', help='Directory to save the evaluation results.')
-    parser.add_argument('--model_dir', default='models', help='Directory to save the evaluation models.')
+    parser.add_argument('--input_dir', required=True, help='Directory containing the output of the models on the MCQA task.')
+    parser.add_argument('--output_dir', required=False, help='Directory to save the evaluation results.')
+    parser.add_argument('--model_dir', default='models', required=False, help='Directory to save the evaluation models.')
+    parser.add_argument('--overwrite', action='store_true', help='Force re-computation even if final results already exist.')
     args = parser.parse_args()
 
     # Default value for --output_dir

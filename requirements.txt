@@ -4,7 +4,7 @@ jsonlines
 tqdm 
 google-generativeai
 sentence_transformers
-xfinder
+git+https://github.com/Andrew-Wyn/xFinder.git
 torch
 transformers
 natsort

@@ -86,6 +86,16 @@ def load_ckb_statements(ckb_path):
     
     return ckb_statements
 
+def load_kb_as_dict(jsonl_path):
+    kb_dict = {}
+    with open(jsonl_path, 'r', encoding='utf-8') as f:
+        for line in f:
+            if not line.strip():
+                continue
+            data = json.loads(line)
+            kb_dict[data["synset_name"]] = data["statements"] # Given a synset, return its statements
+    return kb_dict
+
 def prepare_output(sample, prompt, answer):
     output = {
         "id": sample["id"],
@@ -128,21 +138,44 @@ def jsonl_to_tsv(jsonl_file, tsv_file=None):
         for line in infile:
             writer.writerow(json.loads(line.strip()))
 
-def bundle_json(input_dir, output_name):
-    output_file = os.path.join(input_dir, output_name)
-    if os.path.exists(output_file):
-        os.remove(output_file)
+def write_accuracy_summary(input_dir):
+    bundle_json_by_prefix(input_dir)
+    all_jsonl_to_tsv(input_dir)
 
+def bundle_json_by_prefix(input_dir):
     files = natsorted(os.listdir(input_dir))
+    prefix_dict = {}
 
+    # Group files by prefix
     for file in files:
-        input_file = os.path.join(input_dir, file)  
-        if os.path.isfile(input_file) and input_file.endswith('json'):  
-            with open(input_file, "r", encoding="utf-8") as infile:
-                data = json.load(infile)
-                with open(output_file, "a", encoding="utf-8") as outfile:
-                    outfile.write(json.dumps(data) + "\n")
-            os.remove(input_file)
+        if file.endswith(".json"):
+            prefix_part = file.split("prompt=")[0] + "prompt="
+            if prefix_part not in prefix_dict:
+                prefix_dict[prefix_part] = []
+            prefix_dict[prefix_part].append(file)
+
+    # Process each prefix group
+    for prefix, grouped_files in prefix_dict.items():
+        output_name = prefix.replace("xFinder", "xFinder_accuracy").replace("prompt=", ".jsonl")
+        output_file = os.path.join(input_dir, output_name)
+
+        if os.path.exists(output_file):
+            os.remove(output_file)
+
+        for file in grouped_files:
+            input_file = os.path.join(input_dir, file)
+            if os.path.isfile(input_file):
+                with open(input_file, "r", encoding="utf-8") as infile:
+                    data = json.load(infile)
+                    with open(output_file, "a", encoding="utf-8") as outfile:
+                        outfile.write(json.dumps(data) + "\n")
+                os.remove(input_file)
+
+def all_jsonl_to_tsv(input_dir):
+    for file in os.listdir(input_dir):
+        if file.endswith(".jsonl"):  
+            file_path = os.path.join(input_dir, file)  
+            jsonl_to_tsv(file_path) 
 
 def save_jsonl(data, file_path):
     """Save a list of dictionaries into a JSONL file."""

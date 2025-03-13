@@ -6,12 +6,14 @@ import csv
 import os
 import tqdm
 
-from src.utils.io_utils import load_ckb_statements, prepare_output, load_yaml
+from src.utils.io_utils import load_kb_as_dict, prepare_output, load_yaml
 from src.retriever.retriever import Retriever
+from src.utils.data_utils import concatenate_question_choices, synsets_from_samples
 from src.utils.model_utils import generate_text, load_model_and_tokenizer
 from src.datasets.dataset_loader import QADataset
-from src.utils.prompt_utils import build_prompts
+from src.utils.prompt_utils import build_prompts, get_prompt_settings
 from settings.aliases import PROMPT_TYPE_ALIASES, MODEL_TAG_TO_NAME, DATASET_NAME_TO_TAG, DATASET_TAG_TO_NAME
+from src.utils.string_utils import prepare_prompt_output_path, prepare_model_output_path
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -30,24 +32,62 @@ def inference(
     logging.info(f"Loading configuration from: {config_path}")
     config = load_yaml(config_path)
 
-    # Set seed for reproducibility
-    logging.info(f"Setting seed: {config['seed']}")
-    #set_seed_forall(config['seed'])
+    # Analyze prompt types to load only required data
+    prompt_types = [PROMPT_TYPE_ALIASES.get(t.lower(), t.lower()) for t in prompt_types]
+    # Check if fewshot, cot or knowledge required and set flags
+    prompt_settings = get_prompt_settings(prompt_types)
+    # Dataset tag
+    dataset_tag = DATASET_NAME_TO_TAG[dataset_name]
 
-    # Load datasets
+
+    # Load eval data
     logging.info(f"Loading dataset: {dataset_name}")
-    eval_dataset = QADataset(config[f"{DATASET_NAME_TO_TAG[dataset_name]}"])
-    fewshot_dataset = QADataset(config[f"{DATASET_NAME_TO_TAG[dataset_name]}_fewshot"])
+    eval_dataset = QADataset(config[f"{dataset_tag}"])
     logging.info(f"Loaded {len(eval_dataset.samples)} samples for evaluation.")
 
-    # Load knowledge base
-    logging.info(f"Loading knowledge base from: {ckb_path}")
-    ckb_statements = load_ckb_statements(ckb_path)
-    logging.info(f"Loaded {len(ckb_statements)} knowledge base statements.")
+    # Fewshot data
+    fewshot_dataset = None
+    if prompt_settings["fewshot"]:
+        logging.info(f"Loading fewshot examples: {config[dataset_tag + '_fewshot']}")
+        fewshot_dataset = QADataset(config[f"{dataset_tag}_fewshot"])
+        logging.info(f"Loaded {len(fewshot_dataset.samples)} fewshot examples.")
+    
 
-    # Initialize retriever and retrieve statements
-    logging.info("Initializing retriever and retrieving statements for dataset samples.")
-    retriever = Retriever(ckb_statements, config["retriever"])
+    # Knowledge data
+    ckb_statements = None
+    if prompt_settings["knowledge"]:
+        logging.info(f"Loading knowledge base as a dictionary synset:statements from: {ckb_path}")
+        ckb = load_kb_as_dict(ckb_path)
+        logging.info(f"Knowledge base loaded.")
+
+        # Extract synsets from samples
+        all_samples = eval_dataset.samples + (fewshot_dataset.samples or [])
+        formatted_questions = concatenate_question_choices(all_samples)
+        synset_lists = synsets_from_samples(formatted_questions)
+        
+        # Retrieve statements of such synsets from ckb dict
+        ckb_statements = list(set([
+            statement
+            for synset_list in synset_lists
+            for synset in synset_list
+            for statement in ckb[synset.name()]
+        ]))
+
+        logging.info("Initializing retriever...")
+        retriever = Retriever(ckb_statements, config["retriever"], save_embeddings=False)
+
+        logging.info(f"Retrieveing {max(top_k_values)} statements for evaluation dataset...")
+        eval_formatted_questions = concatenate_question_choices(eval_dataset.samples)
+        eval_ckb_statements = retriever.retrieve(eval_formatted_questions, max(top_k_values))
+        retriever.add_ckb_statements_to_samples(eval_dataset.samples, eval_ckb_statements)
+
+        # Knowledge and fewshot data
+        if prompt_settings["fewshot"]:
+            logging.info(f"Retrieveing {max(top_k_values)} statements for fewshot examples...")
+            fewshot_formatted_questions = concatenate_question_choices(fewshot_dataset.samples)
+            fewshot_ckb_statements = retriever.retrieve(fewshot_formatted_questions, max(top_k_values))
+            retriever.add_ckb_statements_to_samples(fewshot_dataset.samples, fewshot_ckb_statements)
+
 
     # Load model and tokenizer
     logging.info(f"Loading model and tokenizer: {model_name}")
@@ -62,16 +102,12 @@ def inference(
         desc=f"Running inference on {model_name}...",
     )
     
-    prompt_types = [PROMPT_TYPE_ALIASES.get(t.lower(), t.lower()) for t in prompt_types]
     ground_truths = []
     answers = defaultdict(list)
     outputs = defaultdict(list)
     
     for i, sample in iterator:
         logging.debug(f"Processing sample {i+1}/{len(eval_dataset.samples)}")
-
-        # Retrieve statements for given sample
-        retriever.add_ckb_statements_to_sample(sample, max(top_k_values))
 
         # Build prompts
         prompts = build_prompts(sample, prompt_types, top_k_values, fewshot_examples=fewshot_dataset.samples)
@@ -86,12 +122,12 @@ def inference(
         ground_truths.append(sample["answerKey"])
     
     # Save model output
-    model_output_path = os.path.join(output_dir, os.path.basename(ckb_path), DATASET_NAME_TO_TAG[dataset_name], model_name.split('/')[1])
+    model_output_path = prepare_model_output_path(output_dir, dataset_tag, model_name)
     os.makedirs(model_output_path, exist_ok=True)
     logging.info(f"Saving inference results to: {model_output_path}")
     
     for prompt_name, output in outputs.items():
-        prompt_results_output_path = os.path.join(model_output_path, f"{prompt_name}.tsv")
+        prompt_results_output_path = prepare_prompt_output_path(model_output_path, os.path.basename(ckb_path), prompt_name, model_name, retriever_type="synset_filtered")
         with open(prompt_results_output_path, mode="w", newline="", encoding="utf-8") as file:
             tsv_writer = csv.DictWriter(file, fieldnames=output[0].keys(), delimiter="\t")
             tsv_writer.writeheader()
@@ -105,16 +141,16 @@ if __name__ == "__main__":
     parser.add_argument("--model_name", type=str, required=True, help="Model name from Hugging Face.")
     parser.add_argument("--dataset_name", type=str, required=True, help="Dataset name from Hugging Face.")
     parser.add_argument("--ckb_path", type=str, required=True, help="Path to the Knowledge Base file.")
+    parser.add_argument("--output_dir", type=str, required=True, help="Path to store the outputs.")
     parser.add_argument("--config_path", default="settings/config.yaml", type=str, required=False, help="Path to the config file.")
-    parser.add_argument("--output_dir", default="outputs/inference/", type=str, required=False, help="Path to store the outputs.")
     parser.add_argument("--prompt_types", default="all", type=str, required=False, help="Comma-separated list of prompt types to use.")
     parser.add_argument("--top_k_values", default="1,3,5,10,20", type=str, required=False, help="Comma-separated list of prompt types to use.")
 
     args = parser.parse_args()
 
     # Replace eventual aliases
-    model_name = MODEL_TAG_TO_NAME.get(args.model_name, args.model_name)
-    dataset_name = DATASET_TAG_TO_NAME.get(args.dataset_name, args.dataset_name)
+    args.model_name = MODEL_TAG_TO_NAME.get(args.model_name, args.model_name)
+    args.dataset_name = DATASET_TAG_TO_NAME.get(args.dataset_name, args.dataset_name)
 
     # Convert prompt types into list
     args.prompt_types = args.prompt_types.split(",")
