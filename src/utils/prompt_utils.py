@@ -52,7 +52,7 @@ def build_prompts(sample, prompt_types, top_k_values, fewshot_examples=[]):
                                             ))
     return prompts
 
-def get_prompt_settings(prompt_types):
+def get_prompt_requirements(prompt_types):
     knowledge = any("knowledge" in s.lower() or "all" in s.lower() for s in prompt_types)
     fewshot = any("fewshot" in s.lower() or "all" in s.lower() for s in prompt_types)
     cot = any("cot" in s.lower() or "all" in s.lower() for s in prompt_types)

@@ -5,7 +5,7 @@
         "temperature": 0.0, 
         "top_p": 1.0,
         "num_beams": 1,
-        "output_scores": true,
-        "return_dict_in_generate": true
+        "output_scores": false,
+        "return_dict_in_generate": false
         }
 }

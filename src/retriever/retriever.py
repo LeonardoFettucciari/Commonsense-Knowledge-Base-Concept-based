@@ -6,28 +6,44 @@ from sentence_transformers import SentenceTransformer
 from sentence_transformers.util import semantic_search
 
 class Retriever:
-    def __init__(self, passages, retriever_config, cache_dir="cache", save_embeddings=True):
+
+    def __init__(self, retrieval_scope, ckb, config, cache_dir="cache"):
         """
         :param passages: List of passages (strings)
-        :param retriever_config: Dictionary with retriever settings (e.g. {"model_name": ...})
+        :param config: Dictionary with retriever settings (e.g. {"model_name": ...})
         :param cache_dir: Directory to store/read cached embeddings
         """
-        self.retriever_config = retriever_config
-        self.model_name = self.retriever_config["model_name"]
+        self.retrieval_scope = retrieval_scope
+        self.ckb = ckb
+        self.config = config
         self.cache_dir = cache_dir
         
+        self.model_name = self.config["model_name"]
         logging.info(f"Initializing Retriever with model: {self.model_name}")
         self.model = SentenceTransformer(self.model_name)
+                
+        if self.retrieval_scope == "full_ckb":
+            self.save_embeddings = True
+            # CKB here is a list of all ckb statements
+            self.passages = ckb
+
+        elif self.retrieval_scope == "cner_synset_filtered_kb":
+            self.save_embeddings = False
+            # We won't set passages right now, because we do that per-sample
+            # CKB here is a dict synset:statements
+            self.passages = []
+            
+        else:
+            self.passages = []
         
         # Ensure cache directory exists
         os.makedirs(self.cache_dir, exist_ok=True)
         # Compute a hash of the passages + model name for uniqueness
-        self.passages_hash = self._compute_hash(passages, self.model_name)
+        self.passages_hash = self._compute_hash(self.passages, self.model_name)
         # Embeddings file path
         self.embeddings_file = os.path.join(self.cache_dir, f"embeddings_{self.model_name.replace('/', '_')}_{self.passages_hash}.pt")
-        
-        self.passages = passages
-        self.passages_embeddings = self._load_or_compute_embeddings() if save_embeddings else self.compute_embeddings()
+        self.passages_embeddings = self._load_or_compute_embeddings() if self.save_embeddings else self.compute_embeddings()
+
 
     @staticmethod
     def _compute_hash(passages, model_name):
@@ -83,16 +99,34 @@ class Retriever:
             raise ValueError(f"Model {self.model_name} not supported.")
 
     def retrieve(self, queries, top_k, batch_size=512):
-        question_embeddings = self._encode_query(queries)
-        top_k_statements_batches = semantic_search(question_embeddings, self.passages_embeddings, top_k=top_k, query_chunk_size=batch_size)
-        all_batches_statements = [
-            [self.passages[statement['corpus_id']] for statement in batch]
-            for batch in top_k_statements_batches
-        ]
-        return all_batches_statements
+        queries = [queries] if not isinstance(queries, list) else queries
 
-    def add_ckb_statements_to_samples(self, samples, ckb_statements_list):
-        if len(samples) != len(ckb_statements_list):
-            logging.warning(f"Mismatch: {len(samples)} samples but {len(ckb_statements_list)} ckb_statements.")
-        for s, statements in zip(samples, ckb_statements_list):
-            s["ckb_statements"] = statements or []
+        # Compute the actual number of batches
+        num_batches = max(1, len(queries) // batch_size + (len(queries) % batch_size > 0))
+        # Suppress logging **only** if there's exactly one batch
+        if num_batches == 1:
+            logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
+
+        question_embeddings = self._encode_query(queries)
+        top_k_statements_per_question = semantic_search(question_embeddings, self.passages_embeddings, top_k=top_k, query_chunk_size=batch_size)
+        
+        # Restore logging level **only if it was suppressed**
+        if num_batches == 1:
+            logging.getLogger("sentence_transformers").setLevel(logging.INFO)
+        
+        all_questions_statements = [
+            [self.passages[statement['corpus_id']] for statement in question_statements]
+            for question_statements in top_k_statements_per_question
+        ]
+        return all_questions_statements
+
+    def set_passages(self, passages):
+        """
+        Sets (or updates) the passages and re-encodes them if necessary.
+        """
+        self.passages = [passages] if not isinstance(passages, list) else passages
+        # If you want to cache embeddings for these passages:
+        if self.save_embeddings:
+            self.passages_embeddings = self._load_or_compute_embeddings()
+        else:
+            self.passages_embeddings = self._encode_passages()

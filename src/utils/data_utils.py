@@ -2,22 +2,17 @@ from nltk.corpus import wordnet
 import os
 import json
 import csv
-from datasets import load_dataset
 from src.utils.model_utils import get_ner_pipeline
 
 
 
 def extract_unique_words(ner_results):
-    unique_words_all_samples = []   
-    for sample in ner_results:
-        words = [concept["word"] for concept in sample]
-        unique_words_sample = set(words)
-        for word in words:
-            split_words = word.split()
-            unique_words_sample.update(split_words)
-        unique_words_all_samples.append(list(unique_words_sample))
-
-    return unique_words_all_samples
+    words = [concept["word"] for concept in ner_results]
+    unique_words_sample = set(words)
+    for word in words:
+        split_words = word.split()
+        unique_words_sample.update(split_words)
+    return list(unique_words_sample)
 
 def wordnet_concepts_extraction(unique_words_all_samples):
     synsets_all_samples = []
@@ -36,27 +31,31 @@ def get_all_wordnet_synsets(pos):
     return list(wordnet.all_synsets(pos=pos))
 
 def from_words_to_synsets(list_of_words):
-    flatten_list = [w for words in list_of_words for w in words]
-    flatten_list = list(set(flatten_list))
-    return [s for word in flatten_list for s in wordnet.synsets(word) if wordnet.synsets(word) and s.pos() == 'n']
+    flatten_list = [word for word in list_of_words]
+    return [synset for word in flatten_list for synset in wordnet.synsets(word) if wordnet.synsets(word) and synset.pos() == 'n']
 
 def synsets_from_samples(samples):
+    samples = [samples] if not isinstance(samples, list) else samples # Reads single string or list of strings
+
     # Run NER pipeline
     ner_pipeline = get_ner_pipeline("Babelscape/cner-base")
     ner_results = ner_pipeline(samples)
 
     # Extract unique words for each sample separately
-    unique_words_per_sample = [extract_unique_words([ner_result]) for ner_result in ner_results]
+    unique_words_per_sample = [extract_unique_words(ner_result) for ner_result in ner_results]
 
     # Convert words to synsets for each sample separately
-    return [from_words_to_synsets(unique_words) for unique_words in unique_words_per_sample]
+    synsets = [from_words_to_synsets(unique_words) for unique_words in unique_words_per_sample]
+
+    return synsets[0] if len(synsets) == 1 else synsets
 
 
 def concatenate_question_choices(samples):
+        samples = [samples] if not isinstance(samples, list) else samples # Reads single string or list of strings
         queries = []
         for s in samples:
             question = s["question"]
             choices = " ".join([f"{label}. {choice}" for label, choice in zip(s['choices']['label'], s['choices']['text'])])
             query = f"{question} {choices}" # Query is question + choices
             queries.append(query)
-        return queries
+        return queries[0] if len(queries) == 1 else queries # Returns single string or list of strings

@@ -4,6 +4,7 @@ import re
 from natsort import natsorted
 import yaml
 import os
+import logging
 
 def load_yaml(path):
     with open(path, "r") as file:
@@ -74,6 +75,26 @@ def save_output_to_file(relative_path,
                 "\n".join("\n".join(o["statements"]) for o in outputs),
             ]
             tsv_writer.writerow(row_list)
+
+def load_ckb(ckb_path: str, retrieval_scope: str):
+    """
+    Load the knowledge base from `ckb_path`.
+    Depending on retrieval_scope, we might load a dict or a list, etc.
+    """
+    if retrieval_scope == "cner_synset_filtered_kb":
+        logging.info("Loading CKB as a dictionary for synset-based retrieval.")
+        ckb_dict = load_kb_as_dict(ckb_path)
+        return ckb_dict
+
+    elif retrieval_scope == "full_ckb":
+        logging.info("Loading CKB as a list of statements.")
+        ckb_list = load_ckb_statements(ckb_path)
+        return ckb_list
+
+    else:
+        logging.warning(f"Unknown retrieval_scope '{retrieval_scope}'. Defaulting to empty.")
+        return []
+
 
 def load_ckb_statements(ckb_path):
     # Load ckb from path
@@ -156,7 +177,7 @@ def bundle_json_by_prefix(input_dir):
 
     # Process each prefix group
     for prefix, grouped_files in prefix_dict.items():
-        output_name = prefix.replace("xFinder", "xFinder_accuracy").replace("prompt=", ".jsonl")
+        output_name = prefix.replace("xFinder", "xFinder_accuracy").replace("|prompt=", ".jsonl")
         output_file = os.path.join(input_dir, output_name)
 
         if os.path.exists(output_file):

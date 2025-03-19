@@ -111,7 +111,8 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
 def main(args):
     input_dir = args.input_dir
     output_dir = args.output_dir
-    model_dir = args.model_dir    
+    model_dir = args.model_dir
+    overwrite = args.overwrite
     
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -136,7 +137,7 @@ def main(args):
             # Check for the final results file (xFinder_accuracy|FILE_PREFIX.jsonl)
             prefix_part = file.split("prompt=")[0] + "prompt="
             final_results_path = os.path.join(output_dir, f"xFinder_accuracy|{prefix_part}.jsonl")
-            if os.path.exists(final_results_path) and not args.overwrite:
+            if os.path.exists(final_results_path) and not overwrite:
                 logging.info(f"Skipping {file} as final result file {final_results_path} already exists. Use --overwrite to force re-computation.")
                 continue
 

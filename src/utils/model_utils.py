@@ -108,13 +108,21 @@ def generate_text(model,
         max_new_tokens          =config.get("max_new_tokens", 512),
         do_sample               =config.get("do_sample", False),
         temperature             =config.get("temperature", 0.0),
-        output_scores           =config.get("output_scores", True),
-        return_dict_in_generate =config.get("return_dict_in_generate", True),
+        output_scores           =config.get("output_scores", False),
+        return_dict_in_generate =config.get("return_dict_in_generate", False),
     )
 
-    # Decode the generated text.
+    # If return_dict_in_generate=True, 'model_outputs' is a dictionary with 'sequences'
+    # If return_dict_in_generate=False, 'model_outputs' is a tensor directly.
+    if config.get("return_dict_in_generate", False):
+        sequences = model_outputs.sequences
+    else:
+        sequences = model_outputs
+
+    # Decode only the newly generated tokens after the input prompt
+    # Shape: [batch_size, seq_length]
     generated_text = tokenizer.decode(
-        model_outputs.sequences[0][inputs[0].shape[0] :],
+        sequences[0][inputs.shape[1]:],
         skip_special_tokens=True,
     )
 

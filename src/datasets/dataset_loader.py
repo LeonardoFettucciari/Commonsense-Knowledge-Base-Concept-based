@@ -89,6 +89,66 @@ class QADataset(Dataset):
                     "answerKey": answerKey,
                     "cot": cot,
                     })
+        if(self.dataset_name == "csqa"):
+            for sample in self.dataset:
+                id = sample["id"]
+                question = sample["question"]
+                choices = sample["choices"]
+                answerKey = sample["answerKey"]
+
+                samples.append({
+                    "id": id,
+                    "question": question,
+                    "choices": choices,
+                    "answerKey": answerKey,
+                    })
+        elif(self.dataset_name == "csqa_fewshot"):
+            for sample in self.dataset:
+                id = sample["id"]
+                question = sample["question"]
+                choices = json.loads(sample["choices"])
+                choices_texts = choices["text"]
+                choices_labels = choices["label"]
+                answerKey = sample["answerKey"]
+                cot = sample["cot"]
+
+                samples.append({
+                    "id": id,
+                    "question": question,
+                    "choices": {"text": choices_texts, "label": choices_labels},
+                    "answerKey": answerKey,
+                    "cot": cot,
+                    })
+        if(self.dataset_name == "qasc"):
+            for sample in self.dataset:
+                id = sample["id"]
+                question = sample["question"]
+                choices = sample["choices"]
+                answerKey = sample["answerKey"]
+
+                samples.append({
+                    "id": id,
+                    "question": question,
+                    "choices": choices,
+                    "answerKey": answerKey,
+                    })
+        elif(self.dataset_name == "qasc_fewshot"):
+            for sample in self.dataset:
+                id = sample["id"]
+                question = sample["question"]
+                choices = json.loads(sample["choices"])
+                choices_texts = choices["text"]
+                choices_labels = choices["label"]
+                answerKey = sample["answerKey"]
+                cot = sample["cot"]
+
+                samples.append({
+                    "id": id,
+                    "question": question,
+                    "choices": {"text": choices_texts, "label": choices_labels},
+                    "answerKey": answerKey,
+                    "cot": cot,
+                    })
         else:
             raise ValueError(f"Unsupported dataset: {self.dataset_name}")
                 

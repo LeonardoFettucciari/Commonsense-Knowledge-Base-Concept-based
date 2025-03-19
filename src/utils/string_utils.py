@@ -1,12 +1,36 @@
 import logging
 import os
 
-def prepare_prompt_output_path(model_output_path, ckb_name, prompt_name, model_name, retriever_type):
-    ckb_data_value = extract_value_from_key_in_file_name(filename=ckb_name, key="ckb_data")
-    return os.path.join(model_output_path, f"ckb={ckb_data_value}|retriever={retriever_type}|model={extract_model_name(model_name)}|prompt={prompt_name}.tsv")
+def prepare_prompt_output_path(model_output_path, extension, **kwargs):
+    """
+    Constructs an output file path by appending key-value pairs and an extension.
 
-def prepare_model_output_path(output_dir, dataset_name, model_name):
-    return os.path.join(output_dir, dataset_name, extract_model_name(model_name))
+    Args:
+        model_output_path (str): The base directory for the output file.
+        extension (str): The file extension (e.g., 'txt', 'json').
+        **kwargs: Key-value pairs to include in the filename.
+
+    Returns:
+        str: The full output file path.
+    """
+    if not kwargs:
+        raise ValueError("At least one key-value pair must be provided in kwargs.")
+
+    output_name = ""
+    if "knowledge" in kwargs['prompt']:
+        keys_to_keep = ['ckb', 'retrieval_scope', 'model', 'prompt']
+        sub_dict = {k: kwargs[k] for k in keys_to_keep if k in kwargs}
+        output_name = "|".join(f"{key}={value}" for key, value in kwargs.items())
+    else:
+        keys_to_keep = ['model', 'prompt']
+        sub_dict = {k: kwargs[k] for k in keys_to_keep if k in kwargs}
+        output_name = "|".join(f"{key}={value}" for key, value in sub_dict.items())
+    
+    output_name = f"{output_name}.{extension}"
+    return os.path.join(model_output_path, output_name)
+
+def prepare_model_output_path(output_dir, dataset_name, base_model_name):
+    return os.path.join(output_dir, dataset_name, base_model_name)
 
 def extract_value_from_key_in_file_name(filename, key):
     # Split the filename by the '|' separator to get individual key=value parts.
@@ -21,7 +45,29 @@ def extract_value_from_key_in_file_name(filename, key):
     # Return None if key is not found.
     return None
 
-def extract_model_name(model_name):
+def extract_key_value_pairs(filename):
+    """
+    Extracts all key-value pairs from a given filename string.
+    
+    Args:
+        filename (str): The filename containing key-value pairs separated by '|'.
+    
+    Returns:
+        dict: A dictionary containing extracted key-value pairs.
+    """
+    key_value_dict = {}
+    
+    # Split the filename by '|' to get individual key=value parts.
+    parts = filename.split('|')
+    
+    for part in parts:
+        if '=' in part:
+            k, v = part.split('=', 1)  # Split into key and value (only once).
+            key_value_dict[k] = v
+    
+    return key_value_dict
+
+def extract_base_model_name(model_name):
     if '/' in model_name:
         return model_name.split('/')[-1]
     return model_name
