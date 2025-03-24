@@ -89,7 +89,7 @@ class QADataset(Dataset):
                     "answerKey": answerKey,
                     "cot": cot,
                     })
-        if(self.dataset_name == "csqa"):
+        elif(self.dataset_name == "csqa"):
             for sample in self.dataset:
                 id = sample["id"]
                 question = sample["question"]
@@ -119,7 +119,7 @@ class QADataset(Dataset):
                     "answerKey": answerKey,
                     "cot": cot,
                     })
-        if(self.dataset_name == "qasc"):
+        elif(self.dataset_name == "qasc"):
             for sample in self.dataset:
                 id = sample["id"]
                 question = sample["question"]

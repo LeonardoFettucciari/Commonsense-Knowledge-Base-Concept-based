@@ -203,7 +203,7 @@ def main() -> None:
     parser.add_argument(
         "--retrieval_scope",
         type=str,
-        required=True,
+        required=False,
         help="Retrieval scope, e.g., statements to use for reranking.",
     )
     parser.add_argument(

@@ -20,7 +20,7 @@ obqa_fewshot:
 qasc:
     dataset_name: "qasc"
     dataset_path: "allenai/qasc"
-    split: "test"
+    split: "validation"
     subset:
     max_samples:
     shuffle: false
@@ -35,7 +35,7 @@ qasc_fewshot:
 csqa:
     dataset_name: "csqa"
     dataset_path: "tau/commonsense_qa"
-    split: "test"
+    split: "validation"
     subset:
     max_samples:
     shuffle: false

@@ -16,10 +16,14 @@ MODEL_TAG_TO_NAME = {
 # Datasets
 DATASET_NAME_TO_TAG = {
     "allenai/openbookqa": "obqa",
+    "tau/commonsense_qa": "csqa",
+    "allenai/qasc": "qasc",
 }
 
 DATASET_TAG_TO_NAME = {
     "obqa": "allenai/openbookqa",
+    "csqa": "tau/commonsense_qa",
+    "qasc": "allenai/qasc",
 }
 
 # Prompts
