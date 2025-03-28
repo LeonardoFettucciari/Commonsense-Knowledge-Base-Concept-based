@@ -35,7 +35,7 @@ if [ "$VALID_DATASET" = "false" ]; then
 fi
 
 OUTPUT_DIR="outputs/inference"
-CKB_PATH="data/ckb/cleaned/ckb_data=wordnet|model=gemini-1.5-flash.jsonl"
+CKB_PATH="data/ckb/cleaned/full_ckb.jsonl"
 TOP_K_VALUES="1,3,5,10,20"
 
 # Run inference for multiple models
@@ -47,15 +47,7 @@ for MODEL_NAME in "meta-llama/Llama-3.2-3B-Instruct" "meta-llama/Llama-3.1-8B-In
         --model_name "$MODEL_NAME" \
         --dataset_name "$DATASET_NAME" \
         --ckb_path "$CKB_PATH" \
-        --prompt_types "zeroshot,zeroshot_cot,fewshot,fewshot_cot" \
-        --top_k_values "$TOP_K_VALUES"
-
-    python src/inference/inference.py \
-        --output_dir "$OUTPUT_DIR" \
-        --model_name "$MODEL_NAME" \
-        --dataset_name "$DATASET_NAME" \
-        --ckb_path "$CKB_PATH" \
-        --retrieval_scope "full_ckb" \
+        --retrieval_strategy "full_ckb" \
         --prompt_types "zeroshot_with_knowledge,fewshot_with_knowledge" \
         --top_k_values "$TOP_K_VALUES"
 
@@ -64,7 +56,7 @@ for MODEL_NAME in "meta-llama/Llama-3.2-3B-Instruct" "meta-llama/Llama-3.1-8B-In
         --model_name "$MODEL_NAME" \
         --dataset_name "$DATASET_NAME" \
         --ckb_path "$CKB_PATH" \
-        --retrieval_scope "cner_synset_filtered_kb" \
+        --retrieval_strategy "cner_filter" \
         --prompt_types "zeroshot_with_knowledge,fewshot_with_knowledge" \
         --top_k_values "$TOP_K_VALUES"
 done

@@ -3,7 +3,7 @@ import logging
 
 def retrieve_top_k_statements(retriever, sample, ckb, k, retrieval_scope):
 
-    if retrieval_scope == "cner_synset_filtered_kb": # CKB here is a dict synset:statements
+    if retrieval_scope == "cner_filter": # CKB here is a dict synset:statements
         # Concatenate question + choices
         formatted_question = concatenate_question_choices(sample)
         # Extract synsets from samples

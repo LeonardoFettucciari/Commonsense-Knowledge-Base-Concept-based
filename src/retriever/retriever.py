@@ -7,13 +7,13 @@ from sentence_transformers.util import semantic_search
 
 class Retriever:
 
-    def __init__(self, retrieval_scope, ckb, config, cache_dir="cache"):
+    def __init__(self, retrieval_strategy, ckb, config, cache_dir="cache"):
         """
         :param passages: List of passages (strings)
         :param config: Dictionary with retriever settings (e.g. {"model_name": ...})
         :param cache_dir: Directory to store/read cached embeddings
         """
-        self.retrieval_scope = retrieval_scope
+        self.retrieval_strategy = retrieval_strategy
         self.ckb = ckb
         self.config = config
         self.cache_dir = cache_dir
@@ -22,12 +22,12 @@ class Retriever:
         logging.info(f"Initializing Retriever with model: {self.model_name}")
         self.model = SentenceTransformer(self.model_name)
                 
-        if self.retrieval_scope == "full_ckb":
+        if self.retrieval_strategy == "full_ckb":
             self.save_embeddings = True
             # CKB here is a list of all ckb statements
             self.passages = ckb
 
-        elif self.retrieval_scope == "cner_synset_filtered_kb":
+        elif self.retrieval_strategy == "cner_filter":
             self.save_embeddings = False
             # We won't set passages right now, because we do that per-sample
             # CKB here is a dict synset:statements
@@ -68,7 +68,7 @@ class Retriever:
             logging.info("No cached embeddings found. Encoding passages...")
             embeddings = self._encode_passages()
             logging.info(f"Saving embeddings to {self.embeddings_file}")
-            torch.save(embeddings, self.embeddings_file)
+            torch.save(embeddings, self.embeddings_file, pickle_protocol=4)
         return embeddings
     
     def compute_embeddings(self):
@@ -81,39 +81,59 @@ class Retriever:
         return embeddings
 
     def _encode_passages(self, batch_size=512):
-        logging.info("Encoding passages...")
+        encoded_passages = []
+
         if self.model_name == "intfloat/e5-base-v2":
+            # Compute the number of batches
+            num_batches = max(1, len(self.passages) // batch_size + (len(self.passages) % batch_size > 0))
+
             passages_input = [f"passage: {s}" for s in self.passages]
-            embeddings = self.model.encode(passages_input, normalize_embeddings=True, batch_size=batch_size)
-            logging.info(f"Encoded {len(self.passages)} passages.")
-            return embeddings
+            
+            # Show the progress bar only if there are more than 10 batches
+            show_pbar = num_batches > 10
+
+            embeddings = self.model.encode(
+                passages_input,
+                normalize_embeddings=True,
+                batch_size=batch_size,
+                show_progress_bar=show_pbar
+            )
+            encoded_passages = embeddings
         else:
             raise ValueError(f"Model {self.model_name} not supported.")
         
+        return encoded_passages
+
+        
     def _encode_query(self, queries, batch_size=512):
-        logging.debug(f"Encoding queries.")
+        encoded_queries = []
         if self.model_name == "intfloat/e5-base-v2":
+            # Compute the number of batches
+            num_batches = max(1, len(queries) // batch_size + (len(queries) % batch_size > 0))
+
             queries_input = [f"query: {q}" for q in queries]
-            return self.model.encode(queries_input, normalize_embeddings=True, batch_size=batch_size)
+            
+            # Show the progress bar only if there are more than 10 batches
+            show_pbar = num_batches > 10
+
+            encoded_queries = self.model.encode(
+                queries_input,
+                normalize_embeddings=True,
+                batch_size=batch_size,
+                show_progress_bar=show_pbar
+            )
         else:
             raise ValueError(f"Model {self.model_name} not supported.")
+        
+        return encoded_queries
+
 
     def retrieve(self, queries, top_k, batch_size=512):
         queries = [queries] if not isinstance(queries, list) else queries
 
-        # Compute the actual number of batches
-        num_batches = max(1, len(queries) // batch_size + (len(queries) % batch_size > 0))
-        # Suppress logging **only** if there's exactly one batch
-        if num_batches == 1:
-            logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
-
         question_embeddings = self._encode_query(queries)
         top_k_statements_per_question = semantic_search(question_embeddings, self.passages_embeddings, top_k=top_k, query_chunk_size=batch_size)
-        
-        # Restore logging level **only if it was suppressed**
-        if num_batches == 1:
-            logging.getLogger("sentence_transformers").setLevel(logging.INFO)
-        
+ 
         all_questions_statements = [
             [self.passages[statement['corpus_id']] for statement in question_statements]
             for question_statements in top_k_statements_per_question

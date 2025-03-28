@@ -39,6 +39,37 @@ def load_local_file(file_path):
         return data
 
 
+def save_local_file(data, file_path):
+    if file_path.endswith(".json"):
+        with open(file_path, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+    elif file_path.endswith(".jsonl"):
+        with open(file_path, 'w', encoding='utf-8') as f:
+            for item in data:
+                f.write(json.dumps(item, ensure_ascii=False) + '\n')
+
+    elif file_path.endswith(".csv"):
+        if not data:
+            raise ValueError("No data to write to CSV.")
+        with open(file_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=data[0].keys())
+            writer.writeheader()
+            writer.writerows(data)
+
+    elif file_path.endswith(".tsv"):
+        if not data:
+            raise ValueError("No data to write to TSV.")
+        with open(file_path, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=data[0].keys(), delimiter='\t')
+            writer.writeheader()
+            writer.writerows(data)
+
+    else:
+        raise ValueError(f"Unsupported file extension: {file_path}")
+
+
+
 def save_output_to_file(relative_path,
                         samples,
                         all_outputs,
@@ -81,7 +112,7 @@ def load_ckb(ckb_path: str, retrieval_scope: str):
     Load the knowledge base from `ckb_path`.
     Depending on retrieval_scope, we might load a dict or a list, etc.
     """
-    if retrieval_scope == "cner_synset_filtered_kb":
+    if retrieval_scope == "cner_filter":
         logging.info("Loading CKB as a dictionary for synset-based retrieval.")
         ckb_dict = load_kb_as_dict(ckb_path)
         return ckb_dict
@@ -99,12 +130,10 @@ def load_ckb(ckb_path: str, retrieval_scope: str):
 def load_ckb_statements(ckb_path):
     # Load ckb from path
     ckb = load_local_file(ckb_path)
-                
     # Load statements from unknown generic ckb file
     ckb_statements = []
     for line in ckb:
         ckb_statements.extend(line['statements'])
-    
     return ckb_statements
 
 def load_kb_as_dict(jsonl_path):
@@ -122,14 +151,23 @@ def prepare_output(sample, prompt, answer):
         "id": sample["id"],
         "question": sample["question"],
         "choices": "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]),
-        "gold_truth": sample['answerKey'],
+        "ground_truth": sample['answerKey'],
         "model_output": answer,
     }
     if(prompt.top_k):
         output['ckb_statements'] = "\n".join(sample['ckb_statements'][:prompt.top_k])
-    output["prompt"] = prompt.text
-
     return output
+
+def prepare_output_refine(sample, prompt, original_answer, refine_answer):
+    return {
+        "id": sample["id"],
+        "question": sample["question"],
+        "choices": "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]),
+        "ground_truth": sample['answerKey'],
+        "ckb_statements": "\n".join(sample['ckb_statements'][:prompt.top_k]),
+        "model_output": original_answer,
+        "model_output_refine": refine_answer,
+    }
 
 def csv_to_dict(path):
     with open(path, mode="r", newline="") as file:
@@ -177,7 +215,7 @@ def bundle_json_by_prefix(input_dir):
 
     # Process each prefix group
     for prefix, grouped_files in prefix_dict.items():
-        output_name = prefix.replace("xFinder", "xFinder_accuracy").replace("|prompt=", ".jsonl")
+        output_name = "xFinder_accuracy|" + prefix.replace("|prompt=", ".jsonl")
         output_file = os.path.join(input_dir, output_name)
 
         if os.path.exists(output_file):

@@ -61,3 +61,12 @@ PROMPT_TYPE_ALIASES = {
     "fewshot_with_knowledge": "fewshot_with_knowledge",
 
 }
+
+FULL_PROMPT_TO_SHORT_PROMPT = {
+    "zeroshot": "zs",
+    "zeroshot_cot": "zscot",
+    "zeroshot_with_knowledge": "zsk",
+    "fewshot": "fs",
+    "fewshot_cot": "fscot",
+    "fewshot_with_knowledge": "fsk",
+}

@@ -1,3 +1,4 @@
+import copy
 from settings.prompts import (SYSTEM_ZEROSHOT, SYSTEM_ZEROSHOT_WITH_KNOWLEDGE, SYSTEM_ZEROSHOT_COT,
                               SYSTEM_FEWSHOT, SYSTEM_FEWSHOT_WITH_KNOWLEDGE, SYSTEM_FEWSHOT_COT)
 from src.prompts.llama_prompt import LlamaPrompt
@@ -62,3 +63,15 @@ def get_prompt_requirements(prompt_types):
         "fewshot": fewshot,
         "cot": cot
     }
+
+def extend_prompt_with_knowledge(prompt, sample, answer_text, top_k_values):
+    extended_prompts = []
+    for top_k in top_k_values:
+        extended_prompt_k = copy.deepcopy(prompt)
+        extended_prompt_k.top_k = top_k
+        extended_prompt_k.name = f"{prompt.name}_refine_{top_k}"
+        extended_prompt_k.append_messages({"role": "assistant", "content": answer_text})
+        ckb_statements = "\n".join(sample["ckb_statements"][:top_k])
+        extended_prompt_k.append_messages({"role": "user", "content": f"Given the following knowledge statements, refine your answer.\n\nKnowledge:\n{ckb_statements}"})
+        extended_prompts.append(extended_prompt_k)
+    return extended_prompts

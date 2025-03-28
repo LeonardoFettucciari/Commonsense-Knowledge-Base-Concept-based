@@ -55,6 +55,6 @@ for MODEL in $MODELS; do
     fi
 
     # Run evaluation
-    python src/evaluation/eval.py \
+    python src/evaluation/eval_refine.py \
         --input_dir "$INPUT_DIR"
 done

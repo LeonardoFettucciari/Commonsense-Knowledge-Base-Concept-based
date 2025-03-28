@@ -11,7 +11,6 @@ from huggingface_hub import snapshot_download
 from src.utils.io_utils import write_accuracy_summary
 from src.utils.string_utils import extract_key_value_pairs, shorten_prompt, key_value_pairs_to_filename
 
-
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
 
 def xfinder_setup(model_name, model_dir):
@@ -36,7 +35,7 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
     logging.info(f"Evaluating file: {input_file}")
     with open(input_file) as csvfile, open(output_path, "w") as f_out, open(output_path_json, "w") as f_out_json:
         reader = csv.DictReader(csvfile, delimiter='\t')
-        fieldnames = reader.fieldnames  # Dynamically get column names
+        fieldnames = reader.fieldnames
 
         # Add xFinder output columns
         extended_fieldnames = fieldnames + [
@@ -44,34 +43,53 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
             "xfinder_acc_llama", 
             "xfinder_extracted_answer_qwen", 
             "xfinder_acc_qwen",
-
+            "xfinder_extracted_answer_llama_refine", 
+            "xfinder_acc_llama_refine", 
+            "xfinder_extracted_answer_qwen_refine", 
+            "xfinder_acc_qwen_refine",
+            "good_answer_change_llama",
+            "bad_answer_change_llama",
+            "good_answer_change_qwen",
+            "bad_answer_change_qwen",
             "xfinder_extracted_answers_mismatch",
+            "xfinder_extracted_answers_mismatch_refine",
         ]
-        
+
         writer = csv.DictWriter(f_out, fieldnames=extended_fieldnames, delimiter='\t')
         writer.writeheader()
-        
+
+        # Accuracy lists
         xfinder_accuracies_llama = []
         xfinder_accuracies_qwen = []
+        xfinder_accuracies_llama_refine = []
+        xfinder_accuracies_qwen_refine = []
+
+        # Change tracking lists
+        good_answer_change_llama_list = []
+        bad_answer_change_llama_list = []
+        good_answer_change_qwen_list = []
+        bad_answer_change_qwen_list = []
+
+        # Mismatch tracking
         xfinder_extracted_answers_mismatches = []
-        
+        xfinder_extracted_answers_mismatches_refine = []
+
         for row in tqdm(reader, desc=f"Processing {input_file}"):
             try:
-                question = row.get("question", None)
-                choices = row.get("choices", None)
-                model_output = row.get("model_output", None)
-                ground_truth = row.get("ground_truth", None)
+                question = row.get("question")
+                choices = row.get("choices")
+                model_output = row.get("model_output")
+                model_output_refine = row.get("model_output_refine")
+                ground_truth = row.get("ground_truth")
 
+                answer_range = [elem.split(". ") for elem in choices.split('\n')]
+                formatted_choices = " ".join([f"({item[0]}) {item[1]}" for item in answer_range])
+                formatted_question = f"{question} Answer Choices: {formatted_choices}"
             except Exception as e:
                 logging.info(f"Error processing row: {e}")
-                continue  # Skip this row and move to the next one
+                continue
 
-            # Use xFinder formatting for the question and answer choices
-            answer_range = [elem.split(". ") for elem in choices.split('\n')]
-            formatted_choices = " ".join([f"({item[0]}) {item[1]}" for item in answer_range])
-            formatted_question = f"{question} Answer Choices: {formatted_choices}"
-
-            # Original output
+            # Evaluate original
             result_llama = xfinder_evaluator_llama.evaluate_single_item(
                 question=formatted_question,
                 llm_output=model_output,
@@ -79,7 +97,6 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
                 answer_type="alphabet_option",
                 correct_answer=ground_truth,
             )
-            
             result_qwen = xfinder_evaluator_qwen.evaluate_single_item(
                 question=formatted_question,
                 llm_output=model_output,
@@ -87,52 +104,109 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
                 answer_type="alphabet_option",
                 correct_answer=ground_truth,
             )
-            
+
             xfinder_accuracies_llama.append(result_llama[-1])
             xfinder_accuracies_qwen.append(result_qwen[-1])
-
-            # Check if the extracted answers are different
-            extracted_answer_llama = result_llama[-3]
-            extracted_answer_qwen = result_qwen[-3]
-            xfinder_extracted_answers_mismatch = 1 if extracted_answer_llama != extracted_answer_qwen else 0
-            xfinder_extracted_answers_mismatches.append(xfinder_extracted_answers_mismatch)
 
             row.update({
                 "xfinder_extracted_answer_llama": result_llama[-3],
                 "xfinder_acc_llama": result_llama[-1],
                 "xfinder_extracted_answer_qwen": result_qwen[-3],
                 "xfinder_acc_qwen": result_qwen[-1],
-
-                "xfinder_extracted_answers_mismatch": xfinder_extracted_answers_mismatch,
             })
 
-            # Write row to output file
+            # Evaluate refined
+            result_llama_refine = xfinder_evaluator_llama.evaluate_single_item(
+                question=formatted_question,
+                llm_output=model_output_refine,
+                answer_range=answer_range,
+                answer_type="alphabet_option",
+                correct_answer=ground_truth,
+            )
+            result_qwen_refine = xfinder_evaluator_qwen.evaluate_single_item(
+                question=formatted_question,
+                llm_output=model_output_refine,
+                answer_range=answer_range,
+                answer_type="alphabet_option",
+                correct_answer=ground_truth,
+            )
+
+            xfinder_accuracies_llama_refine.append(result_llama_refine[-1])
+            xfinder_accuracies_qwen_refine.append(result_qwen_refine[-1])
+
+            row.update({
+                "xfinder_extracted_answer_llama_refine": result_llama_refine[-3],
+                "xfinder_acc_llama_refine": result_llama_refine[-1],
+                "xfinder_extracted_answer_qwen_refine": result_qwen_refine[-3],
+                "xfinder_acc_qwen_refine": result_qwen_refine[-1],
+            })
+
+            # Compute mismatches
+            mismatch_orig = 1 if result_llama[-3] != result_qwen[-3] else 0
+            mismatch_refine = 1 if result_llama_refine[-3] != result_qwen_refine[-3] else 0
+            xfinder_extracted_answers_mismatches.append(mismatch_orig)
+            xfinder_extracted_answers_mismatches_refine.append(mismatch_refine)
+
+            row.update({
+                "xfinder_extracted_answers_mismatch": mismatch_orig,
+                "xfinder_extracted_answers_mismatch_refine": mismatch_refine,
+            })
+
+            # Track changes
+            good_llama = 1 if result_llama[-3] != result_llama_refine[-3] and result_llama_refine[-1] == 1 else 0
+            bad_llama = 1 if result_llama[-3] != result_llama_refine[-3] and result_llama_refine[-1] == 0 else 0
+            good_qwen = 1 if result_qwen[-3] != result_qwen_refine[-3] and result_qwen_refine[-1] == 1 else 0
+            bad_qwen = 1 if result_qwen[-3] != result_qwen_refine[-3] and result_qwen_refine[-1] == 0 else 0
+
+            good_answer_change_llama_list.append(good_llama)
+            bad_answer_change_llama_list.append(bad_llama)
+            good_answer_change_qwen_list.append(good_qwen)
+            bad_answer_change_qwen_list.append(bad_qwen)
+
+            row.update({
+                "good_answer_change_llama": good_llama,
+                "bad_answer_change_llama": bad_llama,
+                "good_answer_change_qwen": good_qwen,
+                "bad_answer_change_qwen": bad_qwen,
+            })
+
             row = {k: v for k, v in row.items() if k is not None}
             writer.writerow(row)
-        
-        # Write average accuracies
-        avg_accuracy_llama = statistics.mean(xfinder_accuracies_llama)
-        avg_accuracy_qwen = statistics.mean(xfinder_accuracies_qwen)
-        logging.info(f"Average xFinder accuracy for LLaMA (original): {avg_accuracy_llama}")
-        logging.info(f"Average xFinder accuracy for Qwen (original): {avg_accuracy_qwen}")
 
-        # Compute mismateches
-        total_mismatches = sum(xfinder_extracted_answers_mismatches)
+        # Averages
+        avg_llama = statistics.mean(xfinder_accuracies_llama)
+        avg_qwen = statistics.mean(xfinder_accuracies_qwen)
+        avg_llama_refine = statistics.mean(xfinder_accuracies_llama_refine)
+        avg_qwen_refine = statistics.mean(xfinder_accuracies_qwen_refine)
+
+        total_mismatch = sum(xfinder_extracted_answers_mismatches)
+        total_mismatch_refine = sum(xfinder_extracted_answers_mismatches_refine)
         total_rows = len(xfinder_extracted_answers_mismatches)
-        logging.info(f"Total mismatches: {total_mismatches} out of {total_rows} rows")
 
-        # Write temporary JSON file that will be used later for summary
+        # Summary JSON
         json.dump({
             "prompt_type": os.path.splitext(os.path.basename(input_file))[0].split("prompt=")[1],
 
-            "xfinder_avg_accuracy_llama": avg_accuracy_llama,
-            "xfinder_avg_accuracy_qwen": avg_accuracy_qwen,
-            "xfinder_average_accuracy": round((avg_accuracy_llama + avg_accuracy_qwen) / 2, 4),
+            "xfinder_avg_accuracy_llama": avg_llama,
+            "xfinder_avg_accuracy_qwen": avg_qwen,
+            "xfinder_average_accuracy": round((avg_llama + avg_qwen) / 2, 4),
 
-            "xfinder_mismatches_percentage": round((total_mismatches / total_rows) * 100, 2),
-            "xfinder_total_mismatches": total_mismatches,
+            "xfinder_avg_accuracy_llama_refine": avg_llama_refine,
+            "xfinder_avg_accuracy_qwen_refine": avg_qwen_refine,
+            "xfinder_average_accuracy_refine": round((avg_llama_refine + avg_qwen_refine) / 2, 4),
+
+            "xfinder_total_mismatches": total_mismatch,
+            "xfinder_total_mismatches_refine": total_mismatch_refine,
+            "xfinder_mismatches_percentage": round((total_mismatch / total_rows) * 100, 2),
+            "xfinder_mismatches_percentage_refine": round((total_mismatch_refine / total_rows) * 100, 2),
             "xfinder_total_rows": total_rows,
+
+            "good_answer_changes_llama": sum(good_answer_change_llama_list),
+            "bad_answer_changes_llama": sum(bad_answer_change_llama_list),
+            "good_answer_changes_qwen": sum(good_answer_change_qwen_list),
+            "bad_answer_changes_qwen": sum(bad_answer_change_qwen_list),
         }, f_out_json)
+
 
 def main(args):
     input_dir = args.input_dir
@@ -151,17 +225,16 @@ def main(args):
     
     # Scan all files inside input_dir
     for file in os.listdir(input_dir):
-        file_path = os.path.join(input_dir, file)
+        file_path = os.path.join(input_dir, file)  
         if os.path.isfile(file_path):
             logging.info(f"Processing file: {file}")
             filename, _ = os.path.splitext(os.path.basename(file))
-
+            
             # Shorten filename for better readability
             filename_metadata = extract_key_value_pairs(filename)
             filename_metadata['prompt'] = shorten_prompt(filename_metadata['prompt'])
             filename = key_value_pairs_to_filename(filename_metadata)
-            
-            # Define temporary output files
+
             output_path = os.path.join(output_dir, f"{filename}.tsv")
             output_path_json = os.path.join(output_dir, f"{filename}.json")
             
@@ -172,7 +245,7 @@ def main(args):
                 logging.info(f"Skipping {file} as final result file {final_results_path} already exists. Use --overwrite to force re-computation.")
                 continue
 
-            # Run evaluation on the selected file
+            # Run evaluation on the selected file            
             evaluate(file_path,
                      output_path,
                      output_path_json,

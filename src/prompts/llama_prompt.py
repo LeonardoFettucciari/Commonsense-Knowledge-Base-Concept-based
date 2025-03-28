@@ -81,4 +81,11 @@ class LlamaPrompt(Prompt):
     def _messages_to_text(self):
         # Prompt plain text only, without system instruction
         return "\n\n".join([m["content"] for m in self.messages if m["role"] != "system"])
+    
+    def append_messages(self, messages: List[str]):
+        messages = [messages] if not isinstance(messages, list) else messages
+        for m in messages:
+            self.messages.append(m) # Append new messages
+        self.text = self._messages_to_text() # Update prompt text
+
         

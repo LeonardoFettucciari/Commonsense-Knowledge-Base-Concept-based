@@ -16,10 +16,9 @@ from settings.aliases import (
 )
 from src.datasets.dataset_loader import QADataset
 from src.retriever.retriever import Retriever
-from src.utils.data_utils import concatenate_question_choices, synsets_from_samples
-from src.utils.io_utils import load_ckb, load_yaml, prepare_output
+from src.utils.io_utils import load_ckb, load_yaml, prepare_output_refine
 from src.utils.model_utils import generate_text, load_model_and_tokenizer
-from src.utils.prompt_utils import build_prompts, get_prompt_requirements
+from src.utils.prompt_utils import build_prompts, get_prompt_requirements, extend_prompt_with_knowledge
 from src.utils.retriever_utils import (
     add_ckb_statements_to_samples,
     retrieve_top_k_statements,
@@ -27,8 +26,7 @@ from src.utils.retriever_utils import (
 from src.utils.string_utils import (
     extract_base_model_name,
     prepare_model_output_path,
-    prepare_prompt_output_path,
-    extract_value_from_key_in_file_name,
+    prepare_prompt_output_path_refine,
 )
 
 # Configure logging
@@ -53,7 +51,7 @@ def inference(
     :param dataset_name: Name or tag of the dataset to be loaded.
     :param config_path: Path to the YAML configuration file.
     :param output_dir: Directory to save output files.
-    :param retrieval_strategy: Category or strategy for retrieving statements (e.g., 'synset').
+    :param retrieval_strategy: Category or scope for retrieving statements (e.g., 'synset').
     :param ckb_path: Path to the Knowledge Base (CKB) file.
     :param prompt_types: List of prompt types/aliases to use.
     :param top_k_values: List of top-k values for retrieval from the CKB.
@@ -82,23 +80,19 @@ def inference(
         fewshot_dataset = QADataset(config[fewshot_key])
         logging.info("Loaded %d fewshot examples.", len(fewshot_dataset.samples))
 
-    # Load knowledge base data if required
-    ckb = None
-    retriever = None
-    if prompt_requires["knowledge"]:
-        # Load knowledge base
-        ckb = load_ckb(ckb_path, retrieval_strategy)
+    # Load knowledge base
+    ckb = load_ckb(ckb_path, retrieval_strategy)
 
-        # Initialize retriever
-        retriever = Retriever(retrieval_strategy, ckb, config["retriever"])
+    # Initialize retriever
+    retriever = Retriever(retrieval_strategy, ckb, config["retriever"])
 
-        # Retrieve statements for few-shot samples if required
-        if prompt_requires["fewshot"]:
-            for sample in fewshot_dataset.samples:
-                fewshot_ckb_statements = retrieve_top_k_statements(
-                    retriever, sample, ckb, max(top_k_values), retrieval_strategy
-                )
-                add_ckb_statements_to_samples(sample, fewshot_ckb_statements)
+    # Retrieve statements for few-shot samples if required
+    if prompt_requires["fewshot"]:
+        for sample in fewshot_dataset.samples:
+            fewshot_ckb_statements = retrieve_top_k_statements(
+                retriever, sample, ckb, max(top_k_values), retrieval_strategy
+            )
+            add_ckb_statements_to_samples(sample, fewshot_ckb_statements)
 
     # Load model and tokenizer
     logging.info("Loading model and tokenizer: %s", model_name)
@@ -119,12 +113,11 @@ def inference(
 
     # Inference loop
     for index, sample in iterator:
-        # Retrieve statements if required
-        if prompt_requires["knowledge"]:
-            eval_ckb_statements = retrieve_top_k_statements(
-                retriever, sample, ckb, max(top_k_values), retrieval_strategy
-            )
-            add_ckb_statements_to_samples(sample, eval_ckb_statements)
+        # Retrieve statements
+        eval_ckb_statements = retrieve_top_k_statements(
+            retriever, sample, ckb, max(top_k_values), retrieval_strategy
+        )
+        add_ckb_statements_to_samples(sample, eval_ckb_statements)
 
         # Build prompts
         prompts = build_prompts(
@@ -136,9 +129,19 @@ def inference(
 
         # Generate answers for each prompt
         for prompt in prompts:
+            # Get answer from prompt without knowledge statements
             answer_text = generate_text(model, tokenizer, prompt)
-            answers[prompt.name].append(answer_text)
-            outputs[prompt.name].append(prepare_output(sample, prompt, answer_text))
+
+            # Extend given prompt with knowledge statements
+            extended_prompts = extend_prompt_with_knowledge(prompt, sample, answer_text, top_k_values)
+
+            # Confirm or revise answer given new knowledge statements
+            for ext_prompt in extended_prompts:
+                refine_answer_text = generate_text(model, tokenizer, ext_prompt)
+                answers[ext_prompt.name].append(refine_answer_text)
+                outputs[ext_prompt.name].append(prepare_output_refine(
+                    sample, ext_prompt, answer_text, refine_answer_text
+                ))
 
         # Append ground truth
         ground_truths.append(sample["answerKey"])
@@ -150,7 +153,7 @@ def inference(
 
     for prompt_name, output_data in outputs.items():
         # Prepare file path
-        prompt_output_path = prepare_prompt_output_path(
+        prompt_output_path = prepare_prompt_output_path_refine(
             model_output_path,
             extension="tsv",
             retrieval_strategy=retrieval_strategy,
@@ -203,7 +206,7 @@ def main() -> None:
         "--retrieval_strategy",
         type=str,
         required=False,
-        help="Retrieval strategy, e.g., statements to use for reranking.",
+        help="Retrieval strategy, i.e. full ckb or filtered with cner.",
     )
     parser.add_argument(
         "--config_path",
@@ -214,7 +217,7 @@ def main() -> None:
     )
     parser.add_argument(
         "--prompt_types",
-        default="all",
+        default="zeroshot,zeroshot_cot,fewshot_cot",
         type=str,
         required=False,
         help="Comma-separated list of prompt types to use.",
@@ -233,6 +236,13 @@ def main() -> None:
     args.model_name = MODEL_TAG_TO_NAME.get(args.model_name, args.model_name)
     args.dataset_name = DATASET_TAG_TO_NAME.get(args.dataset_name, args.dataset_name)
 
+    # IMPORTANT: only accepted prompt types here are: zeroshot,zeroshot_cot,fewshot_cot
+    # since they do not contain knowledge statements and their output contains reasoning
+    # that can be refined after we inject knowledge statements at inference time
+    # so 'all' argument is mapped to 'zeroshot,zeroshot_cot,fewshot_cot'.
+    if args.prompt_types == 'all':
+        args.prompt_types = "zeroshot,zeroshot_cot,fewshot_cot"
+    
     # Convert prompt types and top_k values into lists
     args.prompt_types = args.prompt_types.split(",")
     args.top_k_values = [int(val) for val in args.top_k_values.split(",")]
