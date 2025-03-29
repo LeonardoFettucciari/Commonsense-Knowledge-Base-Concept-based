@@ -153,6 +153,7 @@ def inference(
         prompt_output_path = prepare_prompt_output_path(
             model_output_path,
             extension="tsv",
+            ckb=os.path.splitext(os.path.basename(ckb_path))[0],
             retrieval_strategy=retrieval_strategy,
             model=extract_base_model_name(model_name),
             prompt=prompt_name,

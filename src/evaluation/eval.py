@@ -68,6 +68,7 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
 
             # Use xFinder formatting for the question and answer choices
             answer_range = [elem.split(". ") for elem in choices.split('\n')]
+            
             formatted_choices = " ".join([f"({item[0]}) {item[1]}" for item in answer_range])
             formatted_question = f"{question} Answer Choices: {formatted_choices}"
 
@@ -75,7 +76,7 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
             result_llama = xfinder_evaluator_llama.evaluate_single_item(
                 question=formatted_question,
                 llm_output=model_output,
-                answer_range=answer_range,
+                answer_range=str(answer_range),
                 answer_type="alphabet_option",
                 correct_answer=ground_truth,
             )
@@ -83,7 +84,7 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
             result_qwen = xfinder_evaluator_qwen.evaluate_single_item(
                 question=formatted_question,
                 llm_output=model_output,
-                answer_range=answer_range,
+                answer_range=str(answer_range),
                 answer_type="alphabet_option",
                 correct_answer=ground_truth,
             )

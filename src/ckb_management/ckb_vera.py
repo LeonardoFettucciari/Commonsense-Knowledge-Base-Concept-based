@@ -1,12 +1,14 @@
 from argparse import ArgumentParser
 import json
 import csv
+import os
 import datetime
 import torch
 import transformers
+from tqdm import tqdm
 
 # -------------------------------------------------------------------------
-#  Vera class (unchanged from your second snippet, just renamed)
+#  Vera class
 # -------------------------------------------------------------------------
 MODEL_NAME = 'liujch1998/vera'
 MODE = 'normal'  # or 'debug'
@@ -90,31 +92,42 @@ class Vera:
 
 
 # -------------------------------------------------------------------------
-#  Filter & Statistics, producing TWO separate TSVs
+#  Filter & Statistics, producing two separate TSVs
 # -------------------------------------------------------------------------
-
-def filter_and_report_two_tsvs(
+def filter_and_stats(
     kb_jsonl_path,
-    per_synset_tsv_path,
-    global_tsv_path,
-    threshold=0.5
+    per_synset_tsv_filename,
+    global_tsv_filename,
+    threshold,
 ):
     """
     Reads a JSONL file where each line is a dict like:
         {
-            "synset": "some_id",
+            "synset_name": "some_id",
             "statements": ["stmt1", "stmt2", ...]
         }
     For each synset:
       - runs Vera
       - splits into removed vs kept statements
       - writes a row in per_synset_tsv_path with:
-         synset_id, pct_removed, removed_list, removed_count, kept_list, kept_count
+         synset_name, pct_removed, removed_list, removed_count, kept_list, kept_count
 
     Then writes one row to global_tsv_path with:
         total_statements, removed_statements, kept_statements, pct_removed
+
+    Additionally, writes a new filtered JSONL to `vera_<original_file_name>` which
+    has the same structure as the input but only with the kept statements.
     """
+    output_dir = os.path.dirname(kb_jsonl_path)
     vera = Vera()
+
+    # Prepare name for the new filtered ckb file.
+    original_filename = os.path.basename(kb_jsonl_path)  # e.g. 'original_input_name.jsonl'
+    filtered_ckb_filename = f"vera_{original_filename}"   # e.g. 'vera_original_input_name.jsonl'
+    filtered_ckb_path = os.path.join(output_dir, filtered_ckb_filename)
+
+    # First, count how many lines are in the input file so tqdm can track total progress
+    total_lines = sum(1 for _ in open(kb_jsonl_path, 'r', encoding='utf-8'))
 
     # Keep track of overall counts across all synsets
     global_total = 0
@@ -122,11 +135,15 @@ def filter_and_report_two_tsvs(
     global_kept = 0
 
     # Open the per-synset stats TSV
-    with open(per_synset_tsv_path, 'w', newline='', encoding='utf-8') as outf_synset:
+    with open(os.path.join(output_dir, per_synset_tsv_filename), 'w', newline='', encoding='utf-8') as outf_synset, \
+         open(filtered_ckb_path, 'w', encoding='utf-8') as outf_ckb, \
+         open(kb_jsonl_path, 'r', encoding='utf-8') as inf, \
+         tqdm(total=total_lines, desc="Processing Synsets") as pbar:
+
         writer_synset = csv.writer(outf_synset, delimiter='\t')
         # header for the per-synset file
         writer_synset.writerow([
-            "synset_id",
+            "synset_name",
             "pct_removed",
             "removed_list",
             "removed_count",
@@ -135,56 +152,65 @@ def filter_and_report_two_tsvs(
         ])
 
         # Read JSONL line-by-line
-        with open(kb_jsonl_path, 'r', encoding='utf-8') as inf:
-            for line in inf:
-                line = line.strip()
-                if not line:
-                    continue
+        for line in inf:
+            pbar.update(1)  # Update the progress bar every time we read a line
 
-                data = json.loads(line)
-                synset_id = data.get("synset") or data.get("synset_id")
-                statements = data.get("statements", [])
+            line = line.strip()
+            if not line:
+                continue
 
-                if not statements:
-                    # Write an empty row if no statements
-                    writer_synset.writerow([synset_id, 0, "", 0, "", 0])
-                    continue
+            data = json.loads(line)
+            synset_name = data.get("synset_name")
+            statements = data.get("statements", [])
 
-                # 1) get Vera results
-                results = vera.runs(statements)
+            if not statements:
+                # Write an empty row if no statements
+                writer_synset.writerow([synset_name, 0, "", 0, "", 0])
+                # Write a JSON line with zero statements to the filtered file
+                data["statements"] = []
+                outf_ckb.write(json.dumps(data, ensure_ascii=False) + "\n")
+                continue
 
-                # 2) filter
-                removed_statements = []
-                kept_statements = []
-                for r in results:
-                    if r['score_calibrated'] < threshold:
-                        removed_statements.append(r['statement'])
-                    else:
-                        kept_statements.append(r['statement'])
+            # 1) get Vera results
+            results = vera.runs(statements)
 
-                # 3) stats for this synset
-                total_count = len(statements)
-                removed_count = len(removed_statements)
-                kept_count = len(kept_statements)
-                pct_removed = round(100.0 * removed_count / total_count, 2)  # e.g. 33.33
-                # join lists as strings
-                removed_str = "; ".join(removed_statements)
-                kept_str = "; ".join(kept_statements)
+            # 2) filter
+            removed_statements = []
+            kept_statements = []
+            for r in results:
+                if r['score_calibrated'] < threshold:
+                    removed_statements.append(r['statement'])
+                else:
+                    kept_statements.append(r['statement'])
 
-                # 4) write row
-                writer_synset.writerow([
-                    synset_id,
-                    pct_removed,
-                    removed_str,
-                    removed_count,
-                    kept_str,
-                    kept_count
-                ])
+            # 3) stats for this synset
+            total_count = len(statements)
+            removed_count = len(removed_statements)
+            kept_count = len(kept_statements)
+            pct_removed = round(100.0 * removed_count / total_count, 2)
 
-                # 5) update global counters
-                global_total += total_count
-                global_removed += removed_count
-                global_kept += kept_count
+            # join lists as strings for the per-synset TSV
+            removed_str = "\n".join(removed_statements)
+            kept_str = "\n".join(kept_statements)
+
+            # 4) write row to the per-synset TSV
+            writer_synset.writerow([
+                synset_name,
+                pct_removed,
+                removed_str,
+                removed_count,
+                kept_str,
+                kept_count
+            ])
+
+            # 5) update global counters
+            global_total += total_count
+            global_removed += removed_count
+            global_kept += kept_count
+
+            # 6) Write a new JSON line to the filtered ckb, with only kept statements
+            data["statements"] = kept_statements
+            outf_ckb.write(json.dumps(data, ensure_ascii=False) + "\n")
 
     # After finishing all synsets, write the global stats to a separate TSV
     if global_total > 0:
@@ -193,7 +219,7 @@ def filter_and_report_two_tsvs(
         global_pct_removed = 0.0
 
     # Write to global TSV
-    with open(global_tsv_path, 'w', newline='', encoding='utf-8') as outf_global:
+    with open(os.path.join(output_dir, global_tsv_filename), 'w', newline='', encoding='utf-8') as outf_global:
         writer_global = csv.writer(outf_global, delimiter='\t')
         # header
         writer_global.writerow([
@@ -212,16 +238,9 @@ def filter_and_report_two_tsvs(
 
 
 # -------------------------------------------------------------------------
-#  Example usage
+#  Arguments
 # -------------------------------------------------------------------------
 if __name__ == "__main__":
-    kb_jsonl_path = "kb.jsonl"
-    per_synset_tsv_path = "per_synset_stats.tsv"
-    global_tsv_path = "global_stats.tsv"
-
-    """
-    Parse arguments and launch the inference procedure.
-    """
     parser = ArgumentParser(description="Merging script for two CKB json files.")
     parser.add_argument(
         "--kb_jsonl_path",
@@ -231,11 +250,25 @@ if __name__ == "__main__":
     )
     parser.add_argument(
         "--threshold",
+        type=float,
+        required=False,
+        default=0.5,
+        help="Threshold for filtering statements."
+    )
+    parser.add_argument(
+        "--per_synset_tsv_filename",
         type=str,
-        required=True,
-        help="Source CKB path."
+        required=False,
+        default="per_synset_stats.tsv",
+        help="Filename of per-synset stats."
+    )
+    parser.add_argument(
+        "--global_tsv_filename",
+        type=str,
+        required=False,
+        default="global_stats.tsv",
+        help="Filename of global stats."
     )
     
     args = parser.parse_args()
-    
-    filter_and_report_two_tsvs(**vars(args))
+    filter_and_stats(**vars(args))
