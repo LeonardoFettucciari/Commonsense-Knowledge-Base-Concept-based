@@ -34,8 +34,8 @@ if [ "$VALID_DATASET" = "false" ]; then
     exit 1
 fi
 
-OUTPUT_DIR="outputs/vera/inference"
-CKB_PATH="data/ckb/cleaned/vera_full_ckb.jsonl"
+OUTPUT_DIR="outputs/inference_vera"
+CKB_PATH="data/ckb/cleaned/vera_final_ckb.jsonl"
 TOP_K_VALUES="1,3,5,10,20"
 
 # Run inference for multiple models

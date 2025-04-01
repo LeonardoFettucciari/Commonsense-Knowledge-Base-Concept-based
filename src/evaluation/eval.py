@@ -32,7 +32,7 @@ def xfinder_setup(model_name, model_dir):
     )
     return evaluator
 
-def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=None, xfinder_evaluator_qwen=None):
+def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama: Evaluator =None, xfinder_evaluator_qwen: Evaluator=None):
     logging.info(f"Evaluating file: {input_file}")
     with open(input_file) as csvfile, open(output_path, "w") as f_out, open(output_path_json, "w") as f_out_json:
         reader = csv.DictReader(csvfile, delimiter='\t')
@@ -76,7 +76,7 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
             result_llama = xfinder_evaluator_llama.evaluate_single_item(
                 question=formatted_question,
                 llm_output=model_output,
-                answer_range=str(answer_range),
+                answer_range=answer_range,
                 answer_type="alphabet_option",
                 correct_answer=ground_truth,
             )
@@ -84,7 +84,7 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama=
             result_qwen = xfinder_evaluator_qwen.evaluate_single_item(
                 question=formatted_question,
                 llm_output=model_output,
-                answer_range=str(answer_range),
+                answer_range=answer_range,
                 answer_type="alphabet_option",
                 correct_answer=ground_truth,
             )

@@ -156,6 +156,7 @@ def inference(
         prompt_output_path = prepare_prompt_output_path_refine(
             model_output_path,
             extension="tsv",
+            strategy="refine",
             retrieval_strategy=retrieval_strategy,
             model=extract_base_model_name(model_name),
             prompt=prompt_name,

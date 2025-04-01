@@ -56,28 +56,28 @@ else
     TOP_K_VALUES="1,3,5,10,20"
 fi
 
-OUTPUT_DIR="outputs/inference_revised"
-CKB_PATH="data/ckb/cleaned/ckb_data=wordnet|model=gemini-1.5-flash.jsonl"
+OUTPUT_DIR="outputs/inference_refine"
+CKB_PATH="data/ckb/cleaned/final_ckb.jsonl"
 
 # Run inference
 for MODEL_NAME in "${MODELS[@]}"; do
     echo "Running inference with model: $MODEL_NAME and top_k: $TOP_K_VALUES"
 
-    python src/inference/inference_revised_with_knowledge.py \
+    python src/inference/inference_refine.py \
         --output_dir "$OUTPUT_DIR" \
         --model_name "$MODEL_NAME" \
         --dataset_name "$DATASET_NAME" \
         --ckb_path "$CKB_PATH" \
-        --retrieval_scope "full_ckb" \
+        --retrieval_strategy "full_ckb" \
         --prompt_types "zeroshot,zeroshot_cot,fewshot_cot" \
         --top_k_values "$TOP_K_VALUES"
 
-    python src/inference/inference_revised_with_knowledge.py \
+    python src/inference/inference_refine.py \
         --output_dir "$OUTPUT_DIR" \
         --model_name "$MODEL_NAME" \
         --dataset_name "$DATASET_NAME" \
         --ckb_path "$CKB_PATH" \
-        --retrieval_scope "cner_synset_filtered_kb" \
+        --retrieval_strategy "cner_filter" \
         --prompt_types "zeroshot,zeroshot_cot,fewshot_cot" \
         --top_k_values "$TOP_K_VALUES"
 done

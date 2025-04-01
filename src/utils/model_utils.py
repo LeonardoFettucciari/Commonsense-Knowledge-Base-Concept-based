@@ -15,7 +15,7 @@ def get_model_settings(config_path):
         settings = json.load(f)
     return settings
 
-def load_model_and_tokenizer(model_name, device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
+def load_model_and_tokenizer(model_name, device=torch.device("cuda:0" if torch.cuda.is_available() else "cpu")):
     model = AutoModelForCausalLM.from_pretrained(
             model_name,
             device_map=device,
