@@ -39,7 +39,7 @@ def load_model_and_tokenizer(model_name, device=torch.device("cuda:0" if torch.c
 def get_ner_pipeline(model_name):
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     model = AutoModelForTokenClassification.from_pretrained(model_name)
-    return pipeline("ner", model=model, tokenizer=tokenizer, grouped_entities=True)
+    return pipeline("ner", model=model, tokenizer=tokenizer, aggregation_strategy="simple")
 
 # Gemini
 def load_gemini_model(model_name, generation_config, system_instruction, api_key):
@@ -97,7 +97,8 @@ def generate_text(model,
 
     # Convert to chat template
     inputs = tokenizer.apply_chat_template(prompt.messages, return_tensors="pt", add_generation_prompt=True).to(device)
-
+    #inputs_text = tokenizer.apply_chat_template(prompt.messages, add_generation_prompt=True, tokenize=False)
+    
     attention_mask = torch.ones_like(inputs).to(device)
     
     # Generate text using the model.

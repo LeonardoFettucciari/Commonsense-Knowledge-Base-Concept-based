@@ -2,8 +2,8 @@
     "generation_config": {
         "max_new_tokens": 512,
         "do_sample": false,
-        "temperature": 0.0, 
-        "top_p": 1.0,
+        "temperature": null, 
+        "top_p": null,
         "num_beams": 1,
         "output_scores": false,
         "return_dict_in_generate": false

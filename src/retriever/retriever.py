@@ -1,5 +1,6 @@
 import os
 import torch
+import numpy as np
 import logging
 import hashlib
 from sentence_transformers import SentenceTransformer
@@ -41,7 +42,7 @@ class Retriever:
         # Compute a hash of the passages + model name for uniqueness
         self.passages_hash = self._compute_hash(self.passages, self.model_name)
         # Embeddings file path
-        self.embeddings_file = os.path.join(self.cache_dir, f"embeddings_{self.model_name.replace('/', '_')}_{self.passages_hash}.pt")
+        self.embeddings_file = os.path.join(self.cache_dir, f"embeddings_{self.model_name.replace('/', '_')}_{self.passages_hash}.npy")
         self.passages_embeddings = self._load_or_compute_embeddings() if self.save_embeddings else self.compute_embeddings()
 
 
@@ -63,12 +64,12 @@ class Retriever:
         """
         if os.path.exists(self.embeddings_file):
             logging.info(f"Loading cached embeddings from {self.embeddings_file}")
-            embeddings = torch.load(self.embeddings_file)
+            embeddings = np.load(self.embeddings_file, allow_pickle=False)
         else:
             logging.info("No cached embeddings found. Encoding passages...")
             embeddings = self._encode_passages()
             logging.info(f"Saving embeddings to {self.embeddings_file}")
-            torch.save(embeddings, self.embeddings_file, pickle_protocol=4)
+            np.save(self.embeddings_file, embeddings)
         return embeddings
     
     def compute_embeddings(self):
@@ -81,7 +82,6 @@ class Retriever:
         return embeddings
 
     def _encode_passages(self, batch_size=512):
-        encoded_passages = []
 
         if self.model_name == "intfloat/e5-base-v2":
             # Compute the number of batches
@@ -92,13 +92,13 @@ class Retriever:
             # Show the progress bar only if there are more than 10 batches
             show_pbar = num_batches > 10
 
-            embeddings = self.model.encode(
+            encoded_passages = self.model.encode(
                 passages_input,
                 normalize_embeddings=True,
                 batch_size=batch_size,
-                show_progress_bar=show_pbar
+                show_progress_bar=show_pbar,
+                convert_to_numpy=True,
             )
-            encoded_passages = embeddings
         else:
             raise ValueError(f"Model {self.model_name} not supported.")
         
@@ -120,7 +120,7 @@ class Retriever:
                 queries_input,
                 normalize_embeddings=True,
                 batch_size=batch_size,
-                show_progress_bar=show_pbar
+                show_progress_bar=show_pbar,
             )
         else:
             raise ValueError(f"Model {self.model_name} not supported.")

@@ -158,6 +158,18 @@ def prepare_output(sample, prompt, answer):
         output['ckb_statements'] = "\n".join(sample['ckb_statements'][:prompt.top_k])
     return output
 
+def prepare_output_retriever_training(sample, prompt, answer, top_k_index):
+    output = {
+        "id": sample["id"],
+        "top_k_index": top_k_index,
+        "question": sample["question"],
+        "choices": "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]),
+        "ground_truth": sample['answerKey'],
+        "model_output": answer,
+        "ckb_statements": prompt.ckb_statements,
+    }
+    return output
+
 def prepare_output_refine(sample, prompt, original_answer, refine_answer):
     return {
         "id": sample["id"],

@@ -1,9 +1,9 @@
 from src.utils.data_utils import concatenate_question_choices, synsets_from_samples
 import logging
 
-def retrieve_top_k_statements(retriever, sample, ckb, k, retrieval_scope):
+def retrieve_top_k_statements(retriever, sample, ckb, k, retrieval_strategy):
 
-    if retrieval_scope == "cner_filter": # CKB here is a dict synset:statements
+    if retrieval_strategy == "cner_filter": # CKB here is a dict synset:statements
         # Concatenate question + choices
         formatted_question = concatenate_question_choices(sample)
         # Extract synsets from samples
@@ -19,13 +19,13 @@ def retrieve_top_k_statements(retriever, sample, ckb, k, retrieval_scope):
         # Retrieve top k statements
         return retriever.retrieve(formatted_question, k)
     
-    elif retrieval_scope == "full_ckb": # CKB here is a list of all ckb statements
+    elif retrieval_strategy == "full_ckb": # CKB here is a list of all ckb statements
         # Concatenate question + choices
         formatted_question = concatenate_question_choices(sample)
         # Retrieve top k statements
         return retriever.retrieve(formatted_question, k)
     else:
-        ValueError(f"Retrieval scope not supported: {retrieval_scope}.")
+        ValueError(f"Retrieval scope not supported: {retrieval_strategy}.")
 
 
     

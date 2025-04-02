@@ -1,7 +1,7 @@
 import copy
 from settings.prompts import (SYSTEM_ZEROSHOT, SYSTEM_ZEROSHOT_WITH_KNOWLEDGE, SYSTEM_ZEROSHOT_COT,
                               SYSTEM_FEWSHOT, SYSTEM_FEWSHOT_WITH_KNOWLEDGE, SYSTEM_FEWSHOT_COT)
-from src.prompts.llama_prompt import LlamaPrompt
+from src.prompts.llama_prompt import LlamaPrompt, KnowledgePrompt
 
 def build_prompts(sample, prompt_types, top_k_values, fewshot_examples=[]):
     prompts = []
@@ -51,6 +51,17 @@ def build_prompts(sample, prompt_types, top_k_values, fewshot_examples=[]):
                                             fewshot_examples=fewshot_examples,
                                             top_k=k,
                                             ))
+    return prompts
+
+def build_prompts_for_retriever_training(sample, ckb_statements, top_k):
+    prompts = []
+
+    for k in range(top_k):
+        prompts.append(KnowledgePrompt(name=f"zeroshot_with_knowledge_{k}",
+                                       system_instruction=SYSTEM_ZEROSHOT_WITH_KNOWLEDGE,
+                                       sample=sample,
+                                       ckb_statements=ckb_statements[k]
+                                       ))
     return prompts
 
 def get_prompt_requirements(prompt_types):

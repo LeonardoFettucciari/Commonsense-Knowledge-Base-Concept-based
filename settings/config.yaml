@@ -5,9 +5,10 @@ seed: 150
 obqa:
     dataset_name: "obqa"
     dataset_path: "allenai/openbookqa"
-    split: "test"
+    #split: "test"
+    split: train
     subset: "main"
-    max_samples:
+    max_samples: 500
     shuffle: false
 
 obqa_fewshot:
@@ -20,9 +21,10 @@ obqa_fewshot:
 qasc:
     dataset_name: "qasc"
     dataset_path: "allenai/qasc"
-    split: "validation"
+    #split: "validation"
+    split: train
     subset:
-    max_samples:
+    max_samples: 500
     shuffle: false
 
 qasc_fewshot:
@@ -35,9 +37,10 @@ qasc_fewshot:
 csqa:
     dataset_name: "csqa"
     dataset_path: "tau/commonsense_qa"
-    split: "validation"
+    #split: "validation"
+    split: train
     subset:
-    max_samples:
+    max_samples: 500
     shuffle: false
 
 csqa_fewshot:

@@ -19,7 +19,7 @@ def prepare_prompt_output_path(model_output_path, extension, **kwargs):
         raise ValueError("At least one key-value pair must be provided in kwargs.")
 
     output_name = ""
-    if "knowledge" not in kwargs['prompt']:
+    if kwargs.get('prompt') and "knowledge" not in kwargs['prompt']:
         keys_to_keep = ['model', 'prompt']
         sub_dict = {k: kwargs[k] for k in keys_to_keep if k in kwargs}
         output_name = "|".join(f"{key}={value}" for key, value in sub_dict.items())
