@@ -150,6 +150,28 @@ class QADataset(Dataset):
                     "cot": cot,
                     })
         else:
-            raise ValueError(f"Unsupported dataset: {self.dataset_name}")
+            try:
+                for sample in self.dataset:
+                    id = sample["id"]
+                    question = sample["question"]
+                    choices = sample["choices"]
+                    answerKey = sample["ground_truth"]
+
+                    lines = choices.split('\n')
+                    choices_labels = []
+                    choices_texts = []
+                    for line in lines:
+                        label, txt = line.split('. ', 1)
+                        choices_labels.append(label.strip())
+                        choices_texts.append(txt.strip())
+
+                    samples.append({
+                        "id": id,
+                        "question": question,
+                        "choices": {"text": choices_texts, "label": choices_labels},
+                        "answerKey": answerKey,
+                        })
+            except Exception as e:
+                raise ValueError(f"Unsupported dataset: {self.dataset_name}") from e
                 
         return samples

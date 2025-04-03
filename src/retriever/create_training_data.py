@@ -56,7 +56,7 @@ def create_training_data(
     config = load_yaml(config_path)
 
     # Get dataset tag and load dataset
-    dataset_tag = DATASET_NAME_TO_TAG[dataset_name]
+    dataset_tag = DATASET_NAME_TO_TAG.get(dataset_name, dataset_name)
     logging.info("Loading dataset: %s", dataset_name)
     train_dataset = QADataset(config[dataset_tag])
     logging.info("Loaded %d samples for generation.", len(train_dataset.samples))
@@ -121,6 +121,7 @@ def create_training_data(
         ckb=os.path.splitext(os.path.basename(ckb_path))[0],
         retrieval_strategy=retrieval_strategy,
         model=extract_base_model_name(model_name),
+        prompt="zeroshot_with_knowledge_1"
     )
 
     # Write data to TSV file

@@ -4,16 +4,23 @@ seed: 150
 # Datasets
 obqa:
     dataset_name: "obqa"
-    dataset_path: "allenai/openbookqa"
+    #dataset_path: "allenai/openbookqa"
+    dataset_path: "outputs/retriever/training_data/zeroshot/obqa/Llama-3.1-8B-Instruct/accuracy/model=Llama-3.1-8B-Instruct|prompt=zs|xfinder_extracted_answers_mismatch=0|xfinder_acc_llama=0.tsv"
     #split: "test"
     split: train
     subset: "main"
-    max_samples: 500
+    max_samples:
     shuffle: false
 
 obqa_fewshot:
     dataset_name: "obqa_fewshot"
     dataset_path: "data/obqa/data=obqa|fewshot_examples.csv"
+    max_samples:
+    shuffle: false
+
+obqa_retriever_train:
+    dataset_name: "obqa_retriever_train"
+    dataset_path: "outputs/retriever/training_data/zeroshot/obqa/Llama-3.1-8B-Instruct/accuracy/model=Llama-3.1-8B-Instruct|prompt=zs|xfinder_extracted_answers_mismatch=0|xfinder_acc_llama=0.tsv"
     max_samples:
     shuffle: false
 

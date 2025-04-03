@@ -159,7 +159,8 @@ def main(args):
 
             # Shorten filename for better readability
             filename_metadata = extract_key_value_pairs(filename)
-            filename_metadata['prompt'] = shorten_prompt(filename_metadata['prompt'])
+            if filename_metadata.get('prompt'):
+                filename_metadata['prompt'] = shorten_prompt(filename_metadata['prompt'])
             filename = key_value_pairs_to_filename(filename_metadata)
             
             # Define temporary output files

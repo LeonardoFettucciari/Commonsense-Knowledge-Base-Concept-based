@@ -90,9 +90,13 @@ def generate_text(model,
                   prompt,
                   config_path="settings/model_config.json",
                   device=torch.device("cuda" if torch.cuda.is_available() else "cpu")):
-    
+    # Load the model's default generation config
+    gen_config = model.generation_config
+    # Check and override top_p
+    if hasattr(gen_config, "top_p"):
+        gen_config.top_p = None  # or remove it entirely
+        
     # Retrieve model configuration parameters
-
     config = load_json(config_path)["generation_config"]
 
     # Convert to chat template

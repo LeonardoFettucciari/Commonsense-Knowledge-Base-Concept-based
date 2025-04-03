@@ -29,15 +29,6 @@ fi
 DATASET_NAME="$1"
 MODEL_NAME="$2"
 
-# Validate dataset name
-VALID_DATASET="false"
-for dataset in $AVAILABLE_DATASETS; do
-    if [ "$DATASET_NAME" = "$dataset" ]; then
-        VALID_DATASET="true"
-        break
-    fi
-done
-
 if [ "$VALID_DATASET" = "false" ]; then
     echo "Error: Invalid dataset name '$DATASET_NAME'."
     echo "Available datasets:"
