@@ -104,7 +104,7 @@ def key_value_pairs_to_filename(key_value_dict, extension=None):
         str: A filename string containing key-value pairs separated by '|'.
     """
     if extension:
-        return "|".join(f"{key}={value}" for key, value in key_value_dict.items()) + f".{extension}"
+        return "|".join(f"{key}={value}" for key, value in key_value_dict.items()) + f".{extension.strip('.')}"
     return "|".join(f"{key}={value}" for key, value in key_value_dict.items())
 
 def shorten_prompt(prompt):

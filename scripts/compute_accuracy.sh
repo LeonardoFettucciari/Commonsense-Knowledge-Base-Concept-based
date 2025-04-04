@@ -6,8 +6,6 @@
 # Example:
 #   bash script.sh /my/base/dir obqa llama8B qwen1.5B
 
-# Available datasets
-AVAILABLE_DATASETS="obqa qasc csqa"
 
 # Model aliases mapping
 declare -A MODEL_ALIASES=(
@@ -24,10 +22,7 @@ DEFAULT_MODELS=("Llama-3.2-3B-Instruct" "Llama-3.1-8B-Instruct" "Qwen2.5-1.5B-In
 if [ -z "$1" ] || [ -z "$2" ]; then
     echo "Error: You must provide <base_directory> and <dataset_name>."
     echo "Usage: bash script.sh <base_directory> <dataset_name> [model1 model2 ...]"
-    echo "Available datasets:"
-    for dataset in $AVAILABLE_DATASETS; do
-        echo "  - $dataset"
-    done
+
     exit 1
 fi
 
@@ -35,23 +30,8 @@ BASE_DIR="$1"
 DATASET_NAME="$2"
 shift 2
 
-# Validate dataset name
-VALID_DATASET="false"
-for dataset in $AVAILABLE_DATASETS; do
-    if [ "$DATASET_NAME" = "$dataset" ]; then
-        VALID_DATASET="true"
-        break
-    fi
-done
 
-if [ "$VALID_DATASET" = "false" ]; then
-    echo "Error: Invalid dataset name '$DATASET_NAME'."
-    echo "Available datasets:"
-    for dataset in $AVAILABLE_DATASETS; do
-        echo "  - $dataset"
-    done
-    exit 1
-fi
+
 
 # Determine list of models to use
 if [ "$#" -eq 0 ]; then
