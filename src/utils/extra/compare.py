@@ -17,6 +17,11 @@ def compare(input_path_cot, input_path_with_knowledge):
     counter = 0
     good_changes = 0
     bad_changes = 0
+    both_wrong_equal = 0
+    both_wrong_different = 0
+    both_correct = 0
+    first_file_mismatch = 0
+    second_file_mismatch = 0
 
     # We assume both files have the same length. 
     # If they don't, you might need to handle that (e.g., check lengths or iterate safely).
@@ -34,14 +39,21 @@ def compare(input_path_cot, input_path_with_knowledge):
             raise ValueError(f"ID mismatch: {row_cot['id']} != {row_with_knowledge['id']}")
         
         if int(row_cot['xfinder_extracted_answers_mismatch']) == 1:
+            first_file_mismatch += 1
             continue
         if int(row_with_knowledge['xfinder_extracted_answers_mismatch']) == 1:
+            second_file_mismatch += 1
             continue
 
         if row_cot['xfinder_extracted_answer_llama'] == row_with_knowledge['xfinder_extracted_answer_llama']:
+            if int(row_cot['xfinder_acc_llama']) == 0:
+                both_wrong_equal += 1
+            else:
+                both_correct += 1
             continue
 
         if int(row_cot['xfinder_acc_llama']) == 0 and int(row_with_knowledge['xfinder_acc_llama']) == 0:
+            both_wrong_different += 1
             continue
 
         good_change = 1 if int(row_cot['xfinder_acc_llama']) == 0 else 0
@@ -78,12 +90,18 @@ def compare(input_path_cot, input_path_with_knowledge):
     # -------------------------------------------------------
 
     good_changes_pct = round((good_changes / counter) * 100, 2) if counter > 0 else 0
-
+    total_check = good_changes + bad_changes + both_wrong_equal + both_wrong_different + both_correct + first_file_mismatch + second_file_mismatch
     stats_data = [{
             "total_rows": counter,
             "good_changes_pct": good_changes_pct,
             "good_changes": good_changes,
             "bad_changes": bad_changes,
+            "both_wrong_equal": both_wrong_equal,
+            "both_wrong_different": both_wrong_different,
+            "both_correct": both_correct,
+            "first_file_mismatch": first_file_mismatch,
+            "second_file_mismatch": second_file_mismatch,
+            "total_check": total_check,
         }]
 
     # -------------------------------------------------------
