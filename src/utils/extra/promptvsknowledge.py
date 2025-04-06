@@ -1,6 +1,7 @@
 import os
-from src.utils.io_utils import load_local_file, save_local_file
+from src.utils.io_utils import load_local_file, save_local_file, load_yaml
 from src.utils.string_utils import extract_key_value_pairs, key_value_pairs_to_filename
+
 
 def compare(input_path_cot, input_path_with_knowledge):
     """
@@ -38,6 +39,9 @@ def compare(input_path_cot, input_path_with_knowledge):
             continue
 
         if row_cot['xfinder_extracted_answer_llama'] == row_with_knowledge['xfinder_extracted_answer_llama']:
+            continue
+
+        if int(row_cot['xfinder_acc_llama']) == 0 and int(row_with_knowledge['xfinder_acc_llama']) == 0:
             continue
 
         good_change = 1 if int(row_cot['xfinder_acc_llama']) == 0 else 0
@@ -85,11 +89,14 @@ def compare(input_path_cot, input_path_with_knowledge):
     # -------------------------------------------------------
     # 5. Save the collected rows into a new TSV file.
     # -------------------------------------------------------
+    filename_no_knowledge = os.path.splitext(os.path.basename(input_path_cot))[0]
+    filename_no_knowledge_metadata = extract_key_value_pairs(filename_no_knowledge)
 
-    output_dir = os.path.dirname(input_path_cot)
     filename, extension = os.path.splitext(os.path.basename(input_path_with_knowledge))
     filename_metadata = extract_key_value_pairs(filename)
-    prefix = "cot_vs_" + filename_metadata['prompt']
+    prefix = filename_no_knowledge_metadata['prompt'] + "_vs_" + filename_metadata['prompt']
+    output_dir = os.path.join(os.path.dirname(input_path_cot), "prompt_vs_knowledge", f"{filename_no_knowledge_metadata['prompt']}_vs_knowledge")
+    os.makedirs(output_dir, exist_ok=True)
     filename_metadata.pop('prompt', None)
     output_filename = f"{prefix}|{key_value_pairs_to_filename(filename_metadata, extension)}"
     output_path = os.path.join(output_dir, output_filename)
@@ -99,132 +106,21 @@ def compare(input_path_cot, input_path_with_knowledge):
     save_local_file(output_data, output_path)
     save_local_file(stats_data, output_stats_path)
 
+
+best_knowledge = load_yaml("settings/best_knowledge_top_k.yaml")
+
 datasets = ['csqa', 'obqa', 'qasc']
 models = ['Llama-3.1-8B-Instruct', 'Llama-3.2-3B-Instruct', 'Qwen2.5-1.5B-Instruct', 'Qwen2.5-7B-Instruct']
 retrieval_strategies = ['cner_filter', 'full_ckb']
+prompt_types = ['zs', 'zscot', 'fs', 'fscot']
 
-k = {'csqa': {
-        'Llama-3.1-8B-Instruct': {
-            'full_ckb': 20,
-            'cner_filter': 20
-        },
-        'Llama-3.2-3B-Instruct': {
-            'full_ckb': 5,
-            'cner_filter': 5
-        },
-        'Qwen2.5-1.5B-Instruct': {
-            'full_ckb': 1,
-            'cner_filter': 1
-        },
-        'Qwen2.5-7B-Instruct': {
-            'full_ckb': 10,
-            'cner_filter': 1
-        }
-    },
-
-    'obqa': {
-        'Llama-3.1-8B-Instruct': {
-            'full_ckb': 10,
-            'cner_filter': 10
-        },
-        'Llama-3.2-3B-Instruct': {
-            'full_ckb': 3,
-            'cner_filter': 5
-        },
-        'Qwen2.5-1.5B-Instruct': {
-            'full_ckb': 3,
-            'cner_filter': 5
-        },
-        'Qwen2.5-7B-Instruct': {
-            'full_ckb': 3,
-            'cner_filter': 3
-        }
-    },
-
-    'qasc': {
-        'Llama-3.1-8B-Instruct': {
-            'full_ckb': 10,
-            'cner_filter': 10
-        },
-        'Llama-3.2-3B-Instruct': {
-            'full_ckb': 3,
-            'cner_filter': 3
-        },
-        'Qwen2.5-1.5B-Instruct': {
-            'full_ckb': 3,
-            'cner_filter': 5
-        },
-        'Qwen2.5-7B-Instruct': {
-            'full_ckb': 5,
-            'cner_filter': 10
-        }
-    }
-}
-
-kvera = {'csqa': {
-        'Llama-3.1-8B-Instruct': {
-            'full_ckb': 20,
-            'cner_filter': 20
-        },
-        'Llama-3.2-3B-Instruct': {
-            'full_ckb': 5,
-            'cner_filter': 5
-        },
-        'Qwen2.5-1.5B-Instruct': {
-            'full_ckb': 1,
-            'cner_filter': 1
-        },
-        'Qwen2.5-7B-Instruct': {
-            'full_ckb': 20,
-            'cner_filter': 20
-        }
-    },
-
-    'obqa': {
-        'Llama-3.1-8B-Instruct': {
-            'full_ckb': 20,
-            'cner_filter': 10
-        },
-        'Llama-3.2-3B-Instruct': {
-            'full_ckb': 3,
-            'cner_filter': 5
-        },
-        'Qwen2.5-1.5B-Instruct': {
-            'full_ckb': 3,
-            'cner_filter': 10
-        },
-        'Qwen2.5-7B-Instruct': {
-            'full_ckb': 3,
-            'cner_filter': 3
-        }
-    },
-
-    'qasc': {
-        'Llama-3.1-8B-Instruct': {
-            'full_ckb': 20,
-            'cner_filter': 5
-        },
-        'Llama-3.2-3B-Instruct': {
-            'full_ckb': 3,
-            'cner_filter': 3
-        },
-        'Qwen2.5-1.5B-Instruct': {
-            'full_ckb': 3,
-            'cner_filter': 5
-        },
-        'Qwen2.5-7B-Instruct': {
-            'full_ckb': 1,
-            'cner_filter': 10
-        }
-    }
-}
 for dataset in datasets:
     for model in models:
         for retrieval_strategy in retrieval_strategies:
+            for prompt_type in prompt_types:
+                case = "zs" if "zs" in prompt_type else "fs"
+                compare(f"outputs/inference/{dataset}/{model}/accuracy/model={model}|prompt={prompt_type}.tsv",
+                        f"outputs/inference/{dataset}/{model}/accuracy/retrieval_strategy={retrieval_strategy}|model={model}|prompt=zsk{best_knowledge[dataset][model]['regular'][retrieval_strategy][case]}.tsv")
 
-            compare(f"outputs/inference/{dataset}/{model}/accuracy/model={model}|prompt=zscot.tsv",
-                    f"outputs/inference/{dataset}/{model}/accuracy/retrieval_strategy={retrieval_strategy}|model={model}|prompt=zsk{k[dataset][model][retrieval_strategy]}.tsv")
-
-            compare(f"outputs/inference/{dataset}/{model}/accuracy/model={model}|prompt=zscot.tsv",
-                    f"outputs/inference_vera/{dataset}/{model}/accuracy/ckb=vera_final_ckb|retrieval_strategy={retrieval_strategy}|model={model}|prompt=zsk{kvera[dataset][model][retrieval_strategy]}.tsv")
-
+                compare(f"outputs/inference/{dataset}/{model}/accuracy/model={model}|prompt={prompt_type}.tsv",
+                        f"outputs/inference_vera/{dataset}/{model}/accuracy/ckb=vera_final_ckb|retrieval_strategy={retrieval_strategy}|model={model}|prompt=zsk{best_knowledge[dataset][model]['vera'][retrieval_strategy][case]}.tsv")

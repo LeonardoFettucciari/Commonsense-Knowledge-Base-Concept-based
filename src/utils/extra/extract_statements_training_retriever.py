@@ -11,7 +11,7 @@ def compare(input_path_zs, input_path_with_knowledge):
     input_with_knowledge = load_local_file(input_path_with_knowledge)
 
     output_data = []
-    output_data_json = []
+    output_data_jsonl = []
 
     # Stats
     output_samples = 0
@@ -59,16 +59,23 @@ def compare(input_path_zs, input_path_with_knowledge):
         }
         output_data.append(new_row)
 
-        new_row_json = {
+
+        choices = [choice.split('. ', 1) for choice in row_zs["choices"].split('\n')]
+        choices = {
+            'label': [c[0] for c in choices],
+            'text': [c[1] for c in choices]
+        }
+
+        new_row_jsonl = {
             "id": row_zs["id"],
             "question": row_zs["question"],
-            "choices": row_zs["choices"],
+            "choices": choices,
             "ground_truth": row_zs["ground_truth"],
 
             "positives": positives,
             "negatives": negatives,
         }
-        output_data_json.append(new_row_json)
+        output_data_jsonl.append(new_row_jsonl)
 
 
     stats_data = [{
@@ -84,14 +91,14 @@ def compare(input_path_zs, input_path_with_knowledge):
     prefix = "zs_vs_" + filename_metadata['prompt']
     filename_metadata.pop('prompt', None)
     output_filename = f"{prefix}|{key_value_pairs_to_filename(filename_metadata, extension)}"
-    output_filename_json = f"{prefix}|{key_value_pairs_to_filename(filename_metadata, 'json')}"
+    output_filename_jsonl = f"{prefix}|{key_value_pairs_to_filename(filename_metadata, 'jsonl')}"
     output_path = os.path.join(output_dir, output_filename)
-    output_path_json = os.path.join(output_dir, output_filename_json)
+    output_path_jsonl = os.path.join(output_dir, output_filename_jsonl)
 
     output_stats_filename = f"stats|{output_filename}"
     output_stats_path = os.path.join(output_dir, output_stats_filename)
     save_local_file(output_data, output_path)
-    save_local_file(output_data_json, output_path_json)
+    save_local_file(output_data_jsonl, output_path_jsonl)
     save_local_file(stats_data, output_stats_path)
 
 datasets = ['csqa', 'obqa', 'qasc']
