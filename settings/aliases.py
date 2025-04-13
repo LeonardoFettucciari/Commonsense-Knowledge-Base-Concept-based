@@ -44,6 +44,12 @@ PROMPT_TYPE_ALIASES = {
     "zero_shot_with_knowledge": "zeroshot_with_knowledge",
     "zeroshot_with_knowledge": "zeroshot_with_knowledge",
 
+    "zscotk": "zeroshot_cot_with_knowledge",
+    "zs_cot_k": "zeroshot_cot_with_knowledge",
+    "zero-shot_cot_with_knowledge": "zeroshot_cot_with_knowledge",
+    "zeroshot_cot_with_knowledge": "zeroshot_cot_with_knowledge",
+
+
     "fs": "fewshot",
     "few-shot": "fewshot",
     "few_shot": "fewshot",

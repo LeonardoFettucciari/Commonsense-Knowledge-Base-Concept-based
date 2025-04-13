@@ -1,10 +1,113 @@
 import random
-from torch.utils.data import Dataset
 import os, csv, json
-from datasets import load_dataset
+from datasets import load_dataset, Dataset
 from tqdm import tqdm
 from src.utils.io_utils import load_local_file
 from src.retriever.retriever import Retriever
+
+
+PREPROCESSORS = {}
+
+def register_preprocessor(name):
+    def decorator(fn):
+        PREPROCESSORS[name] = fn
+        return fn
+    return decorator
+
+def get_preprocessor(name):
+    
+    return PREPROCESSORS.get(name, preprocess_default) if 'fewshot' not in name else preprocess_default_fewshot
+
+
+
+
+def load_hf_dataset(config: dict) -> Dataset:
+    """
+    Loads a Hugging Face dataset using configuration settings.
+
+    Args:
+        config (dict): Configuration dictionary containing:
+            - 'path' (str): Path or name of the dataset.
+            - 'subset' (str, optional): Subset or configuration name.
+            - 'split' (str, optional): Which split to load (e.g., 'train', 'test').
+            - 'max_samples' (int, optional): Maximum number of samples to select.
+
+    Returns:
+        Dataset: A Hugging Face Dataset object with the selected split and
+                 optionally limited to 'max_samples' items.
+    """
+    dataset = load_dataset(
+        config.get('path'),
+        subset=config.get('subset'),
+        split=config.get('split')
+    )
+
+    max_samples = config.get('max_samples', len(dataset))
+    max_samples = min(max_samples, len(dataset))
+    dataset = dataset.select(range(max_samples))
+
+    return dataset
+
+
+def load_local_dataset(local_path: str, max_samples: int | None = None) -> Dataset:
+    dataset = load_dataset('json', data_files=local_path)
+
+    max_samples = min(max_samples, len(dataset))
+    dataset = dataset.select(range(max_samples))
+
+    return dataset
+
+
+# Preprocessing
+
+def preprocess_dataset(dataset_name, dataset):
+    preprocessor = get_preprocessor(dataset_name)
+    if preprocessor is None:
+        raise ValueError(f"No preprocessor registered for dataset: {dataset_name}")
+    return dataset.map(preprocessor)
+
+def preprocess_default(sample):
+    return {
+        "id": sample["id"],
+        "question": sample["question"],
+        "choices": sample["choices"],
+        "answerKey": sample["answerKey"]
+    }
+
+def preprocess_default_fewshot(sample):
+    return {
+        "id": sample["id"],
+        "question": sample["question"],
+        "choices": sample["choices"],
+        "answerKey": sample["answerKey"],
+        "cot": sample["cot"]
+    }
+
+@register_preprocessor("obqa")
+def preprocess_obqa(sample):
+    
+    return {
+        "id": sample["id"],
+        "question": sample["question_stem"],
+        "choices": sample["choices"],
+        "answerKey": sample["answerKey"]
+    }
+
+@register_preprocessor("obqa_fewshot")
+def preprocess_obqa_fewshot(sample):
+    
+    return {
+        "id": sample["id"],
+        "question": sample["question_stem"],
+        "choices": json.loads(sample["choices"]),
+        "answerKey": sample["answerKey"],
+        "cot": sample["cot"]
+    }
+
+
+
+
+
 
 class QADataset(Dataset):
     def __init__(self, dataset_config):

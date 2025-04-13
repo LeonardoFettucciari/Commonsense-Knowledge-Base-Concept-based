@@ -45,7 +45,13 @@ class LlamaPrompt(Prompt):
                 ex_user_string=""
                 ex_assistant_string=""
 
-                if self.cot:
+                if self.cot and self.top_k:
+                    ex_ckb_statements = "\n".join(example["ckb_statements"][:self.top_k])
+                    ex_reasoning = example["cot"]
+                    ex_user_string = f'Example {i}:\n\nQuestion:\n{ex_question}\n\nChoices:\n{ex_choices}\n\nKnowledge:\n{ex_ckb_statements}'
+                    ex_assistant_string = f'Reasoning:\n{ex_reasoning}\n\nAnswer: {ex_answer}'
+
+                elif self.cot:
                     ex_reasoning = example["cot"]
                     ex_user_string = f'Example {i}:\n\nQuestion:\n{ex_question}\n\nChoices:\n{ex_choices}'
                     ex_assistant_string = f'Reasoning:\n{ex_reasoning}\n\nAnswer: {ex_answer}'
@@ -66,13 +72,11 @@ class LlamaPrompt(Prompt):
         question = self.sample["question"]
         choices = "\n".join([f"{label}. {choice}" for label, choice in zip(self.sample['choices']['label'], self.sample['choices']['text'])])
 
-        if self.cot:
-            user_string = f'Question:\n{question}\n\nChoices:\n{choices}'
-        elif self.top_k:
+        user_string = f'Question:\n{question}\n\nChoices:\n{choices}'
+
+        if self.top_k:
             ckb_statements = "\n".join(self.sample["ckb_statements"][:self.top_k])
-            user_string = f'Question:\n{question}\n\nChoices:\n{choices}\n\nKnowledge:\n{ckb_statements}'
-        else:
-            user_string = f'Question:\n{question}\n\nChoices:\n{choices}'
+            user_string += f"\n\nKnowledge:\n{ckb_statements}"
 
         messages.append({"role": "user", "content": user_string})  
 

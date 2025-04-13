@@ -2,8 +2,8 @@ from nltk.corpus import wordnet
 import os
 import json
 import csv
+import logging
 from src.utils.model_utils import get_ner_pipeline
-
 
 
 def extract_unique_words(ner_results):
@@ -51,11 +51,21 @@ def synsets_from_samples(samples):
 
 
 def concatenate_question_choices(samples):
-        samples = [samples] if not isinstance(samples, list) else samples # Reads single string or list of strings
-        queries = []
-        for s in samples:
-            question = s["question"]
-            choices = " ".join([f"{label}. {choice}" for label, choice in zip(s['choices']['label'], s['choices']['text'])])
-            query = f"{question} {choices}" # Query is question + choices
-            queries.append(query)
-        return queries[0] if len(queries) == 1 else queries # Returns single string or list of strings
+    samples = [samples] if not isinstance(samples, list) else samples # Reads single string or list of strings
+    queries = []
+    for s in samples:
+        question = s["question"]
+        choices = " ".join([f"{label}. {choice}" for label, choice in zip(s['choices']['label'], s['choices']['text'])])
+        query = f"{question} {choices}" # Query is question + choices
+        queries.append(query)
+    return queries[0] if len(queries) == 1 else queries # Returns single string or list of strings
+
+def filter_by_column_value(data: dict, column_name: str, target_value: str):
+    filtered_data = [row for row in data if row.get(column_name) == target_value]
+    logging.info(f"Filtered {len(data)} rows to {len(filtered_data)} rows where {column_name} = '{target_value}'")
+
+    if not filtered_data:
+        logging.info(f"No matching rows found for {column_name} = '{target_value}'")
+        return data
+    
+    return filtered_data

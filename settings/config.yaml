@@ -3,56 +3,56 @@ seed: 150
 
 # Datasets
 obqa:
-    dataset_name: "obqa"
-    #dataset_path: "allenai/openbookqa"
-    dataset_path: "outputs/retriever/training_data/zeroshot/obqa/Llama-3.1-8B-Instruct/accuracy/model=Llama-3.1-8B-Instruct|prompt=zs|xfinder_extracted_answers_mismatch=0|xfinder_acc_llama=0.tsv"
-    #split: "test"
-    split: train
+    name: "obqa"
+    path: "allenai/openbookqa"
+    #path: "outputs/retriever/training_data/zeroshot/obqa/Llama-3.1-8B-Instruct/accuracy/model=Llama-3.1-8B-Instruct|prompt=zs|xfinder_extracted_answers_mismatch=0|xfinder_acc_llama=0.tsv"
+    split: "test"
+    #split: train
     subset: "main"
     max_samples:
     shuffle: false
 
 obqa_fewshot:
-    dataset_name: "obqa_fewshot"
-    dataset_path: "data/obqa/data=obqa|fewshot_examples.csv"
+    name: "obqa_fewshot"
+    path: "data/obqa/data=obqa|fewshot_examples.csv"
     max_samples:
     shuffle: false
 
 obqa_retriever_train:
-    dataset_name: "obqa_retriever_train"
-    dataset_path: "outputs/retriever/training_data/zeroshot/obqa/Llama-3.1-8B-Instruct/accuracy/model=Llama-3.1-8B-Instruct|prompt=zs|xfinder_extracted_answers_mismatch=0|xfinder_acc_llama=0.tsv"
+    name: "obqa_retriever_train"
+    path: "outputs/retriever/training_data/zeroshot/obqa/Llama-3.1-8B-Instruct/accuracy/model=Llama-3.1-8B-Instruct|prompt=zs|xfinder_extracted_answers_mismatch=0|xfinder_acc_llama=0.tsv"
     max_samples:
     shuffle: false
 
 
 qasc:
-    dataset_name: "qasc"
-    dataset_path: "allenai/qasc"
+    name: "qasc"
+    path: "allenai/qasc"
     #split: "validation"
     split: train
     subset:
-    max_samples: 500
+    max_samples:
     shuffle: false
 
 qasc_fewshot:
-    dataset_name: "qasc_fewshot"
-    dataset_path: "data/qasc/data=qasc|fewshot_examples.csv"
+    name: "qasc_fewshot"
+    path: "data/qasc/data=qasc|fewshot_examples.csv"
     max_samples:
     shuffle: false
 
 
 csqa:
-    dataset_name: "csqa"
-    dataset_path: "tau/commonsense_qa"
-    #split: "validation"
-    split: train
+    name: "csqa"
+    path: "tau/commonsense_qa"
+    split: "validation"
+    #split: train
     subset:
-    max_samples: 500
+    max_samples:
     shuffle: false
 
 csqa_fewshot:
-    dataset_name: "csqa_fewshot"
-    dataset_path: "data/csqa/data=csqa|fewshot_examples.csv"
+    name: "csqa_fewshot"
+    path: "data/csqa/data=csqa|fewshot_examples.csv"
     max_samples:
     shuffle: false
 
