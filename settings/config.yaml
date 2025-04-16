@@ -5,11 +5,10 @@ seed: 150
 obqa:
     name: "obqa"
     path: "allenai/openbookqa"
-    #path: "outputs/retriever/training_data/zeroshot/obqa/Llama-3.1-8B-Instruct/accuracy/model=Llama-3.1-8B-Instruct|prompt=zs|xfinder_extracted_answers_mismatch=0|xfinder_acc_llama=0.tsv"
-    split: "test"
-    #split: train
+    #split: "test"
+    split: train
     subset: "main"
-    max_samples:
+    max_samples: 1000
     shuffle: false
 
 obqa_fewshot:
@@ -18,20 +17,12 @@ obqa_fewshot:
     max_samples:
     shuffle: false
 
-obqa_retriever_train:
-    name: "obqa_retriever_train"
-    path: "outputs/retriever/training_data/zeroshot/obqa/Llama-3.1-8B-Instruct/accuracy/model=Llama-3.1-8B-Instruct|prompt=zs|xfinder_extracted_answers_mismatch=0|xfinder_acc_llama=0.tsv"
-    max_samples:
-    shuffle: false
-
-
 qasc:
     name: "qasc"
     path: "allenai/qasc"
-    #split: "validation"
     split: train
     subset:
-    max_samples:
+    max_samples: 1000
     shuffle: false
 
 qasc_fewshot:
@@ -44,10 +35,9 @@ qasc_fewshot:
 csqa:
     name: "csqa"
     path: "tau/commonsense_qa"
-    split: "validation"
-    #split: train
+    split: "train"
     subset:
-    max_samples:
+    max_samples: 1000
     shuffle: false
 
 csqa_fewshot:

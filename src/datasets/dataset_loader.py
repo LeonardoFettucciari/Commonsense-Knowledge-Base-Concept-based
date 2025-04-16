@@ -1,25 +1,12 @@
 import random
 import os, csv, json
+import re
 from datasets import load_dataset, Dataset
 from tqdm import tqdm
 from src.utils.io_utils import load_local_file
 from src.retriever.retriever import Retriever
 
-
-PREPROCESSORS = {}
-
-def register_preprocessor(name):
-    def decorator(fn):
-        PREPROCESSORS[name] = fn
-        return fn
-    return decorator
-
-def get_preprocessor(name):
-    
-    return PREPROCESSORS.get(name, preprocess_default) if 'fewshot' not in name else preprocess_default_fewshot
-
-
-
+# main functions
 
 def load_hf_dataset(config: dict) -> Dataset:
     """
@@ -38,7 +25,7 @@ def load_hf_dataset(config: dict) -> Dataset:
     """
     dataset = load_dataset(
         config.get('path'),
-        subset=config.get('subset'),
+        config.get('subset'),
         split=config.get('split')
     )
 
@@ -50,28 +37,53 @@ def load_hf_dataset(config: dict) -> Dataset:
 
 
 def load_local_dataset(local_path: str, max_samples: int | None = None) -> Dataset:
-    dataset = load_dataset('json', data_files=local_path)
-
-    max_samples = min(max_samples, len(dataset))
-    dataset = dataset.select(range(max_samples))
+    ext = os.path.splitext(local_path)[-1].lower()
+    match ext:
+        case '.json':
+            dataset = load_dataset('json', data_files=local_path)['train']
+        case '.csv':
+            dataset = load_dataset('csv', data_files=local_path)['train']
+        case '.tsv':
+            dataset = load_dataset('csv', data_files=local_path, delimiter='\t')['train']
+        case _ :
+            raise ValueError(f"Can't read dataset from {local_path}, extension not supported.")
+        
+    if max_samples is not None:
+        max_samples = min(max_samples, len(dataset))
+        dataset = dataset.select(range(max_samples))
 
     return dataset
 
-
-# Preprocessing
-
-def preprocess_dataset(dataset_name, dataset):
+def preprocess_dataset(dataset: Dataset, dataset_name: str = "default") -> Dataset:
     preprocessor = get_preprocessor(dataset_name)
     if preprocessor is None:
         raise ValueError(f"No preprocessor registered for dataset: {dataset_name}")
     return dataset.map(preprocessor)
+
+# Preprocessing decorators
+
+PREPROCESSORS = {}
+
+def register_preprocessor(name):
+    def decorator(fn):
+        PREPROCESSORS[name] = fn
+        return fn
+    return decorator
+
+def get_preprocessor(name):
+    if 'fewshot' in name:
+        return PREPROCESSORS.get(name, preprocess_default_fewshot)
+    return PREPROCESSORS.get(name, preprocess_default)
+
+
+# Preprocessing functions
 
 def preprocess_default(sample):
     return {
         "id": sample["id"],
         "question": sample["question"],
         "choices": sample["choices"],
-        "answerKey": sample["answerKey"]
+        "ground_truth": sample["answerKey"]
     }
 
 def preprocess_default_fewshot(sample):
@@ -79,7 +91,7 @@ def preprocess_default_fewshot(sample):
         "id": sample["id"],
         "question": sample["question"],
         "choices": sample["choices"],
-        "answerKey": sample["answerKey"],
+        "ground_truth": sample["answerKey"],
         "cot": sample["cot"]
     }
 
@@ -90,7 +102,7 @@ def preprocess_obqa(sample):
         "id": sample["id"],
         "question": sample["question_stem"],
         "choices": sample["choices"],
-        "answerKey": sample["answerKey"]
+        "ground_truth": sample["answerKey"]
     }
 
 @register_preprocessor("obqa_fewshot")
@@ -100,9 +112,21 @@ def preprocess_obqa_fewshot(sample):
         "id": sample["id"],
         "question": sample["question_stem"],
         "choices": json.loads(sample["choices"]),
-        "answerKey": sample["answerKey"],
+        "ground_truth": sample["answerKey"],
         "cot": sample["cot"]
     }
+
+@register_preprocessor("split_choices")
+def preprocess_split_choices(sample):
+
+    matches = re.findall(r'([A-Z])\.\s*(.+)', sample["choices"])
+
+    sample["choices"] = {
+        "text": [choice for _, choice in matches],
+        "label": [label for label, _ in matches]
+    }
+
+    return sample
 
 
 

@@ -1,10 +1,10 @@
 import csv
 import json
-import re
 from natsort import natsorted
 import yaml
 import os
 import logging
+import hashlib
 
 def load_yaml(path):
     with open(path, "r") as file:
@@ -98,7 +98,7 @@ def save_output_to_file(relative_path,
                 sample['id'],
                 sample['question'],
                 "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]),
-                sample['answerKey'],
+                sample['ground_truth'],
                 "\n".join(f"{n['word']}@{n['entity_group']}" for n in ner),
                 "\n".join(uw for uw in unique_words),
                 "\n".join(o["synset"] for o in outputs),
@@ -151,7 +151,7 @@ def prepare_output(sample, prompt, answer):
         "id": sample["id"],
         "question": sample["question"],
         "choices": "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]),
-        "ground_truth": sample['answerKey'],
+        "ground_truth": sample['ground_truth'],
         "model_output": answer,
     }
     if(prompt.top_k):
@@ -164,7 +164,7 @@ def prepare_output_retriever_training(sample, prompt, answer, top_k_index):
         "top_k_index": top_k_index,
         "question": sample["question"],
         "choices": "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]),
-        "ground_truth": sample['answerKey'],
+        "ground_truth": sample['ground_truth'],
         "model_output": answer,
         "ckb_statements": prompt.ckb_statements,
     }
@@ -175,7 +175,7 @@ def prepare_output_refine(sample, prompt, original_answer, refine_answer):
         "id": sample["id"],
         "question": sample["question"],
         "choices": "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]),
-        "ground_truth": sample['answerKey'],
+        "ground_truth": sample['ground_truth'],
         "ckb_statements": "\n".join(sample['ckb_statements'][:prompt.top_k]),
         "model_output": original_answer,
         "model_output_refine": refine_answer,
@@ -210,37 +210,71 @@ def jsonl_to_tsv(jsonl_file, tsv_file=None):
             writer.writerow(json.loads(line.strip()))
 
 def write_accuracy_summary(input_dir):
-    bundle_json_by_prefix(input_dir)
+    bundle_json_by_keys_excluding_prompt(input_dir)
     all_jsonl_to_tsv(input_dir)
 
-def bundle_json_by_prefix(input_dir):
-    files = natsorted(os.listdir(input_dir))
-    prefix_dict = {}
+import os
+import json
+from natsort import natsorted
+from collections import defaultdict
 
-    # Group files by prefix
+from collections import OrderedDict
+import os
+
+def parse_filename_keys(filename):
+    """Parses a filename like key=val|key2=val2.ext into an OrderedDict, removing any extension"""
+    base, _ = os.path.splitext(filename)  # removes the extension
+    parts = base.split("|")
+    return dict(part.split("=", 1) for part in parts if "=" in part)
+
+def bundle_json_by_keys_excluding_prompt(input_dir):
+    files = natsorted(os.listdir(input_dir))
+    group_dict = defaultdict(list)
+
+    # Group files by key-values excluding 'prompt'
+
     for file in files:
         if file.endswith(".json"):
-            prefix_part = file.split("prompt=")[0] + "prompt="
-            if prefix_part not in prefix_dict:
-                prefix_dict[prefix_part] = []
-            prefix_dict[prefix_part].append(file)
+            kv = parse_filename_keys(file)
+            group_key = "|".join(f"{k}={kv[k]}" for k in sorted(kv) if k != "prompt")
+            group_dict[group_key].append(file)
 
-    # Process each prefix group
-    for prefix, grouped_files in prefix_dict.items():
-        output_name = "xFinder_accuracy|" + prefix.replace("|prompt=", ".jsonl")
-        output_file = os.path.join(input_dir, output_name)
+    # Process each group
+    for group_key, grouped_files in group_dict.items():
+        output_name = f"xf_acc|{group_key}.jsonl"
+        output_path = os.path.join(input_dir, output_name)
 
-        if os.path.exists(output_file):
-            os.remove(output_file)
+        prompt_map = {}
 
+        # Load existing entries if the jsonl file exists
+        if os.path.exists(output_path):
+            with open(output_path, "r", encoding="utf-8") as jsonlfile:
+                for line in jsonlfile:
+                    try:
+                        entry = json.loads(line)
+                        if "prompt_type" in entry:
+                            prompt_map[entry["prompt_type"]] = entry
+                    except json.JSONDecodeError:
+                        continue
+
+        # Load new entries and overwrite/add to map
         for file in grouped_files:
-            input_file = os.path.join(input_dir, file)
-            if os.path.isfile(input_file):
-                with open(input_file, "r", encoding="utf-8") as infile:
-                    data = json.load(infile)
-                    with open(output_file, "a", encoding="utf-8") as outfile:
-                        outfile.write(json.dumps(data) + "\n")
-                os.remove(input_file)
+            input_path = os.path.join(input_dir, file)
+            with open(input_path, "r", encoding="utf-8") as jsonfile:
+                try:
+                    data = json.load(jsonfile)
+                    prompt = data.get("prompt_type")
+                    if prompt:
+                        prompt_map[prompt] = data
+                except json.JSONDecodeError:
+                    continue
+            os.remove(input_path)
+
+        # Write back all updated entries
+        with open(output_path, "w", encoding="utf-8") as outfile:
+            for entry in prompt_map.values():
+                outfile.write(json.dumps(entry) + "\n")
+
 
 def all_jsonl_to_tsv(input_dir):
     for file in os.listdir(input_dir):
@@ -253,3 +287,37 @@ def save_jsonl(data, file_path):
     with open(file_path, 'w', encoding='utf-8') as f:
         for entry in data:
             f.write(json.dumps(entry, ensure_ascii=False) + '\n')
+
+
+def hash_file(filepath):
+    """Generate SHA256 hash of a file's content."""
+    hasher = hashlib.sha256()
+    with open(filepath, 'rb') as f:
+        while chunk := f.read(8192):
+            hasher.update(chunk)
+    return hasher.hexdigest()
+
+def load_cache(cache_path):
+    if os.path.exists(cache_path):
+        with open(cache_path, 'r') as f:
+            return json.load(f)
+    return {}
+
+def save_cache(cache, cache_path):
+    with open(cache_path, 'w') as f:
+        json.dump(cache, f, indent=2)
+
+def file_already_processed(file_path, cache_file='.processed_files_cache.json'):
+    cache_path = os.path.join(os.path.dirname(file_path), cache_file)
+    cache = load_cache(cache_path)
+    file_name = os.path.basename(file_path)
+    file_hash = hash_file(file_path)
+    return cache.get(file_name) == file_hash
+
+def mark_file_as_processed(file_path, cache_file='.processed_files_cache.json'):
+    cache_path = os.path.join(os.path.dirname(file_path), cache_file)
+    cache = load_cache(cache_path)
+    file_name = os.path.basename(file_path)
+    file_hash = hash_file(file_path)
+    cache[file_name] = file_hash
+    save_cache(cache, cache_path)

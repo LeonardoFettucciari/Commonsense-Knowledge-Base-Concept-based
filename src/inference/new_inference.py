@@ -4,7 +4,6 @@ import os
 from argparse import ArgumentParser
 from collections import defaultdict
 from typing import Dict, List
-
 import tqdm
 
 # Local imports
@@ -14,7 +13,7 @@ from settings.aliases import (
     MODEL_TAG_TO_NAME,
     PROMPT_TYPE_ALIASES,
 )
-from src.datasets.dataset_loader import QADataset
+from src.datasets.dataset_loader import load_hf_dataset, load_local_dataset, preprocess_dataset
 from src.retriever.retriever import Retriever
 from src.utils.io_utils import load_ckb, load_yaml, prepare_output
 from src.utils.model_utils import generate_text, load_model_and_tokenizer
@@ -25,8 +24,7 @@ from src.utils.retriever_utils import (
 )
 from src.utils.string_utils import (
     extract_base_model_name,
-    prepare_model_output_path,
-    prepare_prompt_output_path,
+    prepare_prompt_output_filename,
 )
 
 # Configure logging
@@ -60,22 +58,27 @@ def inference(
     logging.info("Loading configuration from: %s", config_path)
     config = load_yaml(config_path)
 
-    # Resolve prompt type aliases
+    # Resolve prompt type requirements
     prompt_requires = get_prompt_requirements(prompt_types)
 
     # Get dataset tag and load dataset
     dataset_tag = DATASET_NAME_TO_TAG[dataset_name]
     logging.info("Loading dataset: %s", dataset_name)
-    eval_dataset = QADataset(config[dataset_tag])
-    logging.info("Loaded %d samples for evaluation.", len(eval_dataset.samples))
+    eval_dataset = load_hf_dataset(config[dataset_tag])
+    eval_dataset = preprocess_dataset(eval_dataset, dataset_tag)
+    logging.info("Loaded %d samples for evaluation.", len(eval_dataset))
 
     # Load few-shot data if required
     fewshot_dataset = None
     if prompt_requires["fewshot"]:
-        fewshot_key = f"{dataset_tag}_fewshot"
+        fewshot_tag = f"{dataset_tag}_fewshot"
         logging.info("Loading fewshot examples...")
-        fewshot_dataset = QADataset(config[fewshot_key])
-        logging.info("Loaded %d fewshot examples.", len(fewshot_dataset.samples))
+        fewshot_dataset = load_local_dataset(
+            local_path=config[fewshot_tag]['path'],
+            max_samples=config[fewshot_tag]['max_samples']
+        )
+        fewshot_dataset = preprocess_dataset(fewshot_dataset, fewshot_tag)
+        logging.info("Loaded %d fewshot examples.", len(fewshot_dataset))
 
     # Load knowledge base data if required
     ckb = None
@@ -89,7 +92,7 @@ def inference(
 
         # Retrieve statements for few-shot samples if required
         if prompt_requires["fewshot"]:
-            for sample in fewshot_dataset.samples:
+            for sample in fewshot_dataset:
                 fewshot_ckb_statements = retrieve_top_k_statements(
                     retriever, sample, ckb, max(top_k_values), retrieval_strategy
                 )
@@ -103,8 +106,8 @@ def inference(
     # Prepare for inference
     logging.info("Starting inference...")
     iterator = tqdm.tqdm(
-        enumerate(eval_dataset.samples),
-        total=len(eval_dataset.samples),
+        enumerate(eval_dataset),
+        total=len(eval_dataset),
         desc=f"Running inference on {model_name}...",
     )
 
@@ -126,7 +129,7 @@ def inference(
             sample=sample,
             prompt_types=prompt_types,
             top_k_values=top_k_values,
-            fewshot_examples=fewshot_dataset.samples if fewshot_dataset else None,
+            fewshot_examples=fewshot_dataset,
         )
 
         # Generate answers for each prompt
@@ -139,29 +142,26 @@ def inference(
         ground_truths.append(sample["answerKey"])
 
     # Save inference results
-    model_output_path = prepare_model_output_path(output_dir, dataset_tag, extract_base_model_name(model_name))
-    os.makedirs(model_output_path, exist_ok=True)
-    logging.info("Saving inference results to: %s", model_output_path)
+    model_output_dir = os.path.join(output_dir, dataset_tag, extract_base_model_name(model_name))
+    os.makedirs(model_output_dir, exist_ok=True)
+    logging.info("Saving inference results to: %s", model_output_dir)
 
     for prompt_name, output_data in outputs.items():
-        # Prepare file path
-        prompt_output_path = prepare_prompt_output_path(
-            model_output_path,
-            extension="tsv",
+        prompt_output_filename = prepare_prompt_output_filename(
+            model_output_dir,
+            output_data = output_data[0],
+            prompt=prompt_name,
             ckb=os.path.splitext(os.path.basename(ckb_path))[0],
             retrieval_strategy=retrieval_strategy,
-            model=extract_base_model_name(model_name),
-            prompt=prompt_name,
         )
+        prompt_output_path = os.path.join(model_output_dir, prompt_output_filename)
 
         # Write data to TSV file
         with open(prompt_output_path, mode="w", newline="", encoding="utf-8") as file:
             writer = csv.DictWriter(file, fieldnames=output_data[0].keys(), delimiter="\t")
             writer.writeheader()
             writer.writerows(output_data)
-        logging.info(
-            "Saved results for prompt type '%s' to %s", prompt_name, prompt_output_path
-        )
+        logging.info("Saved results for prompt type '%s' to %s", prompt_name, prompt_output_path)
 
     logging.info("Inference process completed successfully.")
 

@@ -8,8 +8,8 @@ from natsort import natsorted
 from xfinder.eval import Evaluator
 from tqdm import tqdm
 from huggingface_hub import snapshot_download
-from src.utils.io_utils import write_accuracy_summary
-from src.utils.string_utils import extract_key_value_pairs, shorten_prompt, key_value_pairs_to_filename
+from src.utils.io_utils import write_accuracy_summary, file_already_processed, mark_file_as_processed
+from src.utils.string_utils import extract_key_value_pairs, alias_filename, dict_to_filename, extract_value_from_key_in_file_name
 
 
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -124,7 +124,7 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama:
 
         # Write temporary JSON file that will be used later for summary
         json.dump({
-            "prompt_type": os.path.splitext(os.path.basename(input_file))[0].split("prompt=")[1],
+            "prompt_type": extract_value_from_key_in_file_name(os.path.basename(input_file), "prompt"),
 
             "xfinder_avg_accuracy_llama": avg_accuracy_llama,
             "xfinder_avg_accuracy_qwen": avg_accuracy_qwen,
@@ -137,9 +137,8 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama:
 
 def main(args):
     input_dir = args.input_dir
-    output_dir = args.output_dir
-    model_dir = args.model_dir
-    overwrite = args.overwrite
+    output_dir = os.path.join(input_dir, "accuracy")
+    os.makedirs(output_dir, exist_ok=True)
     
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -147,40 +146,45 @@ def main(args):
     logging.info(f"Saving results to: {output_dir}")
 
     # Download and setup models
+    model_dir = "models"
     xfinder_evaluator_qwen = xfinder_setup("xFinder-qwen1505", model_dir)
     xfinder_evaluator_llama = xfinder_setup("xFinder-llama38it", model_dir)
     
     # Scan all files inside input_dir
     for file in os.listdir(input_dir):
         file_path = os.path.join(input_dir, file)
-        if os.path.isfile(file_path):
-            logging.info(f"Processing file: {file}")
-            filename, _ = os.path.splitext(os.path.basename(file))
+        
+        # If not a file
+        if not os.path.isfile(file_path): continue
 
-            # Shorten filename for better readability
-            filename_metadata = extract_key_value_pairs(filename)
-            if filename_metadata.get('prompt'):
-                filename_metadata['prompt'] = shorten_prompt(filename_metadata['prompt'])
-            filename = key_value_pairs_to_filename(filename_metadata)
-            
-            # Define temporary output files
-            output_path = os.path.join(output_dir, f"{filename}.tsv")
-            output_path_json = os.path.join(output_dir, f"{filename}.json")
-            
-            # Check for the final results file (xFinder_accuracy|FILE_PREFIX.jsonl)
-            prefix_part = file.split("prompt=")[0] + "prompt="
-            final_results_path = os.path.join(output_dir, f"xFinder_accuracy|{prefix_part}.jsonl")
-            if os.path.exists(final_results_path) and not overwrite:
-                logging.info(f"Skipping {file} as final result file {final_results_path} already exists. Use --overwrite to force re-computation.")
-                continue
+        # If file already processed, skip it
+        if file_already_processed(file_path): continue
 
-            # Run evaluation on the selected file
-            evaluate(file_path,
-                     output_path,
-                     output_path_json,
-                     xfinder_evaluator_llama,
-                     xfinder_evaluator_qwen,
-            )
+        # Otherwise process it and mark it as processed
+        mark_file_as_processed(file_path)
+        logging.info(f"Processing file: {file}")
+
+        filename, _ = os.path.splitext(os.path.basename(file))
+
+        # Shorten filename for better readability
+        filename_metadata = extract_key_value_pairs(filename)
+        if filename_metadata.get('prompt'):
+            filename_metadata['prompt'] = alias_filename(filename_metadata['prompt'])
+        filename = dict_to_filename(filename_metadata)
+        
+        # Define temporary output files
+        output_path = os.path.join(output_dir, f"{filename}.tsv")
+        output_path_json = os.path.join(output_dir, f"{filename}.json")
+
+        # Run evaluation on the selected file
+        evaluate(file_path,
+                output_path,
+                output_path_json,
+                xfinder_evaluator_llama,
+                xfinder_evaluator_qwen,
+        )
+
+            
         
     # Write summary file for accuracy of all prompt types (e.g., zeroshot-accuracy, etc.)
     write_accuracy_summary(output_dir)
@@ -189,13 +193,6 @@ def main(args):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate models on MCQA with xFinder")
     parser.add_argument('--input_dir', required=True, help='Directory containing the output of the models on the MCQA task.')
-    parser.add_argument('--output_dir', required=False, help='Directory to save the evaluation results.')
-    parser.add_argument('--model_dir', default='models', required=False, help='Directory to save the evaluation models.')
-    parser.add_argument('--overwrite', action='store_true', help='Force re-computation even if final results already exist.')
     args = parser.parse_args()
-
-    # Default value for --output_dir
-    if args.output_dir is None:
-        args.output_dir = os.path.join(args.input_dir, "accuracy")
 
     main(args)

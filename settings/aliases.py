@@ -9,7 +9,7 @@ MODEL_NAME_TO_TAG = {
 MODEL_TAG_TO_NAME = {
     "llama3B": "meta-llama/Llama-3.2-3B-Instruct",
     "llama8B": "meta-llama/Llama-3.1-8B-Instruct",
-    "qwen5B": "Qwen/Qwen2.5-1.5B-Instruct",
+    "qwen1.5B": "Qwen/Qwen2.5-1.5B-Instruct",
     "qwen7B": "Qwen/Qwen2.5-7B-Instruct",
 }
 
@@ -69,10 +69,10 @@ PROMPT_TYPE_ALIASES = {
 }
 
 FULL_PROMPT_TO_SHORT_PROMPT = {
-    "zeroshot": "zs",
-    "zeroshot_cot": "zscot",
     "zeroshot_with_knowledge": "zsk",
-    "fewshot": "fs",
-    "fewshot_cot": "fscot",
+    "zeroshot_cot": "zscot",
+    "zeroshot": "zs",
     "fewshot_with_knowledge": "fsk",
+    "fewshot_cot": "fscot",
+    "fewshot": "fs",    
 }

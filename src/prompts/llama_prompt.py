@@ -41,7 +41,7 @@ class LlamaPrompt(Prompt):
             for i, example in enumerate(self.fewshot_examples, 1):
                 ex_question = example["question"]
                 ex_choices = "\n".join([f"{label}. {choice}" for label, choice in zip(example['choices']['label'], example['choices']['text'])])
-                ex_answer = example["answerKey"]
+                ex_answer = example["ground_truth"]
                 ex_user_string=""
                 ex_assistant_string=""
 

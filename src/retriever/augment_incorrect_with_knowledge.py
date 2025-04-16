@@ -12,7 +12,7 @@ from settings.aliases import (
     MODEL_TAG_TO_NAME,
     PROMPT_TYPE_ALIASES,
 )
-from src.datasets.dataset_loader import QADataset
+from src.datasets.dataset_loader import load_local_dataset, preprocess_dataset
 from src.retriever.retriever import Retriever
 from src.utils.io_utils import load_ckb, load_yaml, prepare_output_retriever_training
 from src.utils.model_utils import generate_text, load_model_and_tokenizer
@@ -20,15 +20,16 @@ from src.utils.prompt_utils import build_prompts_for_retriever_training
 from src.utils.retriever_utils import retrieve_top_k_statements
 from src.utils.string_utils import (
     extract_base_model_name,
-    prepare_model_output_path,
-    prepare_prompt_output_path,
+    prepare_prompt_output_filename,
+    kwargs_to_path,
 )
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
-def create_training_data(
+def augment_incorrect_with_knowledge(
+    input_dir_root: str,
     model_name: str,
     dataset_name: str,
     config_path: str,
@@ -54,15 +55,36 @@ def create_training_data(
     logging.info("Loading configuration from: %s", config_path)
     config = load_yaml(config_path)
 
-    # Get dataset tag and load dataset
+    # Select zs file
     dataset_tag = DATASET_NAME_TO_TAG.get(dataset_name, dataset_name)
-    logging.info("Loading dataset: %s", dataset_name)
-    train_dataset = QADataset(config[dataset_tag])
-    logging.info("Loaded %d samples for generation.", len(train_dataset.samples))
 
-    # Load knowledge base
+    input_dir = os.path.join(
+        input_dir_root,
+        dataset_tag,
+        extract_base_model_name(model_name),
+        'accuracy'
+    )
+    os.makedirs(input_dir, exist_ok=True)
+
+    input_path = kwargs_to_path(
+        dir=input_dir,
+        extension="tsv",
+        model=extract_base_model_name(model_name),
+        prompt="zs"
+    )
+    zs_dataset = load_local_dataset(input_path)
+    zs_dataset = preprocess_dataset(zs_dataset, 'split_choices')
+
+
+    # Filter on mismatch == 0 and accuracy == 0
+    zs_dataset_incorrect_samples = zs_dataset.filter(
+        lambda sample: sample['xfinder_extracted_answers_mismatch'] == 0 and sample['xfinder_acc_llama'] == 0
+    )
+
+    zs_dataset_incorrect_samples = zs_dataset_incorrect_samples.select(range(1)) # TO REMOVE
+
+    # Load knowledge base and initialize retriever
     ckb = load_ckb(ckb_path, retrieval_strategy)
-    # Initialize retriever
     retriever = Retriever(retrieval_strategy, ckb, config["retriever"])
 
     # Load model and tokenizer
@@ -73,8 +95,8 @@ def create_training_data(
     # Prepare for inference
     logging.info("Starting inference...")
     iterator = tqdm.tqdm(
-        enumerate(train_dataset.samples),
-        total=len(train_dataset.samples),
+        enumerate(zs_dataset_incorrect_samples),
+        total=len(zs_dataset_incorrect_samples),
         desc=f"Running inference on {model_name}...",
     )
 
@@ -85,15 +107,15 @@ def create_training_data(
     # Inference loop
     for index, sample in iterator:
         # Retrieve statements if required
-        train_ckb_statements = retrieve_top_k_statements(
+        ckb_statements = retrieve_top_k_statements(
             retriever, sample, ckb, top_k, retrieval_strategy
         )
-        train_ckb_statements = train_ckb_statements[0] # Extract first and only list
+        ckb_statements = ckb_statements[0] # Extract first and only list
         
         # Build prompts
         prompts = build_prompts_for_retriever_training(
             sample=sample,
-            ckb_statements=train_ckb_statements,
+            ckb_statements=ckb_statements,
             top_k=top_k,
         )
 
@@ -101,27 +123,25 @@ def create_training_data(
         for i, prompt in enumerate(prompts):
             answer_text = generate_text(model, tokenizer, prompt)
             answers.append(answer_text)
-            outputs.append(
-                prepare_output_retriever_training(sample, prompt, answer_text, i)
-                )
+            outputs.append(prepare_output_retriever_training(sample, prompt, answer_text, i))
 
         # Append ground truth
-        ground_truths.append(sample["answerKey"])
+        ground_truths.append(sample["ground_truth"])
 
     # Save inference results
-    model_output_path = prepare_model_output_path(output_dir, dataset_tag, extract_base_model_name(model_name))
-    os.makedirs(model_output_path, exist_ok=True)
-    logging.info("Saving inference results to: %s", model_output_path)
+    model_output_dir = os.path.join(output_dir, dataset_name, extract_base_model_name(model_name))
+    os.makedirs(model_output_dir, exist_ok=True)
+    logging.info("Saving inference results to: %s", model_output_dir)
 
     # Prepare file path
-    prompt_output_path = prepare_prompt_output_path(
-        model_output_path,
-        extension="tsv",
+    prompt_output_filename = prepare_prompt_output_filename(
+        model_output_dir,
+        output_data=outputs[0],
+        prompt="trainset_retriever",
         ckb=os.path.splitext(os.path.basename(ckb_path))[0],
         retrieval_strategy=retrieval_strategy,
-        model=extract_base_model_name(model_name),
-        prompt="zeroshot_with_knowledge_1"
     )
+    prompt_output_path = os.path.join(model_output_dir, prompt_output_filename)
 
     # Write data to TSV file
     with open(prompt_output_path, mode="w", newline="", encoding="utf-8") as file:
@@ -132,11 +152,18 @@ def create_training_data(
     logging.info("Inference process completed successfully.")
 
 
+
 def main() -> None:
     """
     Parse arguments and launch the inference procedure.
     """
     parser = ArgumentParser(description="Inference script for CKB-based QA tasks.")
+    parser.add_argument(
+        "--input_dir_root",
+        type=str,
+        required=True,
+        help="Root directory for input folders."
+    )
     parser.add_argument(
         "--model_name",
         type=str,
@@ -188,8 +215,8 @@ def main() -> None:
     args.model_name = MODEL_TAG_TO_NAME.get(args.model_name, args.model_name)
     args.dataset_name = DATASET_TAG_TO_NAME.get(args.dataset_name, args.dataset_name)
 
-    logging.info("Launching inference script...")
-    create_training_data(
+    logging.info("Launching augmenting script...")
+    augment_incorrect_with_knowledge(
         **vars(args)
     )
 
