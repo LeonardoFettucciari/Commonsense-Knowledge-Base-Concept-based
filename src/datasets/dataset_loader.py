@@ -29,7 +29,8 @@ def load_hf_dataset(config: dict) -> Dataset:
         split=config.get('split')
     )
 
-    max_samples = config.get('max_samples', len(dataset))
+    max_samples = config.get('max_samples') if config.get('max_samples') else len(dataset)
+
     max_samples = min(max_samples, len(dataset))
     dataset = dataset.select(range(max_samples))
 
@@ -40,6 +41,8 @@ def load_local_dataset(local_path: str, max_samples: int | None = None) -> Datas
     ext = os.path.splitext(local_path)[-1].lower()
     match ext:
         case '.json':
+            dataset = load_dataset('json', data_files=local_path)['train']
+        case '.jsonl':
             dataset = load_dataset('json', data_files=local_path)['train']
         case '.csv':
             dataset = load_dataset('csv', data_files=local_path)['train']

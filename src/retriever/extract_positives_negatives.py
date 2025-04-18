@@ -45,7 +45,7 @@ def extract_positives_negatives(input_path: str, output_path: str) -> None:
 
     dataset = Dataset.from_list(transformed_data)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
-    dataset.to_json(output_path)
+    dataset.to_json(output_path, lines=True)
     logging.info(f"Saved positives/negatives to: {output_path}")
 
 
@@ -96,8 +96,8 @@ def extract_training_data(input_dir: str) -> None:
                 os.makedirs(output_dir, exist_ok=True)
 
                 # Output file (e.g., filename.csv or filename.json)
-                output_path = os.path.join(output_dir, os.path.splitext(filename)[0] + ".json")
-                anchor_output_path = os.path.join(output_dir, os.path.splitext(filename)[0] + ".json")
+                output_path = os.path.join(output_dir, os.path.splitext(filename)[0] + ".jsonl")
+                anchor_output_path = os.path.join(output_dir, os.path.splitext(filename)[0] + ".jsonl")
 
                 try:
                     extract_positives_negatives(input_path, output_path)

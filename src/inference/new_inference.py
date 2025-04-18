@@ -139,7 +139,7 @@ def inference(
             outputs[prompt.name].append(prepare_output(sample, prompt, answer_text))
 
         # Append ground truth
-        ground_truths.append(sample["answerKey"])
+        ground_truths.append(sample["ground_truth"])
 
     # Save inference results
     model_output_dir = os.path.join(output_dir, dataset_tag, extract_base_model_name(model_name))

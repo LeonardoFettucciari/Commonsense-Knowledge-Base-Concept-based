@@ -30,7 +30,7 @@ def build_prompts(sample, prompt_types, top_k_values, fewshot_examples=[]):
                 
         if p_type == "zeroshot_cot_with_knowledge" or p_type == "all":
             for k in top_k_values:
-                prompts.append(LlamaPrompt( name=f"zeroshot_cot_with_knowledge{k}",
+                prompts.append(LlamaPrompt( name=f"zeroshot_cot_with_knowledge_{k}",
                                             system_instruction=SYSTEM_ZEROSHOT_COT_WITH_KNOWLEDGE,
                                             sample=sample,
                                             cot=True,

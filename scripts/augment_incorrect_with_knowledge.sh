@@ -31,7 +31,7 @@ for DATASET_NAME in "${DATASETS[@]}"; do
             echo "Running inference for dataset '$DATASET_NAME' with model '$MODEL_NAME' and retrieval strategy '$RETRIEVAL_STRATEGY"
 
             python src/retriever/augment_incorrect_with_knowledge.py \
-                --inpur_dir_root "$INPUT_DIR_ROOT" \
+                --input_dir_root "$INPUT_DIR_ROOT" \
                 --output_dir "$OUTPUT_DIR" \
                 --model_name "$MODEL_NAME" \
                 --dataset_name "$DATASET_NAME" \

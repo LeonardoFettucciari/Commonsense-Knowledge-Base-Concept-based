@@ -5,6 +5,7 @@ import yaml
 import os
 import logging
 import hashlib
+from collections import defaultdict
 
 def load_yaml(path):
     with open(path, "r") as file:
@@ -112,12 +113,12 @@ def load_ckb(ckb_path: str, retrieval_scope: str):
     Load the knowledge base from `ckb_path`.
     Depending on retrieval_scope, we might load a dict or a list, etc.
     """
-    if retrieval_scope == "cner_filter":
+    if retrieval_scope == "cner+retriever":
         logging.info("Loading CKB as a dictionary for synset-based retrieval.")
         ckb_dict = load_kb_as_dict(ckb_path)
         return ckb_dict
 
-    elif retrieval_scope == "full_ckb":
+    elif retrieval_scope == "retriever":
         logging.info("Loading CKB as a list of statements.")
         ckb_list = load_ckb_statements(ckb_path)
         return ckb_list
@@ -213,13 +214,6 @@ def write_accuracy_summary(input_dir):
     bundle_json_by_keys_excluding_prompt(input_dir)
     all_jsonl_to_tsv(input_dir)
 
-import os
-import json
-from natsort import natsorted
-from collections import defaultdict
-
-from collections import OrderedDict
-import os
 
 def parse_filename_keys(filename):
     """Parses a filename like key=val|key2=val2.ext into an OrderedDict, removing any extension"""

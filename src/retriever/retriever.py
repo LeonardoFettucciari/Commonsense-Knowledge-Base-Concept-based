@@ -23,12 +23,12 @@ class Retriever:
         logging.info(f"Initializing Retriever with model: {self.model_name}")
         self.model = SentenceTransformer(self.model_name)
                 
-        if self.retrieval_strategy == "full_ckb":
+        if self.retrieval_strategy == "retriever":
             self.save_embeddings = True
             # CKB here is a list of all ckb statements
             self.passages = ckb
 
-        elif self.retrieval_strategy == "cner_filter":
+        elif self.retrieval_strategy == "cner+retriever":
             self.save_embeddings = False
             # We won't set passages right now, because we do that per-sample
             # CKB here is a dict synset:statements

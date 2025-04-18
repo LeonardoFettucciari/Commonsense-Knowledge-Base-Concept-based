@@ -5,9 +5,11 @@ from sentence_transformers import (
     SentenceTransformerTrainingArguments,
     SentenceTransformerModelCardData,
 )
-from sentence_transformers.losses import MultipleNegativesRankingLoss
+from sentence_transformers.losses import MultipleNegativesRankingLoss, TripletLoss
 from sentence_transformers.training_args import BatchSamplers
 from sentence_transformers.evaluation import TripletEvaluator
+
+from src.datasets.dataset_loader import load_local_dataset
 
 # 1. Load a model to finetune with 2. (Optional) model card data
 model = SentenceTransformer(
@@ -20,18 +22,18 @@ model = SentenceTransformer(
 )
 
 # 3. Load a dataset to finetune on
-dataset = load_dataset("sentence-transformers/all-nli", "triplet")
-train_dataset = dataset["train"].select(range(100_000))
-eval_dataset = dataset["dev"]
-test_dataset = dataset["test"]
+dataset = load_local_dataset("outputs/retriever/training_data/qasc/Llama-3.1-8B-Instruct/training_data/triplets.jsonl")
+split = dataset.train_test_split(0.1, shuffle=True, seed=42)
+train_dataset = split['train']
+eval_dataset = split["test"]
 
 # 4. Define a loss function
-loss = MultipleNegativesRankingLoss(model)
+loss = TripletLoss(model)
 
 # 5. (Optional) Specify training arguments
 args = SentenceTransformerTrainingArguments(
     # Required parameter:
-    output_dir="models/retriever/intfloat_e5-base-v2",
+    output_dir="models/retriever",
     # Optional training parameters:
     num_train_epochs=1,
     per_device_train_batch_size=16,
@@ -48,7 +50,7 @@ args = SentenceTransformerTrainingArguments(
     save_steps=100,
     save_total_limit=2,
     logging_steps=100,
-    run_name="intfloat/e5-base-v2",  # Will be used in W&B if `wandb` is installed
+    run_name="mpnet-base-all-nli-triplet",  # Will be used in W&B if `wandb` is installed
 )
 
 # 6. (Optional) Create an evaluator & evaluate the base model
@@ -56,7 +58,7 @@ dev_evaluator = TripletEvaluator(
     anchors=eval_dataset["anchor"],
     positives=eval_dataset["positive"],
     negatives=eval_dataset["negative"],
-    name="dev",
+    name="all-nli-dev",
 )
 dev_evaluator(model)
 
@@ -71,17 +73,18 @@ trainer = SentenceTransformerTrainer(
 )
 trainer.train()
 
+'''
 # (Optional) Evaluate the trained model on the test set
 test_evaluator = TripletEvaluator(
     anchors=test_dataset["anchor"],
     positives=test_dataset["positive"],
     negatives=test_dataset["negative"],
-    name="test",
+    name="all-nli-test",
 )
 test_evaluator(model)
-
+'''
 # 8. Save the trained model
-model.save_pretrained("models/retriever/intfloat_e5-base-v2/final")
+model.save_pretrained("models/retriever/final")
 
 # 9. (Optional) Push it to the Hugging Face Hub
 #model.push_to_hub("mpnet-base-all-nli-triplet")

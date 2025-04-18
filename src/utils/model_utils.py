@@ -54,7 +54,7 @@ def load_gemini_model(model_name, generation_config, system_instruction, api_key
     return model
 
 def clean_statement(model_output):
-    cleaned_statements = [s.strip() for s in re.split(r'\n?\d+\.\s*', model_output) if s.strip()]
+    cleaned_statements = [s.strip() for s in re.split(r'^\d+\.\s+', model_output, flags=re.MULTILINE) if s.strip()]
     return cleaned_statements
 
 def get_statement(llm, synsets_list, definitions_list):

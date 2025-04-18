@@ -23,24 +23,6 @@ def create_ckb(
     output_dir: str,
     limit_samples: Optional[int] = None
 ):
-    
-    # eval_data = load_dataset("allenai/openbookqa")['test']
-    # samples = eval_data.shuffle(seed=42) # .select(range(10))
-
-    # # Bundle question + choices together
-    # formatted_samples = []
-    # for sample in samples:
-    #     question = sample['question_stem']
-    #     choices = " ".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])])
-    #     formatted_samples.append(f"{question} {choices}")
-
-    # # Run NER pipeline
-    # ner_pipeline = get_ner_pipeline("Babelscape/cner-base")
-    # ner_results = ner_pipeline(formatted_samples)
-
-    # # Extract unique words
-    # unique_words_all_samples = extract_unique_words(ner_results)
-    # wordnet_synsets = from_words_to_synsets(unique_words_all_samples)
 
     # Get model settings
     settings = get_model_settings(config_path)
@@ -81,14 +63,13 @@ def create_ckb(
             chat_session = llm.start_chat(history=[])
             # Send message and get response
             model_output = chat_session.send_message(prompt.messages[0]).text
-            # Extract statements' text only and clean them i.e. remove '5.' out of '5. <Statement number 5>'
-            cleaned_statements = clean_statement(model_output)
+
             # Current sample output
             output_dict = {
                 "synset_name": synset_name,
                 "synset_lemma": synset_lemma,
                 "synset_definition": synset_definition,
-                "statements": cleaned_statements
+                "statements": model_output
             }
             fout.write(output_dict)
 

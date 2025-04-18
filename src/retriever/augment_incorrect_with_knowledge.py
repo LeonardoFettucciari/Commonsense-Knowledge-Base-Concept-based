@@ -69,7 +69,6 @@ def augment_incorrect_with_knowledge(
     input_path = kwargs_to_path(
         dir=input_dir,
         extension="tsv",
-        model=extract_base_model_name(model_name),
         prompt="zs"
     )
     zs_dataset = load_local_dataset(input_path)
@@ -81,7 +80,8 @@ def augment_incorrect_with_knowledge(
         lambda sample: sample['xfinder_extracted_answers_mismatch'] == 0 and sample['xfinder_acc_llama'] == 0
     )
 
-    zs_dataset_incorrect_samples = zs_dataset_incorrect_samples.select(range(1)) # TO REMOVE
+    # TO REMOVE
+    #zs_dataset_incorrect_samples = zs_dataset_incorrect_samples.select(range(1)) 
 
     # Load knowledge base and initialize retriever
     ckb = load_ckb(ckb_path, retrieval_strategy)
@@ -112,6 +112,7 @@ def augment_incorrect_with_knowledge(
         )
         ckb_statements = ckb_statements[0] # Extract first and only list
         
+        
         # Build prompts
         prompts = build_prompts_for_retriever_training(
             sample=sample,
@@ -129,7 +130,7 @@ def augment_incorrect_with_knowledge(
         ground_truths.append(sample["ground_truth"])
 
     # Save inference results
-    model_output_dir = os.path.join(output_dir, dataset_name, extract_base_model_name(model_name))
+    model_output_dir = os.path.join(output_dir, dataset_tag, extract_base_model_name(model_name))
     os.makedirs(model_output_dir, exist_ok=True)
     logging.info("Saving inference results to: %s", model_output_dir)
 

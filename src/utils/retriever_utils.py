@@ -3,7 +3,7 @@ import logging
 
 def retrieve_top_k_statements(retriever, sample, ckb, k, retrieval_strategy):
 
-    if retrieval_strategy == "cner_filter": # CKB here is a dict synset:statements
+    if retrieval_strategy == "cner+retriever": # CKB here is a dict synset:statements
         # Concatenate question + choices
         formatted_question = concatenate_question_choices(sample)
         # Extract synsets from samples
@@ -19,7 +19,7 @@ def retrieve_top_k_statements(retriever, sample, ckb, k, retrieval_strategy):
         # Retrieve top k statements
         return retriever.retrieve(formatted_question, k)
     
-    elif retrieval_strategy == "full_ckb": # CKB here is a list of all ckb statements
+    elif retrieval_strategy == "retriever": # CKB here is a list of all ckb statements
         # Concatenate question + choices
         formatted_question = concatenate_question_choices(sample)
         # Retrieve top k statements
