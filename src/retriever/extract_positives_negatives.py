@@ -3,7 +3,7 @@ import os
 from argparse import ArgumentParser
 from collections import defaultdict
 from datasets import Dataset
-from src.datasets.dataset_loader import load_local_dataset
+from src.datasets.dataset_loader import load_local_dataset, preprocess_dataset
 from src.utils.io_utils import file_already_processed, mark_file_as_processed
 
 # Configure logging
@@ -52,22 +52,24 @@ def extract_positives_negatives(input_path: str, output_path: str) -> None:
 def anchor_format(input_path: str, output_path: str) -> None:
     logging.info(f"Formatting anchor data from: {input_path}")
     dataset = load_local_dataset(input_path)
-    dataset = dataset.select_columns(['question', 'positives', 'negatives'])
     
     triplets = []
     for sample in dataset:
+        question = sample['question']
+        choices = " ".join(sample['choices'].split('\n'))
         triplets.extend([
             {
-                "anchor": sample["question"],
+                "anchor": f"{question} {choices}",
                 "positive": pos,
-                "negative": sample["negatives"],
+                "negative": neg,
             }
             for pos in sample['positives']
+            for neg in sample['negatives']
         ])
 
     dataset = Dataset.from_list(triplets)
     dataset.to_json(output_path)
-    logging.info(f"Saved anchor-formatted data to: {output_path}")
+    logging.info(f"Saved anchor-formatted triplets to: {output_path}")
 
 
 def extract_training_data(input_dir: str) -> None:
@@ -89,7 +91,7 @@ def extract_training_data(input_dir: str) -> None:
                     continue
 
                 logging.info(f"Processing file: {filename}")
-                mark_file_as_processed(input_path)
+                
 
                 parent_folder = os.path.dirname(root)
                 output_dir = os.path.join(parent_folder, "training_data")
@@ -97,13 +99,15 @@ def extract_training_data(input_dir: str) -> None:
 
                 # Output file (e.g., filename.csv or filename.json)
                 output_path = os.path.join(output_dir, os.path.splitext(filename)[0] + ".jsonl")
-                anchor_output_path = os.path.join(output_dir, os.path.splitext(filename)[0] + ".jsonl")
+                anchor_output_path = os.path.join(output_dir, "triplets_" + os.path.splitext(filename)[0] + ".jsonl")
 
                 try:
                     extract_positives_negatives(input_path, output_path)
                     anchor_format(output_path, anchor_output_path)
+                    mark_file_as_processed(input_path)                    
                 except Exception as e:
                     logging.error(f"Failed to process {filename}: {e}")
+
 
 
 if __name__ == "__main__":

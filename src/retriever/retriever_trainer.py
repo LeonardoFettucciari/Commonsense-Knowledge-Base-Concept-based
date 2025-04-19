@@ -17,12 +17,13 @@ model = SentenceTransformer(
     model_card_data=SentenceTransformerModelCardData(
         language="en",
         license="apache-2.0",
-        model_name="intfloat/e5-base-v2",
+        model_name="intfloat/e5-base-v2-trained",
     )
 )
 
 # 3. Load a dataset to finetune on
-dataset = load_local_dataset("outputs/retriever/training_data/qasc/Llama-3.1-8B-Instruct/training_data/triplets.jsonl")
+dataset = load_local_dataset("outputs/retriever/training_data/final/csqa.jsonl")
+dataset.select(range(6000))
 split = dataset.train_test_split(0.1, shuffle=True, seed=42)
 train_dataset = split['train']
 eval_dataset = split["test"]
@@ -42,7 +43,6 @@ args = SentenceTransformerTrainingArguments(
     warmup_ratio=0.1,
     fp16=False,  # Set to False if you get an error that your GPU can't run on FP16
     bf16=True,  # Set to True if you have a GPU that supports BF16
-    batch_sampler=BatchSamplers.NO_DUPLICATES,  # MultipleNegativesRankingLoss benefits from no duplicate samples in a batch
     # Optional tracking/debugging parameters:
     eval_strategy="steps",
     eval_steps=100,
@@ -84,7 +84,7 @@ test_evaluator = TripletEvaluator(
 test_evaluator(model)
 '''
 # 8. Save the trained model
-model.save_pretrained("models/retriever/final")
+model.save_pretrained("models/retriever/csqa/final")
 
 # 9. (Optional) Push it to the Hugging Face Hub
 #model.push_to_hub("mpnet-base-all-nli-triplet")

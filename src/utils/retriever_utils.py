@@ -25,7 +25,7 @@ def retrieve_top_k_statements(retriever, sample, ckb, k, retrieval_strategy):
         # Retrieve top k statements
         return retriever.retrieve(formatted_question, k)
     else:
-        ValueError(f"Retrieval scope not supported: {retrieval_strategy}.")
+        ValueError(f"Retrieval strategy not supported: {retrieval_strategy}.")
 
 
     
