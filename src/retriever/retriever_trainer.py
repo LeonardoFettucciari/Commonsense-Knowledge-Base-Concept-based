@@ -1,4 +1,4 @@
-from datasets import load_dataset
+from datasets import load_dataset, concatenate_datasets
 from sentence_transformers import (
     SentenceTransformer,
     SentenceTransformerTrainer,
@@ -22,8 +22,12 @@ model = SentenceTransformer(
 )
 
 # 3. Load a dataset to finetune on
-dataset = load_local_dataset("outputs/retriever/training_data/final/csqa.jsonl")
-dataset.select(range(6000))
+csqa = load_local_dataset("outputs/retriever/training_data/final/csqa.jsonl")
+obqa = load_local_dataset("outputs/retriever/training_data/final/obqa.jsonl")
+qasc = load_local_dataset("outputs/retriever/training_data/final/qasc.jsonl")
+dataset = concatenate_datasets([csqa, obqa, qasc])
+
+dataset = dataset.select(range(6000))
 split = dataset.train_test_split(0.1, shuffle=True, seed=42)
 train_dataset = split['train']
 eval_dataset = split["test"]
@@ -84,7 +88,7 @@ test_evaluator = TripletEvaluator(
 test_evaluator(model)
 '''
 # 8. Save the trained model
-model.save_pretrained("models/retriever/csqa/final")
+model.save_pretrained("models/retriever/final")
 
 # 9. (Optional) Push it to the Hugging Face Hub
 #model.push_to_hub("mpnet-base-all-nli-triplet")

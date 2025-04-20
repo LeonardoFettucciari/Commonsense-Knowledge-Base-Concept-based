@@ -7,6 +7,8 @@ from sentence_transformers import SentenceTransformer
 from sentence_transformers.util import semantic_search
 from huggingface_hub import ModelCard
 from pathlib import Path
+from sentence_transformers import SentenceTransformer
+from sentence_transformers.models import Transformer, StaticEmbedding
 UNIQUE_STRING_FOR_HASHING = "Tavshg;re749hgqg7e5g@hgaklsf09786GRE"
 
 class Retriever:
@@ -169,14 +171,40 @@ class Retriever:
         """
         self.passages_hash = self._compute_hash(
             self.passages,
-            str(self.model.encode(
-            UNIQUE_STRING_FOR_HASHING,
-            normalize_embeddings=True,
-            convert_to_numpy=True,
-            prompt=self.passage_prompt,
-            ))
+            str(self.model_name_or_path),
         )
         self.passages_embeddings_cache_path = os.path.join(
             self.cache_dir,
-            f"{self.passages_hash}.npy"
+            f"{_get_sanitized_model_id(self.model)}_{self.passages_hash}.npy"
         )
+
+
+def _get_model_id(model: SentenceTransformer) -> str:
+    """
+    Returns the name_or_path (for HF models) or base_model (for local/static embeddings)
+    of a SentenceTransformer, regardless of how it was loaded.
+    """
+    # grab the very first sub‐module
+    first = model._first_module()
+
+    if isinstance(first, Transformer):
+        # HF‐style: AutoModel.config.name_or_path is exactly what you passed in
+        return first.auto_model.config.name_or_path
+    elif isinstance(first, StaticEmbedding):
+        # static local embedding: base_model holds the identifier
+        return first.base_model
+    else:
+        # fallback: scan all modules for something with an auto_model
+        for m in model._modules.values():
+            if hasattr(m, "auto_model"):
+                return m.auto_model.config.name_or_path
+        raise RuntimeError("Could not determine model identifier")
+
+def _get_sanitized_model_id(model: SentenceTransformer) -> str:
+    """
+    Like get_model_id, but with '/' and '\' replaced by '_'
+    so it’s safe as a filename or key.
+    """
+    raw = _get_model_id(model)
+    # normalize both forward and backward slashes
+    return raw.replace("/", "_").replace("\\", "_")

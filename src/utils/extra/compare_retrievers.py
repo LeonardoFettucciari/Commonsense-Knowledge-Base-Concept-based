@@ -24,7 +24,7 @@ ckb = load_ckb(ckb_path, retrieval_strategy)
 
 # Initialize retriever trained
 retriever_trained = Retriever(
-    "models/retriever/csqa/final",
+    "models/retriever_mnr/final",
     retrieval_strategy,
     ckb,
     passage_prompt="passage: ",

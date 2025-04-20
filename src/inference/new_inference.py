@@ -88,12 +88,20 @@ def inference(
         ckb = load_ckb(ckb_path, retrieval_strategy)
 
         # Initialize retriever
-        retriever = Retriever(retrieval_strategy, ckb, config["retriever"])
+        retriever = Retriever(
+            "intfloat/e5-base-v2",
+            retrieval_strategy,
+            ckb,
+            passage_prompt="passage: ",
+            query_prompt="query: ",
+        )
 
         # Retrieve statements for few-shot samples if required
         if prompt_requires["fewshot"]:
             for sample in fewshot_dataset:
-                fewshot_ckb_statements = retrieve_top_k_statements(
+                fewshot_ckb_statements = retriever.retrieve(sample)
+                
+                retrieve_top_k_statements(
                     retriever, sample, ckb, max(top_k_values), retrieval_strategy
                 )
                 add_ckb_statements_to_samples(sample, fewshot_ckb_statements)

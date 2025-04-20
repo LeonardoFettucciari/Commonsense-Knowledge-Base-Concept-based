@@ -2,8 +2,6 @@ import os
 from datasets import concatenate_datasets
 from src.datasets.dataset_loader import load_local_dataset
 
-# Assume this function is defined elsewhere
-# from your_module import load_local_dataset
 
 def convert_to_triplets(root_path):
 
