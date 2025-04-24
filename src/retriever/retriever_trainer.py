@@ -27,41 +27,96 @@ obqa = load_local_dataset("outputs/retriever/training_data/final/obqa.jsonl")
 qasc = load_local_dataset("outputs/retriever/training_data/final/qasc.jsonl")
 dataset = concatenate_datasets([csqa, obqa, qasc])
 
-dataset = dataset.select(range(6000))
 split = dataset.train_test_split(0.1, shuffle=True, seed=42)
 train_dataset = split['train']
 eval_dataset = split["test"]
 
+
+
+triplets = []
+for sample in train_dataset:
+    anchor = sample.get("question") + " " + " ".join(sample.get("choices").split("\n"))
+    positives = sample.get("positives", [])
+    negatives = sample.get("negatives", [])
+
+    for pos in positives:
+        for neg in negatives:
+            triplet = {
+                "anchor": anchor,
+                "positive": pos,
+                "negative": neg,
+            }
+            triplets.append(triplet)
+train_dataset = dataset.from_list(triplets)
+
+triplets = []
+for sample in eval_dataset:
+    anchor = sample.get("question") + " " + " ".join(sample.get("choices").split("\n"))
+    positives = sample.get("positives", [])
+    negatives = sample.get("negatives", [])
+
+    for pos in positives:
+        for neg in negatives:
+            triplet = {
+                "anchor": anchor,
+                "positive": pos,
+                "negative": neg,
+            }
+            triplets.append(triplet)
+eval_dataset = dataset.from_list(triplets)
+
 # 4. Define a loss function
 loss = TripletLoss(model)
 
+
+num_train_epochs = 5
+total_steps = len(train_dataset) // 256 * num_train_epochs
+warmup_steps = int(0.1 * total_steps)
 # 5. (Optional) Specify training arguments
 args = SentenceTransformerTrainingArguments(
-    # Required parameter:
+    # Core settings
     output_dir="models/retriever",
-    # Optional training parameters:
-    num_train_epochs=1,
-    per_device_train_batch_size=16,
-    per_device_eval_batch_size=16,
-    learning_rate=2e-5,
-    warmup_ratio=0.1,
-    fp16=False,  # Set to False if you get an error that your GPU can't run on FP16
-    bf16=True,  # Set to True if you have a GPU that supports BF16
-    # Optional tracking/debugging parameters:
-    eval_strategy="steps",
-    eval_steps=100,
+    num_train_epochs=num_train_epochs,                  # 3 full passes over your training data
+    per_device_train_batch_size=64,      # push this up if you have >16 GB GPU
+    per_device_eval_batch_size=64,       # larger eval batches to speed up validation
+
+    # Optimization
+    learning_rate=3e-5,                  # a good starting LR for transformers
+    weight_decay=0.01,                   # regularization on weights
+    lr_scheduler_type="linear",          # linear warmup then decay
+    warmup_steps=500,                    # ~10% of a 5 k-step run
+
+    # Mixed precision
+    fp16=True,                           # if your GPU supports it, speeds up training
+    bf16=False,                          # disable unless you know your GPU supports BF16
+
+    # Logging & checkpointing
+    logging_strategy="steps",
+    logging_steps=100,                   # log loss every 100 steps
     save_strategy="steps",
-    save_steps=100,
-    save_total_limit=2,
-    logging_steps=100,
-    run_name="mpnet-base-all-nli-triplet",  # Will be used in W&B if `wandb` is installed
+    save_steps=500,                      # checkpoint every 500 steps
+    save_total_limit=3,                  # keep only the last 3 checkpoints
+    load_best_model_at_end=True,         # after training, reload best checkpoint
+    metric_for_best_model="eval_loss",   # choose best checkpoint by lowest eval loss
+
+    # Evaluation
+    eval_strategy="steps",
+    eval_steps=500,                      # run evaluation every 500 steps
+
+    # Reproducibility & performance
+    seed=42,
+    remove_unused_columns=True,          # drop unused dataset cols
+
+    # Experiment tracking (e.g., wandb)
+    run_name="e5-base-v2-triplet-finetune",
 )
+
 
 # 6. (Optional) Create an evaluator & evaluate the base model
 dev_evaluator = TripletEvaluator(
-    anchors=eval_dataset["anchor"],
-    positives=eval_dataset["positive"],
-    negatives=eval_dataset["negative"],
+    anchors=eval_dataset[:]["anchor"],
+    positives=eval_dataset[:]["positive"],
+    negatives=eval_dataset[:]["negative"],
     name="all-nli-dev",
 )
 dev_evaluator(model)

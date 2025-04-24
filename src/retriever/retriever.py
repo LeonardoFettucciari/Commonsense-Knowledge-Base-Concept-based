@@ -1,210 +1,252 @@
-import os
-import torch
-import numpy as np
-import logging
+# src/retriever/retriever.py
+
 import hashlib
-from sentence_transformers import SentenceTransformer
-from sentence_transformers.util import semantic_search
-from huggingface_hub import ModelCard
+import logging
 from pathlib import Path
+from typing import List, Union
+
+import faiss
+import numpy as np
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.models import Transformer, StaticEmbedding
-UNIQUE_STRING_FOR_HASHING = "Tavshg;re749hgqg7e5g@hgaklsf09786GRE"
+
+from src.utils.data_utils import synsets_from_samples
+
 
 class Retriever:
+    """
+    Dense retriever with optional Maximal Marginal Relevance (MMR) post-filtering.
+
+    Strategies:
+      - "retriever"      – index the full CKB once and cache the FAISS file.
+      - "cner+retriever" – passages provided later (set_passages); no caching.
+    """
 
     def __init__(
-            self,
-            model_name_or_path: str,
-            retrieval_strategy: str,
-            ckb: dict | list,
-            passage_prompt: str | None = None,
-            query_prompt: str | None = None,
-            cache_dir: str = "cache/embeddings",
+        self,
+        model_name_or_path: str,
+        retrieval_strategy: str,
+        ckb: Union[dict, List[str]],
+        passage_prompt: str | None = None,
+        query_prompt: str | None = None,
+        cache_dir: str = "cache/index",
     ):
-        """
-        Retriever class for retrieving statements from a CKB given a query i.e. question+choices.
-
-        :param model_name_or_path: Hugging face model name or local model path.
-        :param retrieval_strategy: Retriever or cner+retriever.
-        :param ckb: Commonsense Knowledge-Base object.
-        :param passage_prompt: Prefix for each passage i.e. passage: <passage>.
-        :param query_prompt: Prefix for each query i.e. query: <query>.
-        :param cache_dir: Directory for cache.sss
-        """
-        self.model_name_or_path = model_name_or_path
-        self.retrieval_strategy = retrieval_strategy
+        assert retrieval_strategy in {"retriever", "cner+retriever"}
         self.ckb = ckb
+        self.model = SentenceTransformer(model_name_or_path)
+        self.retrieval_strategy = retrieval_strategy
         self.passage_prompt = passage_prompt
         self.query_prompt = query_prompt
-        self.cache_dir = cache_dir
-        os.makedirs(self.cache_dir, exist_ok=True)
 
-        # Model
-        self.model = SentenceTransformer(self.model_name_or_path)
-        
-        # Retrieval strategy
-        self.save_embeddings = False
-        self.passages = []
-        if self.retrieval_strategy == "retriever":
-            # CKB here is a list of all ckb statements
-            self.save_embeddings = True
-            self.passages = ckb
+        # Initialize passages and index only for the "retriever" strategy
+        self.passages: list[str] = ckb if retrieval_strategy == "retriever" else []
+        self.save_index = retrieval_strategy == "retriever"
+        self.cache_dir = Path(cache_dir)
+        if self.save_index:
+            self.cache_dir.mkdir(parents=True, exist_ok=True)
 
-        # Passage embeddings + cache
-        self.passages_hash = None
-        self.passages_embeddings_cache_path = None
-        self.passages_embeddings = self._load_or_encode_passages()
-
-    def retrieve(self, queries, top_k, batch_size=512):
-        """
-        Retrieves top_k statements for each query in queries. Returns a list[str] or str according to queries type. 
-
-        :param queries: list of queries or single query to retriever statements for.
-        :param top_k: number of statements to retriever for each query.
-        :param batch_size: size of batches.
-        """
-        is_single_string = isinstance(queries, str)
-        queries = [queries] if is_single_string else queries
-
-        question_embeddings = self._encode_query(queries)
-        top_k_statements_per_question = semantic_search(
-            question_embeddings,
-            self.passages_embeddings,
-            top_k=top_k,
-            query_chunk_size=batch_size
+        self.index_path = (
+            self.cache_dir / f"{self._cache_key()}.faiss" if self.save_index else None
         )
- 
-        all_questions_statements = [
-            [self.passages[statement['corpus_id']] for statement in question_statements]
-            for question_statements in top_k_statements_per_question
-        ]
-        return all_questions_statements[0] if is_single_string else all_questions_statements
+        self.index = self._load_or_build_index() if self.passages else None
 
-    def set_passages(self, passages):
+    def retrieve_top_k(
+        self,
+        query: str,
+        top_k: int,
+        *,
+        diversify: bool = False,
+        re_rank: str = "mmr",
+        lambda_: float = 0.7,
+        pool_size: int | None = None,
+        diversity_threshold: float = 0.9,
+        batch_size: int = 512,
+    ) -> List[str]:
         """
-        Sets (or updates) the passages and re-encodes them if necessary.
+        Retrieve top_k passages for a pre-formatted query string.
 
-        :param passages: new passages to set.
+        If using "cner+retriever", will:
+          - extract synsets from `query`
+          - collect matching CKB statements
+          - call set_passages(...) on that subset
+        Then delegates to self.retrieve(...)
         """
-        self.passages = [passages] if not isinstance(passages, list) else passages
-        self.passages_embeddings = self._load_or_encode_passages()
-    
-    @staticmethod
-    def _compute_hash(passages, unique_string):
-        """
-        Compute a hash based on all passages and the model name.
-        This ensures a unique hash whenever the passages or model differ.
-        """
+        if self.retrieval_strategy == "cner+retriever":
+            # 1) extract synsets
+            sample_synsets = synsets_from_samples(query)
+
+            # 2) gather all unique statements for those synsets
+            ckb_statements = list({
+                stmt
+                for syn in sample_synsets
+                for stmt in self.ckb.get(syn.name(), [])
+            })
+
+            # 3) swap in those passages
+            self.set_passages(ckb_statements)
+
+        # 4) perform the dense retrieval
+        return self.retrieve(
+            query,
+            top_k,
+            diversify=diversify,
+            re_rank=re_rank,
+            lambda_=lambda_,
+            pool_size=pool_size,
+            diversity_threshold=diversity_threshold,
+            batch_size=batch_size,
+        )
+
+    def retrieve(
+        self,
+        queries: Union[str, List[str]],
+        top_k: int,
+        *,
+        diversify: bool = False,
+        re_rank: str = "mmr",
+        lambda_: float = 0.7,
+        pool_size: int | None = None,
+        diversity_threshold: float = 0.9,
+        batch_size: int = 512,
+    ) -> Union[List[str], List[List[str]]]:
+        if self.index is None:
+            raise RuntimeError(
+                "No FAISS index available. Did you forget to call set_passages?"
+            )
+
+        single = isinstance(queries, str)
+        queries_list = [queries] if single else queries
+
+        # encode
+        q_emb = self._encode(
+            queries_list, prompt=self.query_prompt, batch_size=batch_size
+        )
+
+        # how many to pull
+        cand = pool_size or top_k if diversify else top_k
+        cand = min(cand, len(self.passages))
+
+        # FAISS search
+        scores, idx = self.index.search(q_emb.astype(np.float32), cand)
+
+        hits: list[list[str]] = []
+        for q_i, ids in enumerate(idx):
+            cand_texts = [self.passages[i] for i in ids if i != -1]
+
+            if not diversify:
+                hits.append(cand_texts[:top_k])
+                continue
+
+            # get vectors back
+            cand_vecs = np.stack([self.index.reconstruct(int(i)) for i in ids if i != -1])
+
+            if re_rank == "mmr":
+                hits.append(_mmr(
+                    query_vec=q_emb[q_i],
+                    cand_vecs=cand_vecs,
+                    cand_texts=cand_texts,
+                    k=top_k,
+                    lambda_=lambda_,
+                ))
+            elif re_rank == "filter":
+                kept_texts: list[str] = []
+                kept_vecs: list[np.ndarray] = []
+                for vec, text in zip(cand_vecs, cand_texts):
+                    if not kept_vecs:
+                        kept_texts.append(text)
+                        kept_vecs.append(vec)
+                    else:
+                        sims = np.dot(np.stack(kept_vecs), vec)
+                        if np.all(sims < diversity_threshold):
+                            kept_texts.append(text)
+                            kept_vecs.append(vec)
+                    if len(kept_texts) == top_k:
+                        break
+                hits.append(kept_texts)
+            else:
+                raise ValueError(f"Unknown re_rank mode: {re_rank}")
+
+        return hits[0] if single else hits
+
+    def set_passages(self, passages: Union[str, List[str]]):
+        self.passages = [passages] if isinstance(passages, str) else passages
+        if self.save_index:
+            self.index_path = self.cache_dir / f"{self._cache_key()}.faiss"
+        self.index = self._load_or_build_index()
+
+    def _encode(self, texts: List[str], *, prompt: str | None, batch_size: int):
+        return self.model.encode(
+            texts,
+            prompt=prompt,
+            batch_size=batch_size,
+            convert_to_numpy=True,
+            normalize_embeddings=True,
+            show_progress_bar=self._show_progress_bar(texts, batch_size),
+        )
+
+    def _load_or_build_index(self):
+        if self.save_index and self.index_path.exists():
+            logging.info(f"Loading FAISS index from {self.index_path}")
+            return faiss.read_index(str(self.index_path))
+
+        logging.info("Building FAISS index …")
+        embs = (
+            self._encode(self.passages, prompt=self.passage_prompt, batch_size=1024)
+            .astype(np.float32)
+        )
+        index = faiss.IndexFlatIP(embs.shape[1])
+        index.add(embs)
+        if self.save_index:
+            faiss.write_index(index, str(self.index_path))
+        return index
+
+    def _cache_key(self) -> str:
         md5 = hashlib.md5()
-        md5.update(unique_string.encode('utf-8'))
-        for p in passages:
-            md5.update(p.encode('utf-8'))
+        md5.update(_get_model_id(self.model).encode())
+        for p in self.passages:
+            md5.update(p.encode())
         return md5.hexdigest()
 
-    def _load_or_encode_passages(self):
-        """
-        If a cached file of embeddings exists, load it; otherwise encode passages and save.
-        """
-        self._update_cache_path()
-        if os.path.exists(self.passages_embeddings_cache_path):
-            logging.info(f"Loading cached embeddings from {self.passages_embeddings_cache_path}")
-            return np.load(self.passages_embeddings_cache_path, allow_pickle=False)
-        
-        logging.info("No cached embeddings found. Encoding passages...")
-        passages_embeddings = self._encode_passages()
-
-        if self.save_embeddings:
-            logging.info(f"Saving embeddings to {self.passages_embeddings_cache_path}")
-            np.save(self.passages_embeddings_cache_path, passages_embeddings)
-
-        return passages_embeddings
-
-    def _encode_passages(self, batch_size=512):
-        """
-        Encode passages as 'passage_prompt + passage'.
-        
-        :param batch_size: size of batches.
-        """
-        encoded_passages = self.model.encode(
-            self.passages,
-            normalize_embeddings=True,
-            batch_size=batch_size,
-            show_progress_bar=self._show_progress_bar(self.passages, batch_size),
-            convert_to_numpy=True,
-            prompt=self.passage_prompt,
-        )
-        return encoded_passages
-
-    def _encode_query(self, queries, batch_size=512):
-        """
-        Encode queries as 'query_prompt + query'.
-
-        :param batch_size: size of batches.
-        """
-        encoded_queries = self.model.encode(
-            queries,
-            normalize_embeddings=True,
-            batch_size=batch_size,
-            show_progress_bar=self._show_progress_bar(queries, batch_size),
-            convert_to_numpy=True,
-            prompt=self.query_prompt,
-        )
-        return encoded_queries
-
     @staticmethod
-    def _show_progress_bar(inputs: list[str], batch_size: int):
-        """
-        Show a loading bar only if more than 10 batches.
-
-        :param inputs: input to group in batches of batch_size.
-        :param batch_size: size of batches.
-        """
-        # Compute the number of batches
-        num_batches = max(1, len(inputs) // batch_size + (len(inputs) % batch_size > 0))        
-        # Show the progress bar only if there are more than 10 batches
-        return num_batches > 10
-    
-    def _update_cache_path(self):
-        """
-        Update passages embeddings cache path.
-        """
-        self.passages_hash = self._compute_hash(
-            self.passages,
-            str(self.model_name_or_path),
-        )
-        self.passages_embeddings_cache_path = os.path.join(
-            self.cache_dir,
-            f"{_get_sanitized_model_id(self.model)}_{self.passages_hash}.npy"
-        )
+    def _show_progress_bar(inputs: List[str], batch_size: int) -> bool:
+        nb = max(1, len(inputs) // batch_size + (len(inputs) % batch_size > 0))
+        return nb > 10
 
 
 def _get_model_id(model: SentenceTransformer) -> str:
-    """
-    Returns the name_or_path (for HF models) or base_model (for local/static embeddings)
-    of a SentenceTransformer, regardless of how it was loaded.
-    """
-    # grab the very first sub‐module
     first = model._first_module()
-
     if isinstance(first, Transformer):
-        # HF‐style: AutoModel.config.name_or_path is exactly what you passed in
         return first.auto_model.config.name_or_path
-    elif isinstance(first, StaticEmbedding):
-        # static local embedding: base_model holds the identifier
+    if isinstance(first, StaticEmbedding):
         return first.base_model
-    else:
-        # fallback: scan all modules for something with an auto_model
-        for m in model._modules.values():
-            if hasattr(m, "auto_model"):
-                return m.auto_model.config.name_or_path
-        raise RuntimeError("Could not determine model identifier")
+    for m in model._modules.values():
+        if hasattr(m, "auto_model"):
+            return m.auto_model.config.name_or_path
+    raise RuntimeError("Cannot determine model identifier")
 
-def _get_sanitized_model_id(model: SentenceTransformer) -> str:
-    """
-    Like get_model_id, but with '/' and '\' replaced by '_'
-    so it’s safe as a filename or key.
-    """
-    raw = _get_model_id(model)
-    # normalize both forward and backward slashes
-    return raw.replace("/", "_").replace("\\", "_")
+
+def _mmr(
+    query_vec: np.ndarray,
+    cand_vecs: np.ndarray,
+    cand_texts: List[str],
+    k: int,
+    lambda_: float = 0.7,
+) -> List[str]:
+    assert 0.0 <= lambda_ <= 1.0
+    selected_texts: List[str] = []
+    selected_vecs: List[np.ndarray] = []
+    sim_to_q = cand_vecs @ query_vec
+    free_idx = np.arange(cand_vecs.shape[0])
+
+    while len(selected_texts) < min(k, cand_vecs.shape[0]):
+        if selected_vecs:
+            div_penalty = np.max(cand_vecs[free_idx] @ np.stack(selected_vecs, axis=1), axis=1)
+        else:
+            div_penalty = 0.0
+        mmr_score = (1 - lambda_) * sim_to_q[free_idx] - lambda_ * div_penalty
+        best = int(free_idx[np.argmax(mmr_score)])
+        selected_vecs.append(cand_vecs[best])
+        selected_texts.append(cand_texts[best])
+        free_idx = free_idx[free_idx != best]
+
+    return selected_texts

@@ -26,6 +26,8 @@ from src.utils.string_utils import (
     extract_base_model_name,
     prepare_prompt_output_filename,
 )
+from src.utils.data_utils import concatenate_question_choices
+
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -89,22 +91,23 @@ def inference(
 
         # Initialize retriever
         retriever = Retriever(
-            "intfloat/e5-base-v2",
-            retrieval_strategy,
-            ckb,
+            model_name_or_path="models/retriever_mnr/final",
+            retrieval_strategy=retrieval_strategy,
+            ckb=ckb,
             passage_prompt="passage: ",
             query_prompt="query: ",
         )
 
         # Retrieve statements for few-shot samples if required
         if prompt_requires["fewshot"]:
-            for sample in fewshot_dataset:
-                fewshot_ckb_statements = retriever.retrieve(sample)
-                
-                retrieve_top_k_statements(
-                    retriever, sample, ckb, max(top_k_values), retrieval_strategy
+            for example in fewshot_dataset:
+                question_choices = concatenate_question_choices(example)
+                fewshot_ckb_statements = retriever.retrieve_top_k(
+                    question_choices,
+                    top_k=max(top_k_values),
+                    diversify=False
                 )
-                add_ckb_statements_to_samples(sample, fewshot_ckb_statements)
+                example["ckb_statements"] = fewshot_ckb_statements
 
     # Load model and tokenizer
     logging.info("Loading model and tokenizer: %s", model_name)
@@ -119,18 +122,21 @@ def inference(
         desc=f"Running inference on {model_name}...",
     )
 
+    # Inference loop
     ground_truths: List[str] = []
     answers: Dict[str, List[str]] = defaultdict(list)
     outputs: Dict[str, List[Dict[str, str]]] = defaultdict(list)
-
-    # Inference loop
+    
     for index, sample in iterator:
         # Retrieve statements if required
         if prompt_requires["knowledge"]:
-            eval_ckb_statements = retrieve_top_k_statements(
-                retriever, sample, ckb, max(top_k_values), retrieval_strategy
-            )
-            add_ckb_statements_to_samples(sample, eval_ckb_statements)
+            question_choices = concatenate_question_choices(sample)
+            eval_ckb_statements = retriever.retrieve_top_k(
+                    question_choices,
+                    top_k=max(top_k_values),
+                    diversify=False
+                )
+            sample["ckb_statements"] = eval_ckb_statements
 
         # Build prompts
         prompts = build_prompts(

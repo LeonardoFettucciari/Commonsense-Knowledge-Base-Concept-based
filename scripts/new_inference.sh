@@ -1,12 +1,12 @@
 #!/bin/sh
 
-OUTPUT_DIR="outputs/inference"
+OUTPUT_DIR="outputs/inference/trained_retriever"
 TOP_K_VALUES="1,3,5,10,20"
 
 # Default values
+DEFAULT_PROMPT_TYPES="zsk,fsk"
 DEFAULT_CKB_TYPE="regular"
 DEFAULT_DATASETS="qasc,csqa,obqa"
-DEFAULT_PROMPT_TYPES="zeroshot"
 DEFAULT_MODEL_NAMES="meta-llama/Llama-3.2-3B-Instruct,meta-llama/Llama-3.1-8B-Instruct,Qwen/Qwen2.5-1.5B-Instruct,Qwen/Qwen2.5-7B-Instruct"
 DEFAULT_RETRIEVAL_STRATEGIES="retriever,cner+retriever"
 
@@ -19,9 +19,9 @@ RETRIEVAL_STRATEGY_LIST=${5:-$DEFAULT_RETRIEVAL_STRATEGIES}
 
 # Set CKB path based on the CKB type
 if [ "$CKB_TYPE" = "vera" ]; then
-    CKB_PATH="data/ckb/cleaned/full_ckb_vera.jsonl"
+    CKB_PATH="data/ckb/cleaned/merged_filtered.jsonl"
 else
-    CKB_PATH="data/ckb/cleaned/full_ckb.jsonl"
+    CKB_PATH="data/ckb/cleaned/merged_filtered.jsonl"
 fi
 
 # Convert comma-separated model names to array

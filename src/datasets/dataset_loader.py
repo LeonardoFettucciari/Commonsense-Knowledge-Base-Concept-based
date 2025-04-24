@@ -4,9 +4,7 @@ import re
 from datasets import load_dataset, Dataset
 from tqdm import tqdm
 from src.utils.io_utils import load_local_file
-from src.retriever.retriever import Retriever
 
-# main functions
 
 def load_hf_dataset(config: dict) -> Dataset:
     """
@@ -61,7 +59,7 @@ def preprocess_dataset(dataset: Dataset, dataset_name: str = "default") -> Datas
     preprocessor = get_preprocessor(dataset_name)
     if preprocessor is None:
         raise ValueError(f"No preprocessor registered for dataset: {dataset_name}")
-    return dataset.map(preprocessor)
+    return dataset.map(preprocessor, remove_columns=dataset.column_names)
 
 # Preprocessing decorators
 
@@ -105,7 +103,7 @@ def preprocess_obqa(sample):
         "id": sample["id"],
         "question": sample["question_stem"],
         "choices": sample["choices"],
-        "ground_truth": sample["answerKey"]
+        "ground_truth": sample["answerKey"],
     }
 
 @register_preprocessor("obqa_fewshot")

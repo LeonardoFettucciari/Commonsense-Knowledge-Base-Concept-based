@@ -6,9 +6,8 @@ obqa:
     name: "obqa"
     path: "allenai/openbookqa"
     split: "test"
-    #split: train
     subset: "main"
-    max_samples: 
+    max_samples:
     shuffle: false
 
 obqa_fewshot:
