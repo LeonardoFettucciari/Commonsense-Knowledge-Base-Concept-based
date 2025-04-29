@@ -261,6 +261,7 @@ def bundle_json_by_keys_excluding_prompt(input_dir):
                     if prompt:
                         prompt_map[prompt] = data
                 except json.JSONDecodeError:
+                    logging.error(f"Error decoding JSON from file: {input_path}")
                     continue
             os.remove(input_path)
 

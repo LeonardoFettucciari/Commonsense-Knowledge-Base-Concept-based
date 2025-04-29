@@ -7,7 +7,7 @@ obqa:
     path: "allenai/openbookqa"
     split: "test"
     subset: "main"
-    max_samples:
+    max_samples: 100
     shuffle: false
 
 obqa_fewshot:

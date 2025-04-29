@@ -59,40 +59,68 @@ def dedupe_statements(
     batch_size: int
 ) -> Tuple[List[str], List[str], List[str]]:
     """
+    Remove exact and semantic duplicates from a list of statements.
+
+    Args:
+      statements: List of input text strings.
+      model: Pretrained SentenceTransformer model used for encoding text into embeddings.
+      threshold: Cosine similarity threshold to consider two statements as semantically similar.
+      batch_size: Batch size for encoding statements.
+
     Returns:
-      kept, removed_exact, removed_semantic
+      Tuple containing:
+        - kept: List of statements kept after deduplication.
+        - removed_exact: List of statements removed because they were exact duplicates.
+        - removed_semantic: List of statements removed because they were semantically similar to an already kept statement.
     """
-    # exact dedupe
+
+    # Preprocess statements: remove empty strings and strip whitespace
     cleaned = [s.strip() for s in statements if s and s.strip()]
-    seen = set(); unique = []
-    removed_exact = []
+
+    # Exact deduplication
+    seen = set()           # Tracks statements already encountered
+    unique = []            # List of unique (exact) statements
+    removed_exact = []     # List of statements that were exact duplicates
+
     for s in cleaned:
         if s in seen:
-            removed_exact.append(s)
+            removed_exact.append(s)   # If already seen, mark as duplicate
         else:
-            seen.add(s); unique.append(s)
+            seen.add(s)
+            unique.append(s)          # Otherwise, keep it
 
-    # semantic dedupe
+    # If 0 or 1 unique statements, no semantic deduplication needed
     removed_semantic = []
     if len(unique) <= 1:
         return unique, removed_exact, removed_semantic
 
+    # Encode unique statements into embeddings
     embeds = model.encode(
         unique,
         convert_to_tensor=True,
         batch_size=batch_size,
         show_progress_bar=False
     )
-    kept, kept_embs = [], []
+
+    # Semantic deduplication
+    kept, kept_embs = [], []  # Lists for statements and their embeddings to keep
+
     for text, emb in zip(unique, embeds):
         if not kept_embs:
-            kept.append(text); kept_embs.append(emb)
+            # Always keep the first statement
+            kept.append(text)
+            kept_embs.append(emb)
         else:
+            # Compare current embedding to all previously kept embeddings
             if util.cos_sim(emb, torch.stack(kept_embs)).max().item() < threshold:
-                kept.append(text); kept_embs.append(emb)
+                kept.append(text)
+                kept_embs.append(emb)
             else:
+                # If similar enough (cosine similarity >= threshold), remove it
                 removed_semantic.append(text)
+
     return kept, removed_exact, removed_semantic
+
 
 
 def filter_kb(

@@ -232,21 +232,41 @@ def _mmr(
     k: int,
     lambda_: float = 0.7,
 ) -> List[str]:
+    # Ensure lambda_ is a valid trade-off parameter between 0 and 1
     assert 0.0 <= lambda_ <= 1.0
+
+    # List to store selected texts and their corresponding vectors
     selected_texts: List[str] = []
     selected_vecs: List[np.ndarray] = []
+
+    # Compute similarity of each candidate to the query (dot product)
     sim_to_q = cand_vecs @ query_vec
+
+    # Initialize the list of free (not yet selected) indices
     free_idx = np.arange(cand_vecs.shape[0])
 
+    # Iteratively select texts until we reach k or run out of candidates
     while len(selected_texts) < min(k, cand_vecs.shape[0]):
         if selected_vecs:
+            # If we have already selected texts, compute diversity penalty
+            # For each candidate, find the maximum similarity to any selected vector
             div_penalty = np.max(cand_vecs[free_idx] @ np.stack(selected_vecs, axis=1), axis=1)
         else:
+            # No diversity penalty if no texts are selected yet
             div_penalty = 0.0
+
+        # Compute the MMR score: balance between relevance and diversity
         mmr_score = (1 - lambda_) * sim_to_q[free_idx] - lambda_ * div_penalty
+
+        # Select the candidate with the highest MMR score
         best = int(free_idx[np.argmax(mmr_score)])
+
+        # Add the selected candidate to the list of selected vectors and texts
         selected_vecs.append(cand_vecs[best])
         selected_texts.append(cand_texts[best])
+
+        # Remove the selected index from the list of free indices
         free_idx = free_idx[free_idx != best]
 
+    # Return the selected texts
     return selected_texts

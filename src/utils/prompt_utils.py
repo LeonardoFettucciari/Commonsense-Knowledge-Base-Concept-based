@@ -1,5 +1,8 @@
 import copy
-from settings.prompts import (SYSTEM_ZEROSHOT, SYSTEM_ZEROSHOT_WITH_KNOWLEDGE, SYSTEM_ZEROSHOT_COT, SYSTEM_ZEROSHOT_COT_WITH_KNOWLEDGE,
+from settings.prompts import (SYSTEM_ZEROSHOT, SYSTEM_ZEROSHOT_WITH_KNOWLEDGE, SYSTEM_ZEROSHOT_COT,
+                              SYSTEM_ZEROSHOT_COT_WITH_KNOWLEDGE,
+                              SYSTEM_ZEROSHOT_COT_WITH_KNOWLEDGE_1,
+                              SYSTEM_ZEROSHOT_COT_WITH_KNOWLEDGE_2,
                               SYSTEM_FEWSHOT, SYSTEM_FEWSHOT_WITH_KNOWLEDGE, SYSTEM_FEWSHOT_COT)
 from src.prompts.llama_prompt import LlamaPrompt, KnowledgePrompt
 
@@ -31,7 +34,7 @@ def build_prompts(sample, prompt_types, top_k_values, fewshot_examples=[]):
         if p_type == "zeroshot_cot_with_knowledge" or p_type == "all":
             for k in top_k_values:
                 prompts.append(LlamaPrompt( name=f"zeroshot_cot_with_knowledge_{k}",
-                                            system_instruction=SYSTEM_ZEROSHOT_COT_WITH_KNOWLEDGE,
+                                            system_instruction=SYSTEM_ZEROSHOT_COT_WITH_KNOWLEDGE_1,
                                             sample=sample,
                                             cot=True,
                                             top_k=k,
