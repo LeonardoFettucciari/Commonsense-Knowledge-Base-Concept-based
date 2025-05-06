@@ -9,7 +9,20 @@ from sentence_transformers.losses import MultipleNegativesRankingLoss
 from sentence_transformers.training_args import BatchSamplers
 from sentence_transformers.evaluation import RerankingEvaluator
 
-from src.datasets.dataset_loader import load_local_dataset
+from src.datasets.dataset_loader import load_local_dataset, load_hf_dataset, preprocess_dataset
+
+def intersect_and_align_by_id(dataset_a, dataset_b):
+    ids_a = set(dataset_a["id"])
+    ids_b = set(dataset_b["id"])
+    common_ids = ids_a & ids_b
+
+    dataset_a = dataset_a.filter(lambda x: x["id"] in common_ids)
+    dataset_b = dataset_b.filter(lambda x: x["id"] in common_ids)
+
+    dataset_a = dataset_a.sort("id")
+    dataset_b = dataset_b.sort("id")
+    return dataset_a, dataset_b
+
 
 
 # 1. Load a model to finetune with model card metadata
@@ -22,71 +35,49 @@ model = SentenceTransformer(
     )
 )
 
-# 2. Load the datasets
-csqa = load_local_dataset("outputs/retriever/training_data/final/csqa.jsonl")
-obqa = load_local_dataset("outputs/retriever/training_data/final/obqa.jsonl")
-qasc = load_local_dataset("outputs/retriever/training_data/final/qasc.jsonl")
-dataset = concatenate_datasets([csqa, obqa, qasc])
+# Load datasets
+csqa_train = load_dataset("tau/commonsense_qa", split="train")
+obqa_train = load_dataset("allenai/openbookqa", split="train")
+qasc_train = load_dataset("allenai/qasc",       split="train")
+
+obqa_train = preprocess_dataset(obqa_train, "obqa")
+
+csqa_positives = load_dataset("sapienzanlp/zebra-kb-explanations", "csqa-train-gemini", split="train")
+obqa_positives = load_dataset("sapienzanlp/zebra-kb-explanations", "obqa-train-gemini", split="train")
+qasc_positives = load_dataset("sapienzanlp/zebra-kb-explanations", "qasc-train-gemini", split="train")
+
+csqa_train, csqa_positives = intersect_and_align_by_id(csqa_train, csqa_positives)
+obqa_train, obqa_positives = intersect_and_align_by_id(obqa_train, obqa_positives)
+qasc_train, qasc_positives = intersect_and_align_by_id(qasc_train, qasc_positives)
+
+trainsets = [csqa_train, obqa_train, qasc_train]
+positivesets = [csqa_positives, obqa_positives, qasc_positives]
+
+pairs = []
+for trainset, positiveset in zip(trainsets, positivesets):
+    for i, (item, item_positives) in enumerate(zip(trainset, positiveset)):
+        if item['id'] != item_positives['id']:
+            raise ValueError(f"IDs do not match at index {i}: {item['id']} != {item_positives['id']}")
+        
+        question = item["question"]
+        choices = " ".join([f"{label}. {choice}" for label, choice in zip(item['choices']['label'], item['choices']['text'])])
+        anchor = f"{question} {choices}"
+
+        positives = item_positives.get("positives", [])
+
+        for pos in positives:
+            row = {
+                "anchor": f"query: {anchor}",
+                "positive": f"passage: {pos}"
+           }
+            pairs.append(row)
+train_dataset = Dataset.from_list(pairs)
 
 # 5. Train/test split
-split = dataset.train_test_split(0.1, shuffle=True, seed=42)
+split = train_dataset.train_test_split(0.1, shuffle=True, seed=42)
 train_dataset = split["train"]
 eval_dataset = split["test"]
 
-
-# 2.1 Process datasets
-processed_samples = []
-for item in train_dataset:
-    question = item["question"]
-    choices = " ".join(item["choices"].split("\n"))
-    anchor = f"{question} {choices}"
-
-    positives = item.get("positives", [])
-    negatives = item.get("negatives", [])
-
-    if not positives:
-        continue
-
-    for pos in positives:
-        for neg in negatives:
-            row = {
-                "anchor": anchor,
-                "positive": pos,
-                "negative": neg,
-            }
-            processed_samples.append(row)
-# Convert to HuggingFace Dataset
-train_dataset = Dataset.from_list(processed_samples)
-
-processed_samples = []
-for item in eval_dataset:
-    question = item["question"]
-    choices = " ".join(item["choices"].split("\n"))
-    query = f"{question} {choices}"
-
-    positives = item.get("positives", [])
-    negatives = item.get("negatives", [])
-
-    if not positives:
-        continue
-
-    for pos in positives:
-        for neg in negatives:
-            row = {
-                "query": query,
-                "positive": pos,
-                "negative": neg,
-            }
-            processed_samples.append(row)
-# Convert to HuggingFace Dataset
-eval_dataset = Dataset.from_list(processed_samples)
-
-reranking_evaluator = RerankingEvaluator(
-    samples=eval_dataset,
-    name="eval_dataset_evaluator",
-    show_progress_bar=True
-)
-results = reranking_evaluator(model)
 
 # 6. Define the MNR loss
 loss = MultipleNegativesRankingLoss(model)
@@ -97,7 +88,7 @@ batch_size = 256
 total_steps = len(train_dataset) // batch_size * num_train_epochs
 warmup_steps = int(0.1 * total_steps)
 args = SentenceTransformerTrainingArguments(
-    output_dir="models/retriever_mnr",
+    output_dir="models/retriever_zebra",
     num_train_epochs=num_train_epochs,    # try fewer and watch eval loss
     per_device_train_batch_size=batch_size,      # halves memory, still plenty of negatives
     per_device_eval_batch_size=batch_size,
@@ -125,14 +116,15 @@ trainer = SentenceTransformerTrainer(
     train_dataset=train_dataset,
     eval_dataset=eval_dataset,
     loss=loss,
-    evaluator=reranking_evaluator,
 )
 
 # 9. Train
 trainer.train()
 
 # 10. Save the trained model
-model.save_pretrained("models/retriever_mnr/final")
+model.save_pretrained("models/retriever_zebra/final")
 
 # 11. Optional: Push to hub
 # model.push_to_hub("e5-base-mnr")
+
+

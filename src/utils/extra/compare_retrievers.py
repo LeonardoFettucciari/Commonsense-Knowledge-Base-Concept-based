@@ -31,7 +31,7 @@ def main():
             query_prompt="query: ",
         )
         retrievers_trained[strat] = Retriever(
-            model_name_or_path="models/retriever_mnr/final",
+            model_name_or_path="models/retriever_zebra/final",
             retrieval_strategy=strat,
             ckb=ckb,
             passage_prompt="passage: ",
@@ -92,7 +92,7 @@ def main():
                 top_k=20,
                 diversify=True,
                 re_rank="mmr",
-                lambda_=0.7
+                lambda_=0.8
             )
             print("\n".join(stmts_tr_mmr), "\n")
 

@@ -69,6 +69,7 @@ PROMPT_TYPE_ALIASES = {
 }
 
 FULL_PROMPT_TO_SHORT_PROMPT = {
+    "zeroshot_cot_with_knowledge": "zscotk",
     "zeroshot_with_knowledge": "zsk",
     "zeroshot_cot": "zscot",
     "zeroshot": "zs",

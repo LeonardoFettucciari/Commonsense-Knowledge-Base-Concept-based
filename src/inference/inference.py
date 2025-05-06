@@ -4,6 +4,7 @@ import os
 from argparse import ArgumentParser
 from collections import defaultdict
 from typing import Dict, List
+from datetime import datetime
 import tqdm
 
 # Local imports
@@ -46,20 +47,11 @@ def inference(
     lambda_: float,
     retriever_model: str,
     diversity_threshold: float,
-    
+    run_name: str,                      
 ) -> None:
     """
     Run inference on a dataset using a specified model and optionally retrieve
     knowledge base statements to build the prompts.
-
-    :param model_name: Name or path of the model to use (Hugging Face or local).
-    :param dataset_name: Name or tag of the dataset to be loaded.
-    :param config_path: Path to the YAML configuration file.
-    :param output_dir: Directory to save output files.
-    :param retrieval_strategy: Category or strategy for retrieving statements (e.g., 'synset').
-    :param ckb_path: Path to the Knowledge Base (CKB) file.
-    :param prompt_types: List of prompt types/aliases to use.
-    :param top_k_values: List of top-k values for retrieval from the CKB.
     """
     logging.info("Starting inference process...")
     logging.info("Loading configuration from: %s", config_path)
@@ -168,14 +160,20 @@ def inference(
         ground_truths.append(sample["ground_truth"])
 
     # Save inference results
-    model_output_dir = os.path.join(output_dir, dataset_tag, extract_base_model_name(model_name))
+    model_output_dir = os.path.join(
+        output_dir,
+        dataset_tag,
+        extract_base_model_name(model_name),
+        run_name,
+        datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+    )
     os.makedirs(model_output_dir, exist_ok=True)
     logging.info("Saving inference results to: %s", model_output_dir)
 
     for prompt_name, output_data in outputs.items():
         prompt_output_filename = prepare_prompt_output_filename(
             model_output_dir,
-            output_data = output_data[0],
+            output_data=output_data[0],
             prompt=prompt_name,
             ckb=os.path.splitext(os.path.basename(ckb_path))[0],
             retrieval_strategy=retrieval_strategy,
@@ -197,85 +195,24 @@ def main() -> None:
     Parse arguments and launch the inference procedure.
     """
     parser = ArgumentParser(description="Inference script for CKB-based QA tasks.")
-    parser.add_argument(
-        "--model_name",
-        type=str,
-        required=True,
-        help="Model name from Hugging Face."
-    )
-    parser.add_argument(
-        "--dataset_name",
-        type=str,
-        required=True,
-        help="Dataset name from Hugging Face."
-    )
-    parser.add_argument(
-        "--ckb_path",
-        type=str,
-        required=True,
-        help="Path to the Knowledge Base file."
-    )
-    parser.add_argument(
-        "--output_dir",
-        type=str,
-        required=True,
-        help="Path to store the outputs."
-    )
-    parser.add_argument(
-        "--retrieval_strategy",
-        type=str,
-        required=False,
-        help="Retrieval strategy, e.g., statements to use for reranking.",
-    )
-    parser.add_argument(
-        "--config_path",
-        default="settings/config.yaml",
-        type=str,
-        required=False,
-        help="Path to the config file.",
-    )
-    parser.add_argument(
-        "--prompt_types",
-        default="all",
-        type=str,
-        required=False,
-        help="Comma-separated list of prompt types to use.",
-    )
-    parser.add_argument(
-        "--top_k_values",
-        default="1,3,5,10,20",
-        type=str,
-        required=False,
-        help="Comma-separated list of top-k values to use for retrieval.",
-    )
+    parser.add_argument("--model_name", type=str, required=True)
+    parser.add_argument("--dataset_name", type=str, required=True)
+    parser.add_argument("--ckb_path", type=str, required=True)
+    parser.add_argument("--output_dir", type=str, required=True)
+    parser.add_argument("--retrieval_strategy", type=str, required=False)
+    parser.add_argument("--config_path", default="settings/config.yaml", type=str, required=False)
+    parser.add_argument("--prompt_types", default="all", type=str, required=False)
+    parser.add_argument("--top_k_values", default="1,3,5,10,20", type=str, required=False)
+    parser.add_argument("--lambda_", type=float, required=True)
+    parser.add_argument("--rerank_type", type=str, default=None, required=False)
+    parser.add_argument("--retriever_model", type=str, required=False)
+    parser.add_argument("--diversity_threshold", type=float, required=False)
 
     parser.add_argument(
-        "--lambda_",
-        type=float,
+        "--run_name",
+        type=str,
         required=True,
-        help="Lambda value for mmr reranking.",
-    )
-
-    parser.add_argument(
-        "--rerank_type",
-        type=str,
-        default=None,
-        required=False,
-        help="Reranker type i.e. mmr or simple filter. No reranking by default.",
-    )
-
-    parser.add_argument(
-        "--retriever_model",
-        type=str,
-        required=False,
-        help="Retriever model to use.",
-    )
-
-    parser.add_argument(
-        "--diversity_threshold",
-        type=float,
-        required=False,
-        help="Diversity threshold for simple filter reranking.",
+        help="A name for this run/experiment."
     )
 
     args = parser.parse_args()
@@ -291,10 +228,7 @@ def main() -> None:
     ]
 
     # Convert top k values into a list
-    args.top_k_values = [
-        int(val)
-        for val in args.top_k_values.split(",")
-    ]
+    args.top_k_values = [int(val) for val in args.top_k_values.split(",")]    
 
     logging.info("Launching inference script...")
     inference(

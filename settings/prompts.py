@@ -27,17 +27,3 @@ SYSTEM_FEWSHOT_COT = "You are an expert in question answering. \
 Given a question and a set of choices, provide a reasoning process for answering the question \
 and the correct answer. \
 You are given a few examples that will show you how to answer."
-
-
-SYSTEM_ZEROSHOT_COT_WITH_KNOWLEDGE_1 = "You are an expert in question answering. \
-Given a question, a set of choices and a set of useful statements for answering the question, \
-provide a reasoning process for answering the question \
-and then the correct answer. \
-Only use the statements if they are useful for answering the question."
-
-SYSTEM_ZEROSHOT_COT_WITH_KNOWLEDGE_2 = "You are an expert in question answering. \
-Given a question and a set of choices, \
-provide a reasoning process for answering the question \
-and then the correct answer. \
-Then given a set of useful statements for answering the question, \
-refine your reasoning process and correct answer."
