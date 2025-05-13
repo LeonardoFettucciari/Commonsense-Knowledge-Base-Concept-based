@@ -3,6 +3,11 @@ import os
 import json
 import csv
 import logging
+from nltk.wsd import lesk
+from nltk.tokenize import word_tokenize
+import nltk
+nltk.download('wordnet')
+nltk.download('punkt_tab')
 from src.utils.model_utils import get_ner_pipeline
 
 
@@ -31,14 +36,15 @@ def get_all_wordnet_synsets(pos):
     return list(wordnet.all_synsets(pos=pos))
 
 def from_words_to_synsets(list_of_words):
-    flatten_list = [word for word in list_of_words]
-    return [synset for word in flatten_list for synset in wordnet.synsets(word) if wordnet.synsets(word) and synset.pos() == 'n']
+    return [synset for word in list_of_words for synset in wordnet.synsets(word) if wordnet.synsets(word) and synset.pos() == 'n']
 
-def synsets_from_samples(samples):
-    samples = [samples] if not isinstance(samples, list) else samples # Reads single string or list of strings
+
+def synsets_from_samples(samples, ner_pipeline):
+    if isinstance(samples, str):
+        samples = [samples]
 
     # Run NER pipeline
-    ner_pipeline = get_ner_pipeline("Babelscape/cner-base")
+    #ner_pipeline = get_ner_pipeline("Babelscape/cner-base")
     ner_results = ner_pipeline(samples)
 
     # Extract unique words for each sample separately
@@ -48,6 +54,28 @@ def synsets_from_samples(samples):
     synsets = [from_words_to_synsets(unique_words) for unique_words in unique_words_per_sample]
 
     return synsets[0] if len(synsets) == 1 else synsets
+
+def extract_synsets(samples, ner_pipeline):
+    if isinstance(samples, str):
+        samples = [samples]
+
+    # Run NER pipeline
+    ner_results = ner_pipeline(samples)
+
+    # Extract unique words for each sample separately
+    unique_words_per_sample = [extract_unique_words(sentence) for sentence in ner_results]
+    print(unique_words_per_sample)
+
+    synsets_per_sample = []
+    for words, sentence in zip(unique_words_per_sample, samples):
+        synsets = []
+        for word in words:
+            syn = lesk(word_tokenize(sentence), word)
+            if syn:
+                synsets.append(syn)
+        synsets_per_sample.append(synsets)
+
+    return synsets_per_sample[0] if len(synsets_per_sample) == 1 else synsets_per_sample
 
 
 def concatenate_question_choices(samples):

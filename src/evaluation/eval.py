@@ -159,6 +159,7 @@ def main(args):
 
         # If file already processed, skip it
         if file_already_processed(file_path): continue
+        if file.startswith("."): continue
 
         # Otherwise process it and mark it as processed
         mark_file_as_processed(file_path)

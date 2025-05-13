@@ -24,7 +24,7 @@ def kwargs_to_filename(extension: str = 'tsv', **kwargs) -> str:
         raise ValueError("At least one key-value pair must be provided in kwargs.")
 
     output_name = "|".join(f"{key}={value}" for key, value in kwargs.items())
-    output_name = f"*{output_name}.{extension}"
+    output_name = f"{output_name}.{extension}"
 
     return output_name
 
@@ -96,6 +96,28 @@ def extract_key_value_pairs(filename):
     key_value_dict = {}
     
     filename, _ = os.path.splitext(filename)
+    # Split the filename by '|' to get individual key=value parts.
+    parts = filename.split('|')
+    
+    for part in parts:
+        if '=' in part:
+            k, v = part.split('=', 1)  # Split into key and value (only once).
+            key_value_dict[k] = v
+    
+    return key_value_dict
+
+def extract_key_value_pairs_from_filename(filename):
+    """
+    Extracts all key-value pairs from a given filename string.
+    
+    Args:
+        filename (str): The filename containing key-value pairs separated by '|'.
+    
+    Returns:
+        dict: A dictionary containing extracted key-value pairs.
+    """
+    key_value_dict = {}
+    
     # Split the filename by '|' to get individual key=value parts.
     parts = filename.split('|')
     
