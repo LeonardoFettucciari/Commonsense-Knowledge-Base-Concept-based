@@ -10,4 +10,6 @@ transformers==4.50.3
 natsort==8.4.0
 matplotlib==3.10.1
 faiss-cpu==1.10.0
+openai==1.78.1
+loguru==0.7.3
 git+https://github.com/Andrew-Wyn/xFinder.git@decode-fix

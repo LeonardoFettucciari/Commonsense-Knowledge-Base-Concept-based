@@ -1,0 +1,49 @@
+2025-05-14 12:23:50.345 | INFO     | __main__:<module>:88 - Starting batch processing...
+2025-05-14 12:23:50.383 | INFO     | __main__:process_batches:65 - Processing file: batch_api_data_csqa_range_0_5_model_gpt-4o-mini.jsonl
+2025-05-14 12:23:51.662 | INFO     | __main__:upload_input_file:11 - Uploaded file: outputs/batches/test/batch_api_data_csqa_range_0_5_model_gpt-4o-mini.jsonl → File ID: file-A2dj46UXJXhSMm1YPaChCQ
+2025-05-14 12:23:53.504 | INFO     | __main__:submit_batch:25 - Submitted batch batch_68246f3809208190a8f96f39be1e3b67 for file ID file-A2dj46UXJXhSMm1YPaChCQ
+2025-05-14 12:23:53.504 | INFO     | __main__:wait_for_completion:32 - Waiting for batch batch_68246f3809208190a8f96f39be1e3b67 to complete...
+2025-05-14 12:23:54.376 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: validating
+2025-05-14 12:24:24.713 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: validating
+2025-05-14 12:24:55.434 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:25:25.743 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:25:56.177 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:26:26.491 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:26:56.779 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:27:27.054 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:27:57.295 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:28:27.653 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:28:57.919 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:29:28.217 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:29:58.620 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:30:28.958 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:30:59.224 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:31:29.568 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:31:59.840 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:32:30.132 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:33:00.430 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:33:31.092 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:34:01.921 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:34:32.223 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:35:02.517 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:35:32.817 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:36:03.098 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:36:33.370 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:37:03.834 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:37:34.893 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:38:05.161 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:38:35.581 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:39:06.239 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:39:36.693 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:40:07.027 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:40:23.754 | INFO     | __main__:<module>:51 - Starting batch processing...
+2025-05-14 12:40:37.429 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:41:07.170 | INFO     | __main__:<module>:46 - Starting batch processing...
+2025-05-14 12:41:07.207 | INFO     | __main__:wait_for_completion:9 - Waiting for batch batch_68246f3809208190a8f96f39be1e3b67 to complete...
+2025-05-14 12:41:07.604 | INFO     | __main__:wait_for_completion:13 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:41:07.754 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:41:38.009 | INFO     | __main__:wait_for_completion:13 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:41:39.011 | INFO     | __main__:wait_for_completion:36 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:42:08.303 | INFO     | __main__:wait_for_completion:13 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:42:38.634 | INFO     | __main__:wait_for_completion:13 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress
+2025-05-14 12:43:08.947 | INFO     | __main__:wait_for_completion:13 - Batch batch_68246f3809208190a8f96f39be1e3b67 status: in_progress

@@ -52,14 +52,8 @@ split_csv "$MODEL_LIST" MODELS
 # ── main loop ──────────────────────────────────────────────────────────────
 for DATASET in "${DATASETS[@]}"; do
   for MODEL in "${MODELS[@]}"; do
-    RUN_DIR="$INPUT_DIR_ROOT/$DATASET/$MODEL/$RUN_NAME"
-    INPUT_DIR=$(find "$RUN_DIR" -mindepth 1 -maxdepth 1 -type d | head -n 1)
+    INPUT_DIR="$INPUT_DIR_ROOT/$DATASET/$MODEL/$RUN_NAME"
 
-    if [ -z "$INPUT_DIR" ]; then
-      die "No subdirectory found in $RUN_DIR"
-    fi
-
-    echo "Evaluating '$INPUT_DIR'."
     python src/evaluation/eval.py \
       --input_dir "$INPUT_DIR"
   done

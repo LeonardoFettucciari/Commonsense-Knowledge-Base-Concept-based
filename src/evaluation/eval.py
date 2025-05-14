@@ -1,4 +1,5 @@
 import os
+import datetime
 import csv
 import json
 import argparse
@@ -135,61 +136,101 @@ def evaluate(input_file, output_path, output_path_json, xfinder_evaluator_llama:
             "xfinder_total_rows": total_rows,
         }, f_out_json)
 
-def main(args):
-    input_dir = args.input_dir
-    output_dir = os.path.join(input_dir, "accuracy")
-    os.makedirs(output_dir, exist_ok=True)
-    
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
-    logging.info(f"Processing input directory: {input_dir}")
-    logging.info(f"Saving results to: {output_dir}")
 
-    # Download and setup models
+import os
+import datetime
+import logging
+
+def get_latest_datetime_dir(base_dir):
+    """
+    Scan direct subdirectories of base_dir, parse those whose names are
+    in the format YYYY-MM-DD_HH-MM-SS, and return the path to the most recent one.
+    If none found, return None.
+    """
+    dt_dirs = []
+    for name in os.listdir(base_dir):
+        path = os.path.join(base_dir, name)
+        if not os.path.isdir(path):
+            continue
+        try:
+            dt = datetime.datetime.strptime(name, "%Y-%m-%d_%H-%M-%S")
+        except ValueError:
+            continue
+
+        dt_dirs.append((dt, path))
+
+    if not dt_dirs:
+        return None
+
+    latest_dt, latest_path = max(dt_dirs, key=lambda x: x[0])
+    return latest_path
+
+def main(args):
+    # configure logging
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s - %(levelname)s - %(message)s",
+        datefmt="%Y-%m-%d %H:%M:%S",
+    )
+
+    # 1) Pick the latest timestamped folder if available
+    base_dir = args.input_dir
+    selected_dir = get_latest_datetime_dir(base_dir) or base_dir
+    logging.info(f"Using input directory: {selected_dir}")
+
+
+    # 2) Build list of files to process
+    files_to_process = []
+    for name in os.listdir(selected_dir):
+        path = os.path.join(selected_dir, name)
+        if not name.startswith(".") and os.path.isfile(path) and not file_already_processed(path):
+            files_to_process.append(path)
+
+    if not files_to_process:
+        return
+
+    # 3) Load models now that we have work
+    logging.info("Loading models…")
     model_dir = "models"
     xfinder_evaluator_qwen = xfinder_setup("xFinder-qwen1505", model_dir)
     xfinder_evaluator_llama = xfinder_setup("xFinder-llama38it", model_dir)
-    
-    # Scan all files inside input_dir
-    for file in os.listdir(input_dir):
-        file_path = os.path.join(input_dir, file)
-        
-        # If not a file
-        if not os.path.isfile(file_path): continue
 
-        # If file already processed, skip it
-        if file_already_processed(file_path): continue
-        if file.startswith("."): continue
+    # 4) Prepare output
+    output_dir = os.path.join(selected_dir, "accuracy")
+    os.makedirs(output_dir, exist_ok=True)
+    logging.info(f"Saving results to: {output_dir}")
 
-        # Otherwise process it and mark it as processed
-        mark_file_as_processed(file_path)
-        logging.info(f"Processing file: {file}")
+    # 5) Process each queued file
+    for file_path in files_to_process:
+        name = os.path.basename(file_path)
+        logging.info(f"Processing file: {name}")
 
-        filename, _ = os.path.splitext(os.path.basename(file))
+        base, _ = os.path.splitext(name)
+        metadata = extract_key_value_pairs(base)
+        if metadata.get('prompt'):
+            metadata['prompt'] = alias_filename(metadata['prompt'])
+        clean_name = dict_to_filename(metadata)
 
-        # Shorten filename for better readability
-        filename_metadata = extract_key_value_pairs(filename)
-        if filename_metadata.get('prompt'):
-            filename_metadata['prompt'] = alias_filename(filename_metadata['prompt'])
-        filename = dict_to_filename(filename_metadata)
-        
-        # Define temporary output files
-        output_path = os.path.join(output_dir, f"{filename}.tsv")
-        output_path_json = os.path.join(output_dir, f"{filename}.json")
+        tsv_out = os.path.join(output_dir, f"{clean_name}.tsv")
+        json_out = os.path.join(output_dir, f"{clean_name}.json")
 
-        # Run evaluation on the selected file
-        evaluate(file_path,
-                output_path,
-                output_path_json,
-                xfinder_evaluator_llama,
-                xfinder_evaluator_qwen,
+        evaluate(
+            file_path,
+            tsv_out,
+            json_out,
+            xfinder_evaluator_llama,
+            xfinder_evaluator_qwen,
         )
 
-            
-        
-    # Write summary file for accuracy of all prompt types (e.g., zeroshot-accuracy, etc.)
+        mark_file_as_processed(file_path)
+        logging.info(f"Finished processing: {name}")
+
+    # 6) Final summary
     write_accuracy_summary(output_dir)
     logging.info("Evaluation process completed.")
+
+
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Evaluate models on MCQA with xFinder")

@@ -117,8 +117,7 @@ class KnowledgePrompt(Prompt):
         question = self.sample["question"]
         choices = "\n".join([f"{label}. {choice}" for label, choice in zip(self.sample['choices']['label'], self.sample['choices']['text'])])
 
-        ckb_statements = self.ckb_statements
-        user_string = f'Question:\n{question}\n\nChoices:\n{choices}\n\nKnowledge:\n{ckb_statements}'
+        user_string = f'Question:\n{question}\n\nChoices:\n{choices}\n\nKnowledge:\n{self.ckb_statements}'
 
         messages.append({"role": "user", "content": user_string})  
 

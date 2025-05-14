@@ -1,0 +1,36 @@
+# -----------------------------
+#  Global model configuration
+# -----------------------------
+model_name: "gpt-4o-mini"          
+                                   
+
+generation_config:
+  temperature: 0.0                  
+  max_tokens: 8192        
+
+
+system_instruction: |
+  You are a commonsense-knowledge generator for multiple-choice QA.
+  When given a question, its answer choices, and the correct answer, produce exactly ten distinct, positively phrased assertions—each illustrating one broadly applicable concept that supports the solution.
+  • Avoid any negations or comparative language (e.g. “unlike,” “not,” “as opposed to”).
+  • Use scenario-specific terms when they help illustrate the point, but if a detail is overly narrow or risks overfitting, abstract to a broader category (e.g. “hot surfaces” instead of “cigarettes”).
+  • Vary your phrasing and subjects so you never repeat the same idea or reuse the same key term.
+  • Do not over-tailor to the particular question; keep each statement generalizable.
+  Output all ten statements in one unnumbered line, separated only by the token [SEP].
+
+
+obqa:            
+  path: allenai/openbookqa
+  subset: main
+  split: train
+
+qasc:            
+  path: allenai/qasc
+  subset: 
+  split: train
+
+csqa:            
+  path: tau/commonsense_qa
+  subset:
+  split: train
+

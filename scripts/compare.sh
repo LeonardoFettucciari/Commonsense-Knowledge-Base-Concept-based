@@ -4,8 +4,8 @@ set -euo pipefail
 PYTHON_SCRIPT="src/utils/extra/compare.py"
 
 # Manually specify configurations below
-datasets=("csqa")
-models=("llama8B")
+datasets=("obqa" "csqa" "qasc")
+models=("llama8B" "llama3B" "qwen1.5B" "qwen7B")
 experiments1=("baselines")
 prompts1=("zscot")
 

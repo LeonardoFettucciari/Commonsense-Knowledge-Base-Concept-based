@@ -1,5 +1,5 @@
 import logging
-import traceback
+import torch
 from collections import Counter
 
 from datasets import load_dataset
@@ -25,7 +25,7 @@ train_batch_size = 128
 num_epochs = 3
 full_dataset_path = "outputs/classifier/full_gloss.jsonl"
 short_model_name = model_name.split("/")[-1]
-run_name = f"classifier-{short_model_name}-full-gloss"
+run_name = f"classifier-{short_model_name}-pos_weighted"
 max_train_samples = 1000000  
 
 # 1a. Load a model to finetune with 1b. (Optional) model card data
@@ -120,8 +120,16 @@ logging.info(f"Train label distribution: {train_dist}")
 logging.info(f"Eval  label distribution:  {eval_dist}")
 
 
+# Calculate weight: more weight to positive samples
+num_pos = train_dist[1.0]
+num_neg = train_dist[0.0]
+pos_weight_value = num_neg / num_pos
+# Must be a 1D tensor
+pos_weight_tensor = torch.tensor([pos_weight_value])
+
 # 3. Define our training loss.
-loss = BinaryCrossEntropyLoss(model=model)
+loss = BinaryCrossEntropyLoss(model=model, pos_weight=pos_weight_tensor)
+
 
 # 4. Use CrossEncoderNanoBEIREvaluator, a light-weight evaluator for English reranking
 # evaluator = CrossEncoderNanoBEIREvaluator(

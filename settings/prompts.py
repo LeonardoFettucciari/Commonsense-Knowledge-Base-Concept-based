@@ -8,7 +8,7 @@ provide the correct answer."
 SYSTEM_ZEROSHOT_COT_WITH_KNOWLEDGE = "You are an expert in question answering. \
 Given a question, a set of choices and a set of useful statements for answering the question, \
 provide a reasoning process for answering the question \
-and the correct answer."
+and then the correct answer."
 
 SYSTEM_ZEROSHOT_COT = "You are an expert in question answering. \
 Given a question and a set of choices, provide a reasoning process for answering the question \

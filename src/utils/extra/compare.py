@@ -118,7 +118,7 @@ def compare(input_path_cot, input_path_with_knowledge, root, exp1, exp2):
     output_filename = f"{prompt_prefix}|{kwargs_to_filename(extension='tsv', **kb_meta)}"
     output_stats_filename = f"stats|{output_filename}"
 
-
+    print(f"✅ Saved output in: {out_dir}")
     save_local_file(output_data, os.path.join(out_dir, output_filename))
     save_local_file(stats_data, os.path.join(out_dir, output_stats_filename))
 
