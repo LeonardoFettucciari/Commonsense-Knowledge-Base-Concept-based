@@ -10,6 +10,18 @@ from datasets import load_dataset
 
 MAX_BATCH_TOKENS = 1000000
 
+full2short = {
+        "allenai/openbookqa": "obqa",
+        "allenai/qasc": "qasc",
+        "tau/commonsense_qa": "csqa",
+    }
+
+short2full = {
+        "obqa": "allenai/openbookqa",
+        "qasc": "allenai/qasc",
+        "csqa": "tau/commonsense_qa",
+    }
+
 
 def create_gpt_prompt(
         question: str,
@@ -60,12 +72,7 @@ def create_batch(
     else:
         print(f"Output directory already exists: {output_dir}")
 
-    aliases = {
-        "allenai/openbookqa": "obqa",
-        "allenai/qasc": "qasc",
-        "tau/commonsense_qa": "csqa",
-    }
-    dataset_name = aliases.get(dataset_path)
+    dataset_name = full2short.get(dataset_path)
     if dataset_name is None:
         raise ValueError(f"Unknown dataset alias for: {dataset_path}")
 
@@ -180,4 +187,5 @@ if __name__ == "__main__":
     parser.add_argument("--output_dir", type=str, required=True, help="Path to save the batches.")
     parser.add_argument("--limit_samples", type=int, required=False, help="Maximum number of elements to consider.")
     args = parser.parse_args()
+    args.dataset_path = short2full.get(args.dataset_path, args.dataset_path)
     create_batch(**vars(args))

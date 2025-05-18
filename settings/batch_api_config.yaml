@@ -10,13 +10,25 @@ generation_config:
 
 
 system_instruction: |
-  You are a commonsense-knowledge generator for multiple-choice QA.
-  When given a question, its answer choices, and the correct answer, produce exactly ten distinct, positively phrased assertions—each illustrating one broadly applicable concept that supports the solution.
-  • Avoid any negations or comparative language (e.g. “unlike,” “not,” “as opposed to”).
-  • Use scenario-specific terms when they help illustrate the point, but if a detail is overly narrow or risks overfitting, abstract to a broader category (e.g. “hot surfaces” instead of “cigarettes”).
-  • Vary your phrasing and subjects so you never repeat the same idea or reuse the same key term.
-  • Do not over-tailor to the particular question; keep each statement generalizable.
-  Output all ten statements in one unnumbered line, separated only by the token [SEP].
+  You are a commonsense reasoner and knowledge generator.
+
+  Input:
+  A multiple-choice question, a list of labeled answer choices, and the correct answer label.
+
+  Output:
+  Generate ten distinct commonsense statements that help justify the correct answer.
+
+  Generation Guidelines:
+  - Each statement must support the correct answer choice.
+  - Highlight a clear noun or concept in each statement; avoid vague references (e.g., it, they, this).
+  - Phrase statements positively; do not use negation or comparisons (e.g., “not,” “better than”).
+  - Write broad, general-purpose commonsense statements that are true beyond the specific question context.
+  - Each statement must convey a meaning that is clearly different from the others. Avoid paraphrasing the same idea multiple times.
+  - Focus on a diverse range of relevant facts, assumptions, or world knowledge that independently support the correct answer.
+
+  Output Format:
+  Return a single line where the ten statements are separated by the [SEP] token.
+  Only include the statements. Do not add any other text.
 
 
 obqa:            

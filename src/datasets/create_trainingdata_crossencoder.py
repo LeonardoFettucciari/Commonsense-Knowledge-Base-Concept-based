@@ -7,55 +7,44 @@ from src.utils.io_utils import load_local_file, save_local_file
 import random, collections
 nltk.download("wordnet")
 
-
 def build_ctx_noun(syn_name):
     s = wn.synset(syn_name)
-    lex = s.lexname()                
     parts = [
         syn_name,
-        "[LEX]", lex,
-        "[LEMMA]", ", ".join(s.lemma_names()[:5]),
+        "[LEMMA]", s.lemma_names()[0],
         "[DEF]", s.definition(),
     ]
-    ex = s.examples()
-    if ex: parts.extend(["[EX]", " ; ".join(ex[:3])])
-    hyp = s.hypernyms()
-    if hyp: parts.extend(["[HYPER]", ", ".join(h.name() for h in hyp[:2])])
     return " ".join(parts)
 
-def sample_same_lex(target):
-    lex = wn.synset(target).lexname()
-    pool = [s for s in by_lex[lex] if s != target]
-    return random.choice(pool) if pool else None
+import random
+from nltk.corpus import wordnet as wn
 
-def sample_hypernym_sibling(target):
-    hypers = wn.synset(target).hypernyms()
-    if not hypers: return None
-    sib_pool = []
-    for h in hypers:
-        sib_pool.extend([c.name() for c in h.hyponyms() if c.name()!=target])
-    return random.choice(sib_pool) if sib_pool else None
+def get_negative_synsets(original_synset_name, pos_count=6):
 
-def negatives_for_noun(target):
-    # random noun
-    yield random.choice([s for s in all_noun_syns if s!=target])
-    # same lexname
-    cand = sample_same_lex(target)
-    if cand: yield cand
-    # hypernym sibling
-    sib = sample_hypernym_sibling(target)
-    if sib: yield sib
-    # same lemma different meaning
-    synsets = wn.synsets(wn.synset(target).lemma_names()[0], pos='n')
-    if len(synsets) > 1:
-        for s in synsets:
-            if s.name() != target:
-                yield s.name()
+    sldm_count = pos_count // 2
+
+    # Parse the original synset
+    original_synset = wn.synset(original_synset_name)
+    lemma = original_synset.lemma_names()[0]
+
+    # Same Lemma Different Meaning (SLDM)
+    candidate_synsets = wn.synsets(lemma, pos=original_synset.pos())
+    sldm_synsets = [s.name() for s in candidate_synsets if s.name() != original_synset.name()][:sldm_count]
+
+    # Random synsets
+    random_count = pos_count - len(sldm_synsets)
+    remaining_synsets = [s for s in all_noun_syns if s != original_synset.name()]
+    random_synsets = random.sample(remaining_synsets, k=random_count)
+
+    return sldm_synsets + random_synsets
+
                 
 
 
+
+
 input_path = f"data/ckb/cleaned/merged_filtered.jsonl"
-output_path = f"outputs/classifier/full_gloss.jsonl"
+output_path = f"outputs/classifier/newTrainSet.jsonl"
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
 ckb = load_local_file(input_path)
@@ -63,32 +52,30 @@ print(f"Loaded {len(ckb)} samples from {input_path}")
 
 # Pre-compute lookup tables
 all_noun_syns = [s.name() for s in wn.all_synsets('n')]
-by_lex        = collections.defaultdict(list)
-for s in tqdm(all_noun_syns, desc="Generating lexical lookup..."):        
-    by_lex[wn.synset(s).lexname()].append(s)
 ctx = {s: build_ctx_noun(s) for s in tqdm(all_noun_syns, desc="Generating ctx lookup...")}
+syn2statements = {s['synset_name']: s['statements'] for s in tqdm(ckb, desc="Generating ctx lookup...")}
 
 # Generate dataset
 dataset = []
-for row in tqdm(ckb, desc="Generating pairs"):                    
+pos_count = 6
+for row in tqdm(ckb, desc="Generating triples..."):  
     syn = row['synset_name']
-    statements_added = 0
-    
-    for st in random.sample(row['statements'], k=min(7, len(row['statements']))):
-        dataset.append({
-            'statement': st,
-            'synset': ctx[syn],
-            'label': 1.0
-        })
-        for neg in negatives_for_noun(syn):
+
+    # Add negative samples
+    for neg in get_negative_synsets(syn, pos_count=pos_count):
             dataset.append({
-                'statement': st,
-                'synset': ctx[neg],
+                'synset': ctx[syn],
+                'statement': random.choice(syn2statements[neg]),
                 'label': 0.0
             })
-        statements_added += 1
-        if statements_added >= 7:
-            break
+
+    # Add positive samples
+    for st in random.sample(row['statements'], k=min(pos_count, len(row['statements']))):
+        dataset.append({
+            'synset': ctx[syn],
+            'statement': st,
+            'label': 1.0
+        })
 
 save_local_file(
     dataset,
