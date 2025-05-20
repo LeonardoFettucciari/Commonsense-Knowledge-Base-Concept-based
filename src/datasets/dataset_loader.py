@@ -5,6 +5,20 @@ from datasets import load_dataset, Dataset
 from tqdm import tqdm
 from src.utils.io_utils import load_local_file
 
+def split_choices(example):
+    """
+    Turns a flat `choices` string like
+      "A. foo\nB. bar\nC. baz\nD. qux"
+    into a dict:
+      {"text": ["foo","bar","baz","qux"], "label": ["A","B","C","D"]}
+    """
+    matches = re.findall(r'([A-Z])\.\s*(.+)', example["choices"])
+    return {
+        "choices": {
+            "text": [text for _, text in matches],
+            "label": [lbl  for lbl, _  in matches]
+        }
+    }
 
 def load_hf_dataset(config: dict) -> Dataset:
     """

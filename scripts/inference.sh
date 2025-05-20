@@ -10,7 +10,7 @@ OUTPUT_DIR="outputs/inference"
 PROMPT_TYPES="zscotk"
 CKB_PATH="data/ckb/cleaned/merged_filtered.jsonl"
 DATASET_LIST="obqa,csqa,qasc"
-MODEL_LIST="llama8B,llama3B,qwen1.5B,qwen7B"
+MODEL_NAMES="llama8B,llama3B,qwen1.5B,qwen7B"
 RETRIEVAL_STRATEGY_LIST="retriever"
 TOP_K_VALUES="5"
 RETRIEVER_MODEL="intfloat/e5-base-v2"
@@ -74,7 +74,7 @@ done
 split_csv() { IFS=',' read -r -a "$2" <<< "$1"; }
 
 split_csv "$DATASET_LIST"            DATASETS
-split_csv "$MODEL_LIST"              MODELS
+split_csv "$MODEL_NAMES"              MODELS
 split_csv "$RETRIEVAL_STRATEGY_LIST" RETRIEVAL_STRATEGIES
 
 mkdir -p "$OUTPUT_DIR"

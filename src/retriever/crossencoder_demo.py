@@ -1,27 +1,29 @@
 from sentence_transformers import CrossEncoder
 import torch.nn as nn
+import torch
+import torch.nn.functional as F
 from src.utils.model_utils import get_ner_pipeline
 from src.utils.data_utils import extract_synsets, synsets_from_samples
+from transformers import DebertaV2Tokenizer, DebertaV2ForSequenceClassification
 from nltk.corpus import wordnet as wn
 
-def build_ctx_noun(syn):
-    lex = syn.lexname()                
+def build_ctx_noun(syn_name):
+    s = wn.synset(syn_name)
     parts = [
-        syn.name(),
-        "[LEX]", lex,
-        "[LEMMA]", ", ".join(syn.lemma_names()[:5]),
-        "[DEF]", syn.definition(),
+        syn_name,
+        "[LEMMA]", s.lemma_names()[0],
+        "[DEF]", s.definition(),
     ]
-    ex = syn.examples()
-    if ex: parts.extend(["[EX]", " ; ".join(ex[:3])])
-    hyp = syn.hypernyms()
-    if hyp: parts.extend(["[HYPER]", ", ".join(h.name() for h in hyp[:2])])
     return " ".join(parts)
 
 
-model = CrossEncoder(
-   'models/classifier-ms-marco-MiniLM-L6-v2-full-gloss/final',
-)
+# Load the trained DeBERTa model
+model_path = "models/deberta-v3-classifier/checkpoint-20529"  # adjust if you use a checkpoint dir
+tokenizer = DebertaV2Tokenizer.from_pretrained("microsoft/deberta-v3-base")
+model = DebertaV2ForSequenceClassification.from_pretrained(model_path)
+model.eval()
+model.to("cuda" if torch.cuda.is_available() else "cpu")
+
 ner_pipeline = get_ner_pipeline("Babelscape/cner-base")
 
 sentences = [
@@ -38,19 +40,38 @@ sentences = [
 ]
 
 
+# Synset extraction
 synsets_per_sample = synsets_from_samples(sentences, ner_pipeline)
 
+# Inference loop
 scores = []
-for sentence, synsets in zip(sentences, synsets_per_sample):
-    sentence_synsets = [(sentence, build_ctx_noun(syn)) for syn in synsets]
-    scores.append((sentence, [(syn, score) for syn, score in zip(synsets, model.predict(sentence_synsets, activation_fn=nn.Sigmoid()))]))
+device = model.device
 
+for sentence, synsets in zip(sentences, synsets_per_sample):
+    input_pairs = [(syn.name(), build_ctx_noun(syn.name())) for syn in synsets]
+    
+    encodings = tokenizer(
+        [s for s, _ in input_pairs],
+        [ctx for _, ctx in input_pairs],
+        truncation=True,
+        padding=True,
+        max_length=256,
+        return_tensors="pt"
+    ).to(device)
+
+    with torch.no_grad():
+        logits = model(**encodings).logits
+        probs = torch.sigmoid(logits)[:, 1].cpu().tolist()  # Get class 1 prob
+
+    scores.append((sentence, [(syn, score) for syn, score in zip(synsets, probs)]))
+
+# Print results
 for sentence, syn_score in scores:
     print("=" * 100)
     print(f"{sentence}")
     print("=" * 100)
     for syn, score in sorted(syn_score, key=lambda x: x[1], reverse=True):
-        print(f"{syn} -> {score}")
+        print(f"{syn} -> {score:.4f}")
         print(f"{syn.definition()}\n")
     print("\n")
 

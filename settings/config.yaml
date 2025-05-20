@@ -5,9 +5,9 @@ seed: 150
 obqa:
     name: "obqa"
     path: "allenai/openbookqa"
-    split: "test"
+    split: "train"
     subset: "main"
-    max_samples: 
+    max_samples:
     shuffle: false
 
 obqa_fewshot:
@@ -19,9 +19,9 @@ obqa_fewshot:
 qasc:
     name: "qasc"
     path: "allenai/qasc"
-    split: validation
+    split: train
     subset:
-    max_samples: 
+    max_samples: 2000
     shuffle: false
 
 qasc_fewshot:
@@ -34,9 +34,9 @@ qasc_fewshot:
 csqa:
     name: "csqa"
     path: "tau/commonsense_qa"
-    split: "validation"
+    split: "train"
     subset:
-    max_samples: 
+    max_samples: 2000
     shuffle: false
 
 csqa_fewshot:

@@ -108,3 +108,5 @@ print(f"Accuracy: {results['eval_accuracy']:.4f}")
 print(f"Precision: {results['eval_precision']:.4f}")
 print(f"Recall: {results['eval_recall']:.4f}")
 print(f"F1-score: {results['eval_f1']:.4f}")
+
+model.save_pretrained("models/deberta-v3-classifier/final")
