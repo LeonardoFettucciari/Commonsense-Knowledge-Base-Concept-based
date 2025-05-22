@@ -21,6 +21,8 @@ def main():
     # build one Retriever & one trained Retriever for each strategy
     retrievers = {}
     retrievers_trained = {}
+    retrievers_trained_2 = {}
+
     for strat in strategies:
         ckb = load_ckb(ckb_path, strat)
         retrievers[strat] = Retriever(
@@ -31,7 +33,15 @@ def main():
             query_prompt="query: ",
         )
         retrievers_trained[strat] = Retriever(
-            model_name_or_path="models/retriever_zebra/final",
+            model_name_or_path="models/retriever_trained/final",
+            retrieval_strategy=strat,
+            ckb=ckb,
+            passage_prompt="passage: ",
+            query_prompt="query: ",
+        )
+
+        retrievers_trained_2[strat] = Retriever(
+            model_name_or_path="models/retriever_trained_all_datasets/final",
             retrieval_strategy=strat,
             ckb=ckb,
             passage_prompt="passage: ",
@@ -69,8 +79,9 @@ def main():
         for strat in strategies:
             base_r = retrievers[strat]
             tr_r   = retrievers_trained[strat]
+            tr_r_2 = retrievers_trained_2[strat]
 
-            print(f"--- STRATEGY: {strat.upper()} — BASE RETRIEVER ---")
+            print(f"--- STRATEGY: {strat.upper()} — {base_r.model_name_or_path} ---")
             stmts = base_r.retrieve_top_k(
                 formatted_query,
                 top_k=20,
@@ -78,7 +89,7 @@ def main():
             )
             print("\n".join(stmts), "\n")
 
-            print(f"--- STRATEGY: {strat.upper()} — TRAINED RETRIEVER ---")
+            print(f"--- STRATEGY: {strat.upper()} — {tr_r.model_name_or_path} ---")
             stmts_tr = tr_r.retrieve_top_k(
                 formatted_query,
                 top_k=20,
@@ -86,7 +97,7 @@ def main():
             )
             print("\n".join(stmts_tr), "\n")
 
-            print(f"--- STRATEGY: {strat.upper()} — TRAINED RETRIEVER (MMR) ---")
+            print(f"--- STRATEGY: {strat.upper()} — {tr_r.model_name_or_path} (MMR) ---")
             stmts_tr_mmr = tr_r.retrieve_top_k(
                 formatted_query,
                 top_k=20,
@@ -96,8 +107,36 @@ def main():
             )
             print("\n".join(stmts_tr_mmr), "\n")
 
-            print(f"--- STRATEGY: {strat.upper()} — TRAINED RETRIEVER (FILTER) ---")
+            print(f"--- STRATEGY: {strat.upper()} — {tr_r.model_name_or_path} (FILTER) ---")
             stmts_tr_filt = tr_r.retrieve_top_k(
+                formatted_query,
+                top_k=20,
+                diversify=True,
+                re_rank="filter",
+                diversity_threshold=0.9
+            )
+            print("\n".join(stmts_tr_filt), "\n")
+
+            print(f"--- STRATEGY: {strat.upper()} — {tr_r_2.model_name_or_path} ---")
+            stmts_tr = tr_r_2.retrieve_top_k(
+                formatted_query,
+                top_k=20,
+                diversify=False
+            )
+            print("\n".join(stmts_tr), "\n")
+
+            print(f"--- STRATEGY: {strat.upper()} — {tr_r_2.model_name_or_path} (MMR) ---")
+            stmts_tr_mmr = tr_r_2.retrieve_top_k(
+                formatted_query,
+                top_k=20,
+                diversify=True,
+                re_rank="mmr",
+                lambda_=0.8
+            )
+            print("\n".join(stmts_tr_mmr), "\n")
+
+            print(f"--- STRATEGY: {strat.upper()} — {tr_r_2.model_name_or_path} (FILTER) ---")
+            stmts_tr_filt = tr_r_2.retrieve_top_k(
                 formatted_query,
                 top_k=20,
                 diversify=True,

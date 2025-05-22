@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # -----------------------------------------
-# run_inference.sh – batch inference driver
+# run_inference.sh – batch‐aware inference driver
 # -----------------------------------------
 set -Eeuo pipefail
 IFS=$'\n\t'
@@ -11,20 +11,23 @@ PROMPT_TYPES="zscotk"
 CKB_PATH="data/ckb/cleaned/merged_filtered.jsonl"
 DATASET_LIST="obqa,csqa,qasc"
 MODEL_NAMES="llama8B,llama3B,qwen1.5B,qwen7B"
-RETRIEVAL_STRATEGY_LIST="retriever"
+RETRIEVAL_STRATEGY_LIST="retriever,cner+retriever"
 TOP_K_VALUES="5"
 RETRIEVER_MODEL="intfloat/e5-base-v2"
 LAMBDA=0.8
 DIVERSITY_THRESHOLD=0.9
+RERANK_TYPE=""
 RUN_NAME="run_$(date +%Y%m%d_%H%M%S)"
+BATCH_SIZE=16
 # ────────────────────────────────────────────────────────────────────────────
 
 die() { printf "❌  %s\n" "$*" >&2; exit 1; }
 
-# GNU getopt for long‑flag parsing
+# GNU getopt for long-flag parsing
 PARSED=$(getopt -o h \
   --long help,rerank-type:,lambda:,prompt-types:,ckb-path:,dataset-list:,model-names:,\
-retrieval-strategy-list:,top-k-values:,retriever-model:,output-dir:,diversity-threshold:,run-name: \
+retrieval-strategy-list:,top-k-values:,retriever-model:,output-dir:,diversity-threshold:,\
+run-name:,batch-size: \
   -- "$@") || exit 1
 eval set -- "$PARSED"
 
@@ -42,26 +45,28 @@ while true; do
     --output-dir)             OUTPUT_DIR=$2; shift 2 ;;
     --diversity-threshold)    DIVERSITY_THRESHOLD=$2; shift 2 ;;
     --run-name)               RUN_NAME=$2; shift 2 ;;
+    --batch-size)             BATCH_SIZE=$2; shift 2 ;;
     -h|--help)
         cat <<EOF
 Batch inference runner
 ----------------------
 Required:
-  --rerank-type <TYPE>          rerank strategy (e.g. mmr, none…)
+  --rerank-type <TYPE>            rerank strategy (e.g. mmr, none…)
 
 Optional (defaults in brackets):
-  --lambda <FLOAT>              balance factor [$LAMBDA]
-  --prompt-types <LIST>         prompt templates [$PROMPT_TYPES]
-  --ckb-path <PATH>             cleaned CKB jsonl [$CKB_PATH]
-  --dataset-list <LIST>         datasets comma‑sep [$DATASET_LIST]
-  --model-names <LIST>          models comma‑sep [$MODEL_NAMES]
-  --retrieval-strategy-list     retrieval strategies [$RETRIEVAL_STRATEGY_LIST]
-  --top-k-values <LIST>         K values comma‑sep [$TOP_K_VALUES]
-  --retriever-model <PATH>      retriever checkpoint [$RETRIEVER_MODEL]
-  --output-dir <DIR>            write outputs here [$OUTPUT_DIR]
-  --diversity-threshold <FLOAT> MMR diversity [$DIVERSITY_THRESHOLD]
-  --run-name <STRING>           experiment tag [$RUN_NAME]
-  -h, --help                    show this help
+  --lambda <FLOAT>                balance factor             [$LAMBDA]
+  --prompt-types <LIST>           prompt templates           [$PROMPT_TYPES]
+  --ckb-path <PATH>               cleaned CKB jsonl           [$CKB_PATH]
+  --dataset-list <LIST>           datasets comma-sep         [$DATASET_LIST]
+  --model-names <LIST>            models comma-sep           [$MODEL_NAMES]
+  --retrieval-strategy-list       retrieval strategies       [$RETRIEVAL_STRATEGY_LIST]
+  --top-k-values <LIST>           K values comma-sep         [$TOP_K_VALUES]
+  --retriever-model <PATH>        retriever checkpoint       [$RETRIEVER_MODEL]
+  --output-dir <DIR>              write outputs here         [$OUTPUT_DIR]
+  --diversity-threshold <FLOAT>   MMR diversity              [$DIVERSITY_THRESHOLD]
+  --run-name <STRING>             experiment tag             [$RUN_NAME]
+  --batch-size <INT>              inference batch size       [$BATCH_SIZE]
+  -h, --help                      show this help
 EOF
         exit 0 ;;
     --) shift; break ;;
@@ -69,12 +74,11 @@ EOF
   esac
 done
 
-
 # ── helpers ────────────────────────────────────────────────────────────────
 split_csv() { IFS=',' read -r -a "$2" <<< "$1"; }
 
 split_csv "$DATASET_LIST"            DATASETS
-split_csv "$MODEL_NAMES"              MODELS
+split_csv "$MODEL_NAMES"             MODELS
 split_csv "$RETRIEVAL_STRATEGY_LIST" RETRIEVAL_STRATEGIES
 
 mkdir -p "$OUTPUT_DIR"
@@ -83,7 +87,7 @@ mkdir -p "$OUTPUT_DIR"
 for DATASET in "${DATASETS[@]}"; do
   for MODEL in "${MODELS[@]}"; do
     for RETRIEVAL in "${RETRIEVAL_STRATEGIES[@]}"; do
-      echo "▶ dataset=$DATASET  model=$MODEL  ${RERANK_TYPE:+rerank=$RERANK_TYPE}  λ=$LAMBDA  top‑k=$TOP_K_VALUES"
+      echo "▶ dataset=$DATASET  model=$MODEL  rerank_type=$RERANK_TYPE  λ=$LAMBDA  top-k=$TOP_K_VALUES  batch=$BATCH_SIZE"
 
       python src/inference/inference.py \
         --output_dir          "$OUTPUT_DIR" \
@@ -93,11 +97,12 @@ for DATASET in "${DATASETS[@]}"; do
         --retrieval_strategy  "$RETRIEVAL" \
         --prompt_types        "$PROMPT_TYPES" \
         --top_k_values        "$TOP_K_VALUES" \
-        ${RERANK_TYPE:+--rerank_type "$RERANK_TYPE"} \
-        --lambda              "$LAMBDA" \
+        --rerank_type         "$RERANK_TYPE" \
+        --lambda_             "$LAMBDA" \
         --retriever_model     "$RETRIEVER_MODEL" \
         --diversity_threshold "$DIVERSITY_THRESHOLD" \
-        --run_name            "$RUN_NAME"
+        --run_name            "$RUN_NAME" \
+        --batch_size          "$BATCH_SIZE"
     done
   done
 done

@@ -4,8 +4,9 @@
         "do_sample": false,
         "temperature": null, 
         "top_p": null,
+        "top_k": null,
         "num_beams": 1,
         "output_scores": false,
-        "return_dict_in_generate": false
+        "return_dict_in_generate": true
         }
 }

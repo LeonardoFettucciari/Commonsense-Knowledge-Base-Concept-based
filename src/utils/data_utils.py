@@ -6,8 +6,8 @@ import logging
 from nltk.wsd import lesk
 from nltk.tokenize import word_tokenize
 import nltk
-nltk.download('wordnet')
-nltk.download('punkt_tab')
+#nltk.download('wordnet')
+#nltk.download('punkt_tab')
 from src.utils.model_utils import get_ner_pipeline
 
 
@@ -83,8 +83,8 @@ def concatenate_question_choices(samples):
     queries = []
     for s in samples:
         question = s["question"]
-        choices = " ".join([f"{label}. {choice}" for label, choice in zip(s['choices']['label'], s['choices']['text'])])
-        query = f"{question} {choices}" # Query is question + choices
+        choices = "\n".join([f"{label}. {choice}" for label, choice in zip(s['choices']['label'], s['choices']['text'])])
+        query = f"{question}\n{choices}" # Query is question + choices
         queries.append(query)
     return queries[0] if len(queries) == 1 else queries # Returns single string or list of strings
 

@@ -1,6 +1,6 @@
 import copy
 from settings.prompts import (SYSTEM_ZEROSHOT, SYSTEM_ZEROSHOT_WITH_KNOWLEDGE, SYSTEM_ZEROSHOT_COT,
-                              SYSTEM_ZEROSHOT_COT_WITH_KNOWLEDGE,
+                              SYSTEM_ZEROSHOT_COT_WITH_KNOWLEDGE, SYSTEM_ZEROSHOT_COT_WITH_KNOWLEDGE_OLD,
                               SYSTEM_FEWSHOT, SYSTEM_FEWSHOT_WITH_KNOWLEDGE, SYSTEM_FEWSHOT_COT)
 from src.prompts.llama_prompt import LlamaPrompt, KnowledgePrompt
 

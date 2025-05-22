@@ -8,22 +8,11 @@ from sentence_transformers import (
 from sentence_transformers.losses import MultipleNegativesRankingLoss
 from sentence_transformers.training_args import BatchSamplers
 from sentence_transformers.evaluation import RerankingEvaluator
-
 from src.datasets.dataset_loader import load_local_dataset, load_hf_dataset, preprocess_dataset
+from src.datasets.dataset_loader import split_choices
 
-def intersect_and_align_by_id(dataset_a, dataset_b):
-    ids_a = set(dataset_a["id"])
-    ids_b = set(dataset_b["id"])
-    common_ids = ids_a & ids_b
-
-    dataset_a = dataset_a.filter(lambda x: x["id"] in common_ids)
-    dataset_b = dataset_b.filter(lambda x: x["id"] in common_ids)
-
-    dataset_a = dataset_a.sort("id")
-    dataset_b = dataset_b.sort("id")
-    return dataset_a, dataset_b
-
-
+# 0. Specify output directory
+output_dir = "models/retriever_trained_all_datasets"
 
 # 1. Load a model to finetune with model card metadata
 model = SentenceTransformer(
@@ -31,39 +20,29 @@ model = SentenceTransformer(
     model_card_data=SentenceTransformerModelCardData(
         language="en",
         license="apache-2.0",
-        model_name="intfloat/e5-base-v2-trained-mnr",
+        model_name="intfloat/e5-base-v2-trained",
     )
 )
 
 # Load datasets
-csqa_train = load_dataset("tau/commonsense_qa", split="train")
-obqa_train = load_dataset("allenai/openbookqa", split="train")
-qasc_train = load_dataset("allenai/qasc",       split="train")
+csqa_llama8b_positives = load_local_dataset("data/csqa/Llama-3.1-8B-Instruct/retriever_trainset/2025-05-21_02-40-35/prompt=zscot|ckb=merged_filtered|retrieval_strategy=retriever.jsonl")
+csqa_qwen7b_positives = load_local_dataset("data/csqa/Qwen2.5-7B-Instruct/retriever_trainset/2025-05-21_03-40-02/prompt=zscot|ckb=merged_filtered|retrieval_strategy=retriever.jsonl")
+obqa_llama8b_positives = load_local_dataset("data/obqa/Llama-3.1-8B-Instruct/retriever_trainset/2025-05-21_12-15-43/prompt=zscot|ckb=merged_filtered|retrieval_strategy=retriever.jsonl")
+obqa_qwen7b_positives = load_local_dataset("data/obqa/Qwen2.5-7B-Instruct/retriever_trainset/2025-05-21_14-11-57/prompt=zscot|ckb=merged_filtered|retrieval_strategy=retriever.jsonl")
+qasc_llama8b_positives = load_local_dataset("data/qasc/Llama-3.1-8B-Instruct/retriever_trainset/2025-05-21_06-50-53/prompt=zscot|ckb=merged_filtered|retrieval_strategy=retriever.jsonl")
+qasc_qwen7b_positives = load_local_dataset("data/qasc/Qwen2.5-7B-Instruct/retriever_trainset/2025-05-21_08-51-29/prompt=zscot|ckb=merged_filtered|retrieval_strategy=retriever.jsonl")
 
-obqa_train = preprocess_dataset(obqa_train, "obqa")
 
-csqa_positives = load_dataset("sapienzanlp/zebra-kb-explanations", "csqa-train-gemini", split="train")
-obqa_positives = load_dataset("sapienzanlp/zebra-kb-explanations", "obqa-train-gemini", split="train")
-qasc_positives = load_dataset("sapienzanlp/zebra-kb-explanations", "qasc-train-gemini", split="train")
-
-csqa_train, csqa_positives = intersect_and_align_by_id(csqa_train, csqa_positives)
-obqa_train, obqa_positives = intersect_and_align_by_id(obqa_train, obqa_positives)
-qasc_train, qasc_positives = intersect_and_align_by_id(qasc_train, qasc_positives)
-
-trainsets = [csqa_train, obqa_train, qasc_train]
-positivesets = [csqa_positives, obqa_positives, qasc_positives]
+positive_datasets = [csqa_llama8b_positives, obqa_llama8b_positives, qasc_llama8b_positives,
+                     csqa_qwen7b_positives, obqa_qwen7b_positives, qasc_qwen7b_positives]
 
 pairs = []
-for trainset, positiveset in zip(trainsets, positivesets):
-    for i, (item, item_positives) in enumerate(zip(trainset, positiveset)):
-        if item['id'] != item_positives['id']:
-            raise ValueError(f"IDs do not match at index {i}: {item['id']} != {item_positives['id']}")
-        
+for positive_dataset in positive_datasets:
+    for item in positive_dataset:
         question = item["question"]
-        choices = " ".join([f"{label}. {choice}" for label, choice in zip(item['choices']['label'], item['choices']['text'])])
-        anchor = f"{question} {choices}"
-
-        positives = item_positives.get("positives", [])
+        choices = item["choices"]
+        anchor = f"{question}\n{choices}"
+        positives = item.get("positives", [])
 
         for pos in positives:
             row = {
@@ -88,7 +67,7 @@ batch_size = 256
 total_steps = len(train_dataset) // batch_size * num_train_epochs
 warmup_steps = int(0.1 * total_steps)
 args = SentenceTransformerTrainingArguments(
-    output_dir="models/retriever_zebra",
+    output_dir=output_dir,
     num_train_epochs=num_train_epochs,    # try fewer and watch eval loss
     per_device_train_batch_size=batch_size,      # halves memory, still plenty of negatives
     per_device_eval_batch_size=batch_size,
@@ -98,10 +77,10 @@ args = SentenceTransformerTrainingArguments(
     fp16=True,                # enable fp16 if supported
     bf16=False,
     batch_sampler=BatchSamplers.NO_DUPLICATES,
-    eval_strategy="steps",
-    eval_steps=500,           # evaluate less often
-    save_strategy="steps",
-    save_steps=500,
+    eval_strategy="epoch",
+    eval_steps=None,           # evaluate less often
+    save_strategy="epoch",
+    save_steps=None,
     save_total_limit=2,
     logging_steps=100,
     load_best_model_at_end=True,
@@ -122,7 +101,7 @@ trainer = SentenceTransformerTrainer(
 trainer.train()
 
 # 10. Save the trained model
-model.save_pretrained("models/retriever_zebra/final")
+model.save_pretrained(f"{output_dir}/final")
 
 # 11. Optional: Push to hub
 # model.push_to_hub("e5-base-mnr")

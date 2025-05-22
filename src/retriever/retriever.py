@@ -1,5 +1,3 @@
-# src/retriever/retriever.py
-
 import hashlib
 import logging
 from pathlib import Path
@@ -10,6 +8,7 @@ import numpy as np
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.models import Transformer, StaticEmbedding
 
+from src.utils.model_utils import get_ner_pipeline
 from src.utils.data_utils import synsets_from_samples
 
 
@@ -31,6 +30,7 @@ class Retriever:
         query_prompt: str | None = None,
         cache_dir: str = "cache/index",
     ):
+        self.model_name_or_path = model_name_or_path
         assert retrieval_strategy in {"retriever", "cner+retriever"}
         self.ckb = ckb
         self.model = SentenceTransformer(model_name_or_path)
@@ -38,21 +38,34 @@ class Retriever:
         self.passage_prompt = passage_prompt
         self.query_prompt = query_prompt
 
-        # Initialize passages and index only for the "retriever" strategy
-        self.passages: list[str] = ckb if retrieval_strategy == "retriever" else []
+        # For "retriever", we'll maintain a FAISS index on disk;
+        # for small-scale "cner+retriever", we'll do in-memory brute force.
         self.save_index = retrieval_strategy == "retriever"
         self.cache_dir = Path(cache_dir)
+
+        # Only build index for full-retriever immediately
         if self.save_index:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
+            self.passages = ckb
+            self.index_path = (self.cache_dir / f"{self._cache_key()}.faiss")
+            self.index = self._load_or_build_index()
+            self._inmem_embs: np.ndarray | None = None
+            
+        else:
+            self.passages = []
+            self.index_path = None
+            self.index = None
+            self._inmem_embs: np.ndarray | None = None
 
-        self.index_path = (
-            self.cache_dir / f"{self._cache_key()}.faiss" if self.save_index else None
-        )
-        self.index = self._load_or_build_index() if self.passages else None
+        self.ner_pipeline = get_ner_pipeline("Babelscape/cner-base")
+
+    from typing import Union, List
+
+
 
     def retrieve_top_k(
         self,
-        query: str,
+        queries: Union[str, List[str]],
         top_k: int,
         *,
         diversify: bool = False,
@@ -61,41 +74,48 @@ class Retriever:
         pool_size: int | None = None,
         diversity_threshold: float = 0.9,
         batch_size: int = 512,
-    ) -> List[str]:
+    ) -> Union[List[str], List[List[str]]]:
         """
-        Retrieve top_k passages for a pre-formatted query string.
-
-        If using "cner+retriever", will:
-          - extract synsets from `query`
-          - collect matching CKB statements
-          - call set_passages(...) on that subset
-        Then delegates to self.retrieve(...)
+        Retrieve top_k passages for either a single query (str) or a batch of queries (List[str]).
+        If using "cner+retriever" strategy, extracts synsets per query, subsets the CKB,
+        rebuilds passages, then delegates to self.retrieve().
         """
-        if self.retrieval_strategy == "cner+retriever":
-            # 1) extract synsets
-            sample_synsets = synsets_from_samples(query)
+        single = isinstance(queries, str)
+        queries_list: List[str] = [queries] if single else queries  # type: ignore
 
-            # 2) gather all unique statements for those synsets
-            ckb_statements = list({
-                stmt
-                for syn in sample_synsets
-                for stmt in self.ckb.get(syn.name(), [])
-            })
+        all_results: List[Union[str, List[str]]] = []
 
-            # 3) swap in those passages
-            self.set_passages(ckb_statements)
+        for query in queries_list:
+            if self.retrieval_strategy == "cner+retriever":
+                # 1) extract synsets for this query
+                sample_synsets = synsets_from_samples(query, self.ner_pipeline)
 
-        # 4) perform the dense retrieval
-        return self.retrieve(
-            query,
-            top_k,
-            diversify=diversify,
-            re_rank=re_rank,
-            lambda_=lambda_,
-            pool_size=pool_size,
-            diversity_threshold=diversity_threshold,
-            batch_size=batch_size,
-        )
+                # 2) gather all unique statements for those synsets (default to empty list)
+                ckb_statements = list({
+                    stmt
+                    for syn in sample_synsets
+                    for stmt in self.ckb.get(syn.name(), [])
+                })
+
+                # 3) reset passages to only those CKB statements
+                self.set_passages(ckb_statements)
+
+            # 4) perform the (dense) retrieval for this single query
+            result = self.retrieve(
+                query,
+                top_k,
+                diversify=diversify,
+                re_rank=re_rank,
+                lambda_=lambda_,
+                pool_size=pool_size,
+                diversity_threshold=diversity_threshold,
+                batch_size=batch_size,
+            )
+            all_results.append(result)
+
+        # if single query, return flat list; else return list-of-lists
+        return all_results[0] if single else all_results
+
 
     def retrieve(
         self,
@@ -109,37 +129,50 @@ class Retriever:
         diversity_threshold: float = 0.9,
         batch_size: int = 512,
     ) -> Union[List[str], List[List[str]]]:
+        single = isinstance(queries, str)
+        queries_list = [queries] if single else queries
+
+        # if we've got no passages at all, just return empties
+        if not self.passages:
+            return [] if single else [[] for _ in queries_list]
+    
+        # encode query embeddings
+        q_emb = self._encode(
+            queries_list,
+            prompt=self.query_prompt,
+            batch_size=batch_size
+        ).astype(np.float32)
+
+        # ---- In-memory brute-force path ----
+        if self._inmem_embs is not None:
+            # (n_passages, dim) @ (dim, n_queries) -> (n_passages, n_queries)
+            sims = self._inmem_embs @ q_emb.T
+            results: list[list[str]] = []
+            for qi in range(sims.shape[1]):
+                top_ix = np.argsort(-sims[:, qi])[:top_k]
+                results.append([self.passages[i] for i in top_ix])
+            return results[0] if single else results
+
+        # ---- FAISS path ----
         if self.index is None:
             raise RuntimeError(
                 "No FAISS index available. Did you forget to call set_passages?"
             )
 
-        single = isinstance(queries, str)
-        queries_list = [queries] if single else queries
-
-        # encode
-        q_emb = self._encode(
-            queries_list, prompt=self.query_prompt, batch_size=batch_size
-        )
-
-        # how many to pull
+        # how many to pull for MMR pool
         cand = pool_size or top_k if diversify else top_k
         cand = min(cand, len(self.passages))
 
-        # FAISS search
-        scores, idx = self.index.search(q_emb.astype(np.float32), cand)
-
+        scores, idx = self.index.search(q_emb, cand)
         hits: list[list[str]] = []
         for q_i, ids in enumerate(idx):
             cand_texts = [self.passages[i] for i in ids if i != -1]
-
             if not diversify:
                 hits.append(cand_texts[:top_k])
                 continue
 
-            # get vectors back
+            # get vectors back for MMR/filter
             cand_vecs = np.stack([self.index.reconstruct(int(i)) for i in ids if i != -1])
-
             if re_rank == "mmr":
                 hits.append(_mmr(
                     query_vec=q_emb[q_i],
@@ -169,10 +202,23 @@ class Retriever:
         return hits[0] if single else hits
 
     def set_passages(self, passages: Union[str, List[str]]):
+        """
+        Replace current passages and rebuild either FAISS index or in-memory embeddings.
+        """
         self.passages = [passages] if isinstance(passages, str) else passages
         if self.save_index:
+            # full-retriever: build or reload disk-based FAISS index
             self.index_path = self.cache_dir / f"{self._cache_key()}.faiss"
-        self.index = self._load_or_build_index()
+            self.index = self._load_or_build_index()
+            self._inmem_embs = None
+        else:
+            # small-scale: encode all passages in-memory
+            self._inmem_embs = self._encode(
+                self.passages,
+                prompt=self.passage_prompt,
+                batch_size=512
+            ).astype(np.float32)
+            self.index = None
 
     def _encode(self, texts: List[str], *, prompt: str | None, batch_size: int):
         return self.model.encode(
@@ -235,38 +281,23 @@ def _mmr(
     # Ensure lambda_ is a valid trade-off parameter between 0 and 1
     assert 0.0 <= lambda_ <= 1.0
 
-    # List to store selected texts and their corresponding vectors
     selected_texts: List[str] = []
     selected_vecs: List[np.ndarray] = []
 
-    # Compute similarity of each candidate to the query (dot product)
     sim_to_q = cand_vecs @ query_vec
-
-    # Initialize the list of free (not yet selected) indices
     free_idx = np.arange(cand_vecs.shape[0])
 
-    # Iteratively select texts until we reach k or run out of candidates
     while len(selected_texts) < min(k, cand_vecs.shape[0]):
         if selected_vecs:
-            # If we have already selected texts, compute diversity penalty
-            # For each candidate, find the maximum similarity to any selected vector
             div_penalty = np.max(cand_vecs[free_idx] @ np.stack(selected_vecs, axis=1), axis=1)
         else:
-            # No diversity penalty if no texts are selected yet
             div_penalty = 0.0
 
-        # Compute the MMR score: balance between relevance and diversity
         mmr_score = (1 - lambda_) * sim_to_q[free_idx] - lambda_ * div_penalty
-
-        # Select the candidate with the highest MMR score
         best = int(free_idx[np.argmax(mmr_score)])
 
-        # Add the selected candidate to the list of selected vectors and texts
         selected_vecs.append(cand_vecs[best])
         selected_texts.append(cand_texts[best])
-
-        # Remove the selected index from the list of free indices
         free_idx = free_idx[free_idx != best]
 
-    # Return the selected texts
     return selected_texts

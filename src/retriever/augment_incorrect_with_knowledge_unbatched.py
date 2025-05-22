@@ -2,29 +2,29 @@ import csv
 import logging
 import os
 import datetime
-from argparse import ArgumentParser
-from math import ceil
-from typing import Dict, List
-
 import torch
-from tqdm import tqdm
+from argparse import ArgumentParser
+from typing import Dict, List
 
 # Local imports
 from settings.aliases import (
     DATASET_NAME_TO_TAG,
+    DATASET_TAG_TO_NAME,
     MODEL_TAG_TO_NAME,
 )
 from src.datasets.dataset_loader import load_local_dataset, split_choices
 from src.retriever.retriever import Retriever
 from src.utils.io_utils import load_ckb, load_yaml, prepare_output_retriever_training
-from src.utils.model_utils import batched_generate_text, load_model_and_tokenizer
+from src.utils.model_utils import generate_text, load_model_and_tokenizer
 from src.utils.prompt_utils import build_prompts_for_retriever_training
+from src.utils.retriever_utils import retrieve_top_k_statements
 from src.utils.data_utils import concatenate_question_choices
 from src.utils.string_utils import (
     extract_base_model_name,
     prepare_prompt_output_filename,
 )
 
+# Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
@@ -65,14 +65,13 @@ def augment_incorrect_with_knowledge(
     retrieval_strategy: str,
     ckb_path: str,
     top_k: int,
-    batch_size: int,
 ) -> None:
+    # Log start
     logging.info("=== Starting augment_incorrect_with_knowledge ===")
-    logging.info("Loading YAML config from %s", config_path)
-    cfg = load_yaml(config_path)
-    gen_config = load_yaml("settings/model_config.json")["generation_config"]
+    logging.info("Configuration path: %s", config_path)
+    config = load_yaml(config_path)
 
-    # Determine input run directory
+    # Determine input run directory (structured as input_dir_root/dataset/model/run-name)
     run_dir = os.path.join(
         input_dir_root,
         DATASET_NAME_TO_TAG.get(dataset_name, dataset_name),
@@ -81,6 +80,7 @@ def augment_incorrect_with_knowledge(
     )
     logging.info("Searching for runs in: %s", run_dir)
     latest_run_dir = get_latest_datetime_dir(run_dir)
+    logging.info("Using latest run directory: %s", latest_run_dir)
 
     # Locate accuracy folder
     accuracy_dir = os.path.join(latest_run_dir, "accuracy")
@@ -90,42 +90,45 @@ def augment_incorrect_with_knowledge(
         raise FileNotFoundError(f"Accuracy folder not found in {latest_run_dir}")
 
     # Select TSV input
-    input_path = next(
-        (os.path.join(accuracy_dir, f)
-         for f in os.listdir(accuracy_dir)
-         if f.endswith(".tsv") and prompt_name in f),
-        None
-    )
+    input_path = None
+    for fname in os.listdir(accuracy_dir):
+        if fname.endswith('.tsv') and prompt_name in fname:
+            input_path = os.path.join(accuracy_dir, fname)
+            break
     if not input_path:
         logging.error("No TSV file containing '%s' in %s", prompt_name, accuracy_dir)
         raise FileNotFoundError(f"No TSV file containing '{prompt_name}' found in {accuracy_dir}")
     logging.info("Found input TSV: %s", input_path)
 
-    # Load & filter dataset
+    # Load and preprocess dataset
     input_dataset = load_local_dataset(input_path)
-    input_dataset = input_dataset.map(split_choices, remove_columns=["choices"])
-    
-    total = len(input_dataset)
-    logging.info("Loaded and preprocessed %d samples", total)
+    input_dataset = input_dataset.map(
+        split_choices,
+        remove_columns=["choices"],    # drop the old string column
+)
 
-    input_dataset = input_dataset.filter(
-        lambda s: int(s["xfinder_extracted_answers_mismatch"]) == 0
-                  and int(s["xfinder_acc_llama"]) == 0
+    total_samples = len(input_dataset)
+    logging.info("Loaded and preprocessed %d samples", total_samples)
+
+    # Filter for incorrect
+    input_dataset_incorrect_samples = input_dataset.filter(
+        lambda sample: int(sample['xfinder_extracted_answers_mismatch']) == 0
+        and int(sample['xfinder_acc_llama']) == 0
     )
-    input_dataset = input_dataset.select(range(1))
-    incorrect_count = len(input_dataset)
+    input_dataset_incorrect_samples = input_dataset_incorrect_samples.select(range(1))
+    incorrect_count = len(input_dataset_incorrect_samples)
     logging.info("Filtered to %d incorrect samples", incorrect_count)
 
     # Initialize CKB and retriever
     logging.info("Loading CKB from %s with strategy %s", ckb_path, retrieval_strategy)
     ckb = load_ckb(ckb_path, retrieval_strategy)
     retriever = Retriever(
-        model_name_or_path=cfg["retriever"]["model_name"],
-        retrieval_strategy=retrieval_strategy,
-        ckb=ckb,
-        passage_prompt="passage: ",
-        query_prompt="query: ",
-    )
+            model_name_or_path=config['retriever']['model_name'],
+            retrieval_strategy=retrieval_strategy,
+            ckb=ckb,
+            passage_prompt="passage: ",
+            query_prompt="query: ",
+        )
     logging.info("Retriever initialized")
 
     # Load model and tokenizer
@@ -133,53 +136,37 @@ def augment_incorrect_with_knowledge(
     model, tokenizer = load_model_and_tokenizer(model_name)
     model.eval()
     torch.set_grad_enabled(False)
-    logging.info("Model ready for inference")
+    logging.info("Model and tokenizer loaded successfully")
 
-    # Batch‐processing loop
+    # Run inference loop
+    from tqdm import tqdm
+    logging.info("Beginning inference loop on %d samples", incorrect_count)
+    iterator = tqdm(
+        enumerate(input_dataset_incorrect_samples),
+        total=incorrect_count,
+        desc=f"Inferencing {model_name}",
+    )
+
     outputs: List[Dict[str, str]] = []
-    n_batches = ceil(incorrect_count / batch_size)
-    pbar = tqdm(range(n_batches), desc=f"Batching {model_name}", total=n_batches)
-
-    for b in pbar:
-        start = b * batch_size
-        end = min((b + 1) * batch_size, incorrect_count)
-        batch = input_dataset.select(range(start, end))
-
-        # 1) Batch retrieval
-        queries = [concatenate_question_choices(s) for s in batch]
-        batch_ckb_lists = retriever.retrieve(
-            queries,
-            top_k=top_k,
-            diversify=False,
-            batch_size=512
-        )
-
-        # 2) Build prompts + mapping
-        batch_prompts = []
-        prompt_map = []  # list of (sample_idx, prompt_idx)
-        for i, sample in enumerate(batch):
-            ckb_stmts = batch_ckb_lists[i]
-            prompts = build_prompts_for_retriever_training(
-                sample=sample,
-                ckb_statements=ckb_stmts,
+    for index, sample in iterator:
+        # Retrieve statements
+        question_choices = concatenate_question_choices(sample)
+        eval_ckb_statements = retriever.retrieve_top_k(
+                question_choices,
                 top_k=top_k,
+                diversify=False,
             )
-            for j, p in enumerate(prompts):
-                batch_prompts.append(p)
-                prompt_map.append((i, j))
 
-        # 3) Batched generation
-        decoded_texts = batched_generate_text(
-            model, tokenizer, batch_prompts, gen_config
+        # Build prompts
+        prompts = build_prompts_for_retriever_training(
+            sample=sample,
+            ckb_statements=eval_ckb_statements,
+            top_k=top_k,
         )
-
-        # 4) Re-associate outputs
-        for text, (i, j) in zip(decoded_texts, prompt_map):
-            sample = batch[i]
-            outputs.append(
-                prepare_output_retriever_training(sample, batch_prompts[i * top_k + j], text, j)
-            )
-
+        # Generate answers and collect outputs
+        for i, prompt in enumerate(prompts):
+            answer_text = generate_text(model, tokenizer, prompt)
+            outputs.append(prepare_output_retriever_training(sample, prompt, answer_text, i))
     logging.info("Inference complete: generated %d outputs", len(outputs))
 
     # Prepare output directory
@@ -196,7 +183,7 @@ def augment_incorrect_with_knowledge(
     prompt_output_filename = prepare_prompt_output_filename(
         dated_output_dir,
         output_data=outputs[0],
-        prompt="zscotk1",
+        prompt=prompt_name,
         ckb=os.path.splitext(os.path.basename(ckb_path))[0],
         retrieval_strategy=retrieval_strategy,
     )
@@ -211,7 +198,7 @@ def augment_incorrect_with_knowledge(
 
 
 def main() -> None:
-    parser = ArgumentParser(description="Batched CKB-based QA inference.")
+    parser = ArgumentParser(description="Inference script for CKB-based QA tasks.")
     parser.add_argument("--input_dir_root", type=str, required=True,
                         help="Root directory containing runs.")
     parser.add_argument("--input_run_name", type=str, required=True,
@@ -234,13 +221,10 @@ def main() -> None:
                         type=str, help="Path to config file.")
     parser.add_argument("--top_k", default=20, type=int,
                         help="Top k retrieval count.")
-    parser.add_argument("--batch_size", type=int, default=16,
-                        help="Number of samples to process per batch.")
-    args = parser.parse_args()
 
-    # Resolve any aliases
+    args = parser.parse_args()
     args.model_name = MODEL_TAG_TO_NAME.get(args.model_name, args.model_name)
-    args.dataset_name = DATASET_NAME_TO_TAG.get(args.dataset_name, args.dataset_name)
+    args.dataset_name = DATASET_TAG_TO_NAME.get(args.dataset_name, args.dataset_name)
 
     logging.info("Launching augment_incorrect_with_knowledge with args: %s", vars(args))
     augment_incorrect_with_knowledge(
@@ -255,9 +239,7 @@ def main() -> None:
         retrieval_strategy=args.retrieval_strategy,
         ckb_path=args.ckb_path,
         top_k=args.top_k,
-        batch_size=args.batch_size,
     )
-
 
 if __name__ == "__main__":
     main()

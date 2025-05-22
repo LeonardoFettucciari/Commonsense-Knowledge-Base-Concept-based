@@ -3,8 +3,10 @@ import logging
 import os
 from argparse import ArgumentParser
 from collections import defaultdict
-from typing import Dict, List
 from datetime import datetime
+from typing import Dict, List
+from transformers import GenerationConfig
+import torch
 import tqdm
 
 # Local imports
@@ -14,10 +16,14 @@ from settings.aliases import (
     MODEL_TAG_TO_NAME,
     PROMPT_TYPE_ALIASES,
 )
-from src.datasets.dataset_loader import load_hf_dataset, load_local_dataset, preprocess_dataset
+from src.datasets.dataset_loader import (
+    load_hf_dataset,
+    load_local_dataset,
+    preprocess_dataset,
+)
 from src.retriever.retriever import Retriever
 from src.utils.io_utils import load_ckb, load_yaml, prepare_output
-from src.utils.model_utils import generate_text, load_model_and_tokenizer
+from src.utils.model_utils import load_model_and_tokenizer, batched_generate_text
 from src.utils.prompt_utils import build_prompts, get_prompt_requirements
 from src.utils.retriever_utils import (
     add_ckb_statements_to_samples,
@@ -47,31 +53,41 @@ def inference(
     lambda_: float,
     retriever_model: str,
     diversity_threshold: float,
-    run_name: str,                      
+    run_name: str,
+    batch_size: int = 1,  # new parameter
 ) -> None:
     """
     Run inference on a dataset using a specified model and optionally retrieve
-    knowledge base statements to build the prompts.
+    knowledge base statements, now with batched generation.
     """
     logging.info("Starting inference process...")
-    logging.info("Loading configuration from: %s", config_path)
     config = load_yaml(config_path)
 
-    # Resolve prompt type requirements
+    # Load and clean your config dict
+    raw_config = load_yaml("settings/model_config.json")["generation_config"]
+
+    # Remove sampling args if not needed
+    if not raw_config.get("do_sample", False):
+        raw_config.pop("top_k", None)
+        raw_config.pop("top_p", None)
+
+    # Create a new, explicit GenerationConfig
+    gen_config = GenerationConfig(**raw_config)
+
+
     prompt_requires = get_prompt_requirements(prompt_types)
 
-    # Get dataset tag and load dataset
+    # Load dataset
     dataset_tag = DATASET_NAME_TO_TAG[dataset_name]
     logging.info("Loading dataset: %s", dataset_name)
     eval_dataset = load_hf_dataset(config[dataset_tag])
     eval_dataset = preprocess_dataset(eval_dataset, dataset_tag)
     logging.info("Loaded %d samples for evaluation.", len(eval_dataset))
 
-    # Load few-shot data if required
+    # Few-shot
     fewshot_dataset = None
     if prompt_requires["fewshot"]:
         fewshot_tag = f"{dataset_tag}_fewshot"
-        logging.info("Loading fewshot examples...")
         fewshot_dataset = load_local_dataset(
             local_path=config[fewshot_tag]['path'],
             max_samples=config[fewshot_tag]['max_samples']
@@ -79,14 +95,11 @@ def inference(
         fewshot_dataset = preprocess_dataset(fewshot_dataset, fewshot_tag)
         logging.info("Loaded %d fewshot examples.", len(fewshot_dataset))
 
-    # Load knowledge base data if required
+    # Knowledge base & retriever
     ckb = None
     retriever = None
     if prompt_requires["knowledge"]:
-        # Load knowledge base
         ckb = load_ckb(ckb_path, retrieval_strategy)
-
-        # Initialize retriever
         retriever = Retriever(
             model_name_or_path=retriever_model,
             retrieval_strategy=retrieval_strategy,
@@ -94,120 +107,125 @@ def inference(
             passage_prompt="passage: ",
             query_prompt="query: ",
         )
-
-        # Retrieve statements for few-shot samples if required
         if prompt_requires["fewshot"]:
             for example in fewshot_dataset:
-                question_choices = concatenate_question_choices(example)
-                fewshot_ckb_statements = retriever.retrieve_top_k(
-                    question_choices,
+                qc = concatenate_question_choices(example)
+                fs_ckb = retriever.retrieve_top_k(
+                    qc,
                     top_k=max(top_k_values),
-                    diversify=True if rerank_type else False,
+                    diversify=bool(rerank_type),
                     re_rank=rerank_type,
                     lambda_=lambda_,
                     diversity_threshold=diversity_threshold,
                 )
+                example["ckb_statements"] = fs_ckb
 
-                example["ckb_statements"] = fewshot_ckb_statements
-
-    # Load model and tokenizer
+    # Load model/tokenizer
     logging.info("Loading model and tokenizer: %s", model_name)
     model, tokenizer = load_model_and_tokenizer(model_name)
-    logging.info("Model and tokenizer loaded successfully.")
+    model.to(torch.device('cuda' if torch.cuda.is_available() else 'cpu'))
 
-    # Prepare for inference
-    logging.info("Starting inference...")
-    iterator = tqdm.tqdm(
-        enumerate(eval_dataset),
-        total=len(eval_dataset),
-        desc=f"Running inference on {model_name}...",
-    )
-
-    # Inference loop
+    # Prepare output containers
     ground_truths: List[str] = []
     answers: Dict[str, List[str]] = defaultdict(list)
     outputs: Dict[str, List[Dict[str, str]]] = defaultdict(list)
-    
-    for index, sample in iterator:
-        # Retrieve statements if required
-        if prompt_requires["knowledge"]:
-            question_choices = concatenate_question_choices(sample)
-            eval_ckb_statements = retriever.retrieve_top_k(
-                    question_choices,
+
+    # Progress bar
+    for batch in tqdm.tqdm(eval_dataset.batch(batch_size=batch_size), desc=f"Batched inference ({batch_size})"):
+        # Batch inference
+        batch_prompts: List[tuple] = []  # tuples of (sample, prompt_name, prompt_obj)
+
+        # Retrieve & build prompts per sample
+        batch_len = len(next(iter(batch.values())))
+        for i in range(batch_len):
+            sample = {key: batch[key][i] for key in batch}
+
+            if prompt_requires["knowledge"]:
+                qc = concatenate_question_choices(sample)
+                ev_ckb = retriever.retrieve_top_k(
+                    qc,
                     top_k=max(top_k_values),
-                    diversify=True if rerank_type else False,
+                    diversify=bool(rerank_type),
                     re_rank=rerank_type,
                     lambda_=lambda_,
                     diversity_threshold=diversity_threshold,
                 )
-            sample["ckb_statements"] = eval_ckb_statements
+                sample["ckb_statements"] = ev_ckb
 
-        # Build prompts
-        prompts = build_prompts(
-            sample=sample,
-            prompt_types=prompt_types,
-            top_k_values=top_k_values,
-            fewshot_examples=fewshot_dataset,
+            # Build prompts
+            prompts = build_prompts(
+                sample=sample,
+                prompt_types=prompt_types,
+                top_k_values=top_k_values,
+                fewshot_examples=fewshot_dataset,
+            )
+            for pr in prompts:
+                batch_prompts.append((sample, pr.name, pr))
+
+        # Generate answers in batch
+        prompts = [pr for (_, _, pr) in batch_prompts]
+        gen_outputs = batched_generate_text(
+            model=model,
+            tokenizer=tokenizer,
+            prompts=prompts,
+            gen_config=gen_config,
         )
 
-        # Generate answers for each prompt
-        for prompt in prompts:
-            answer_text = generate_text(model, tokenizer, prompt)
-            answers[prompt.name].append(answer_text)
-            outputs[prompt.name].append(prepare_output(sample, prompt, answer_text))
+        # Map outputs back
+        for text, (sample, prompt_name, pr) in zip(gen_outputs, batch_prompts):
+            answers[prompt_name].append(text)
+            outputs[prompt_name].append(prepare_output(sample, pr, text))
 
-        # Append ground truth
-        ground_truths.append(sample["ground_truth"])
+        # Ground truths
+        for i in range(batch_len):
+            sample = {key: batch[key][i] for key in batch}
+            ground_truths.append(sample["ground_truth"])
 
-    # Save inference results
+
+    # Save results
     model_output_dir = os.path.join(
         output_dir,
         dataset_tag,
         extract_base_model_name(model_name),
         run_name,
-        datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+        datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
     )
     os.makedirs(model_output_dir, exist_ok=True)
     logging.info("Saving inference results to: %s", model_output_dir)
 
-    for prompt_name, output_data in outputs.items():
-        prompt_output_filename = prepare_prompt_output_filename(
+    for prompt_name, out_data in outputs.items():
+        filename = prepare_prompt_output_filename(
             model_output_dir,
-            output_data=output_data[0],
+            output_data=out_data[0],
             prompt=prompt_name,
             ckb=os.path.splitext(os.path.basename(ckb_path))[0],
             retrieval_strategy=retrieval_strategy,
         )
-        prompt_output_path = os.path.join(model_output_dir, prompt_output_filename)
-
-        # Write data to TSV file
-        with open(prompt_output_path, mode="w", newline="", encoding="utf-8") as file:
-            writer = csv.DictWriter(file, fieldnames=output_data[0].keys(), delimiter="\t")
+        path = os.path.join(model_output_dir, filename)
+        with open(path, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=out_data[0].keys(), delimiter="\t")
             writer.writeheader()
-            writer.writerows(output_data)
-        logging.info("Saved results for prompt type '%s' to %s", prompt_name, prompt_output_path)
+            writer.writerows(out_data)
+        logging.info("Saved results for prompt type '%s' to %s", prompt_name, path)
 
     logging.info("Inference process completed successfully.")
 
 
 def main() -> None:
-    """
-    Parse arguments and launch the inference procedure.
-    """
     parser = ArgumentParser(description="Inference script for CKB-based QA tasks.")
     parser.add_argument("--model_name", type=str, required=True)
     parser.add_argument("--dataset_name", type=str, required=True)
     parser.add_argument("--ckb_path", type=str, required=True)
     parser.add_argument("--output_dir", type=str, required=True)
     parser.add_argument("--retrieval_strategy", type=str, required=False)
-    parser.add_argument("--config_path", default="settings/config.yaml", type=str, required=False)
-    parser.add_argument("--prompt_types", default="all", type=str, required=False)
-    parser.add_argument("--top_k_values", default="1,3,5,10,20", type=str, required=False)
+    parser.add_argument("--config_path", default="settings/config.yaml", type=str)
+    parser.add_argument("--prompt_types", default="all", type=str)
+    parser.add_argument("--top_k_values", default="1,3,5,10,20", type=str)
     parser.add_argument("--lambda_", type=float, required=True)
-    parser.add_argument("--rerank_type", type=str, default=None, required=False)
-    parser.add_argument("--retriever_model", type=str, required=False)
-    parser.add_argument("--diversity_threshold", type=float, required=False)
-
+    parser.add_argument("--rerank_type", type=str, default=None)
+    parser.add_argument("--retriever_model", type=str)
+    parser.add_argument("--diversity_threshold", type=float)
+    parser.add_argument("--batch_size", type=int, default=1, help="Batch size for inference generation.")
     parser.add_argument(
         "--run_name",
         type=str,
@@ -217,18 +235,10 @@ def main() -> None:
 
     args = parser.parse_args()
 
-    # Replace eventual aliases
     args.model_name = MODEL_TAG_TO_NAME.get(args.model_name, args.model_name)
     args.dataset_name = DATASET_TAG_TO_NAME.get(args.dataset_name, args.dataset_name)
-
-    # Convert prompt types into a list, mapping aliases if any found
-    args.prompt_types = [
-        PROMPT_TYPE_ALIASES.get(t.lower(), t.lower())
-        for t in args.prompt_types.split(",")
-    ]
-
-    # Convert top k values into a list
-    args.top_k_values = [int(val) for val in args.top_k_values.split(",")]    
+    args.prompt_types = [PROMPT_TYPE_ALIASES.get(t.lower(), t.lower()) for t in args.prompt_types.split(",")]
+    args.top_k_values = [int(val) for val in args.top_k_values.split(",")]
 
     logging.info("Launching inference script...")
     inference(
