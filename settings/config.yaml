@@ -5,7 +5,7 @@ seed: 150
 obqa:
     name: "obqa"
     path: "allenai/openbookqa"
-    split: "test"
+    split: "train"
     subset: "main"
     max_samples: 
     shuffle: false
@@ -13,7 +13,7 @@ obqa:
 qasc:
     name: "qasc"
     path: "allenai/qasc"
-    split: validation
+    split: train
     subset:
     max_samples: 
     shuffle: false
@@ -21,7 +21,7 @@ qasc:
 csqa:
     name: "csqa"
     path: "tau/commonsense_qa"
-    split: "validation"
+    split: "train"
     subset:
     max_samples: 
     shuffle: false

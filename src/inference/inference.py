@@ -113,7 +113,7 @@ def inference(
                 fs_ckb = retriever.retrieve_top_k(
                     qc,
                     top_k=max(top_k_values),
-                    diversify=bool(rerank_type),
+                    pool_size= max(top_k_values) * 2,  # Ensure enough candidates
                     re_rank=rerank_type,
                     lambda_=lambda_,
                     diversity_threshold=diversity_threshold,
@@ -145,7 +145,7 @@ def inference(
                 ev_ckb = retriever.retrieve_top_k(
                     qc,
                     top_k=max(top_k_values),
-                    diversify=bool(rerank_type),
+                    pool_size= max(top_k_values) * 2,  # Ensure enough candidates
                     re_rank=rerank_type,
                     lambda_=lambda_,
                     diversity_threshold=diversity_threshold,

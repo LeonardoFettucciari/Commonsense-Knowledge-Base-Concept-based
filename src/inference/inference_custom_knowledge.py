@@ -156,7 +156,7 @@ def inference(
             retrieved_statements = retriever.retrieve_top_k(
                 question_choices,
                 top_k=5,
-                diversify=bool(rerank_type),
+                pool_size= max(top_k_values) * 2,  # Ensure enough candidates
                 re_rank=rerank_type,
                 lambda_=lambda_,
                 diversity_threshold=diversity_threshold,
@@ -165,7 +165,8 @@ def inference(
         print("\nTop‑5 retrieved knowledge statements:")
         if retrieved_statements:
             for i, stmt in enumerate(retrieved_statements, 1):
-                print(f"  {i}. {stmt}")
+                #print(f"  {i}. {stmt}")
+                print(f"{stmt}")
         else:
             print("  (No statements retrieved.)")
 

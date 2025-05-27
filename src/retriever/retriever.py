@@ -68,7 +68,6 @@ class Retriever:
         queries: Union[str, List[str]],
         top_k: int,
         *,
-        diversify: bool = False,
         re_rank: str = "mmr",
         lambda_: float = 0.7,
         pool_size: int | None = None,
@@ -104,7 +103,6 @@ class Retriever:
             result = self.retrieve(
                 query,
                 top_k,
-                diversify=diversify,
                 re_rank=re_rank,
                 lambda_=lambda_,
                 pool_size=pool_size,
@@ -122,8 +120,7 @@ class Retriever:
         queries: Union[str, List[str]],
         top_k: int,
         *,
-        diversify: bool = False,
-        re_rank: str = "mmr",
+        re_rank: str = "none",  # 'none', 'mmr', or 'filter'
         lambda_: float = 0.7,
         pool_size: int | None = None,
         diversity_threshold: float = 0.9,
@@ -132,74 +129,61 @@ class Retriever:
         single = isinstance(queries, str)
         queries_list = [queries] if single else queries
 
-        # if we've got no passages at all, just return empties
         if not self.passages:
             return [] if single else [[] for _ in queries_list]
-    
-        # encode query embeddings
+
         q_emb = self._encode(
             queries_list,
             prompt=self.query_prompt,
             batch_size=batch_size
         ).astype(np.float32)
 
-        # ---- In-memory brute-force path ----
+        # In-memory retrieval for 'CNER+retriever' strategy
         if self._inmem_embs is not None:
-            # (n_passages, dim) @ (dim, n_queries) -> (n_passages, n_queries)
             sims = self._inmem_embs @ q_emb.T
-            results: list[list[str]] = []
+            results = []
             for qi in range(sims.shape[1]):
                 top_ix = np.argsort(-sims[:, qi])[:top_k]
-                results.append([self.passages[i] for i in top_ix])
-            return results[0] if single else results
-
-        # ---- FAISS path ----
-        if self.index is None:
-            raise RuntimeError(
-                "No FAISS index available. Did you forget to call set_passages?"
-            )
-
-        # how many to pull for MMR pool
-        cand = pool_size or top_k if diversify else top_k
-        cand = min(cand, len(self.passages))
-
-        scores, idx = self.index.search(q_emb, cand)
-        hits: list[list[str]] = []
-        for q_i, ids in enumerate(idx):
-            cand_texts = [self.passages[i] for i in ids if i != -1]
-            if not diversify:
-                hits.append(cand_texts[:top_k])
-                continue
-
-            # get vectors back for MMR/filter
-            cand_vecs = np.stack([self.index.reconstruct(int(i)) for i in ids if i != -1])
-            if re_rank == "mmr":
-                hits.append(_mmr(
-                    query_vec=q_emb[q_i],
+                cand_texts = [self.passages[i] for i in top_ix]
+                cand_vecs = self._inmem_embs[top_ix]
+                results.append(_deduplicate(
+                    method=re_rank,
+                    query_vec=q_emb[qi],
                     cand_vecs=cand_vecs,
                     cand_texts=cand_texts,
-                    k=top_k,
+                    top_k=top_k,
                     lambda_=lambda_,
+                    diversity_threshold=diversity_threshold,
                 ))
-            elif re_rank == "filter":
-                kept_texts: list[str] = []
-                kept_vecs: list[np.ndarray] = []
-                for vec, text in zip(cand_vecs, cand_texts):
-                    if not kept_vecs:
-                        kept_texts.append(text)
-                        kept_vecs.append(vec)
-                    else:
-                        sims = np.dot(np.stack(kept_vecs), vec)
-                        if np.all(sims < diversity_threshold):
-                            kept_texts.append(text)
-                            kept_vecs.append(vec)
-                    if len(kept_texts) == top_k:
-                        break
-                hits.append(kept_texts)
-            else:
-                raise ValueError(f"Unknown re_rank mode: {re_rank}")
+            return results[0] if single else results
+
+        # FAISS-based retrieval for 'retriever' strategy
+        if self.index is None:
+            raise RuntimeError("No FAISS index available. Did you forget to call set_passages?")
+
+        cand = pool_size or top_k if re_rank != "none" else top_k
+        cand = min(cand, len(self.passages))
+        scores, idx = self.index.search(q_emb, cand)
+
+        hits = []
+        for q_i, ids in enumerate(idx):
+            valid_ids = [i for i in ids if i != -1]
+            cand_texts = [self.passages[i] for i in valid_ids]
+            cand_vecs = np.stack([self.index.reconstruct(int(i)) for i in valid_ids])
+
+
+            hits.append(_deduplicate(
+                method=re_rank,
+                query_vec=q_emb[q_i],
+                cand_vecs=cand_vecs,
+                cand_texts=cand_texts,
+                top_k=top_k,
+                lambda_=lambda_,
+                diversity_threshold=diversity_threshold,
+            ))
 
         return hits[0] if single else hits
+
 
     def set_passages(self, passages: Union[str, List[str]]):
         """
@@ -276,28 +260,64 @@ def _mmr(
     cand_vecs: np.ndarray,
     cand_texts: List[str],
     k: int,
-    lambda_: float = 0.7,
+    lambda_: float = 0.8,
 ) -> List[str]:
-    # Ensure lambda_ is a valid trade-off parameter between 0 and 1
+    
+    # 0 means diversity, 1 means relevance
     assert 0.0 <= lambda_ <= 1.0
 
-    selected_texts: List[str] = []
-    selected_vecs: List[np.ndarray] = []
+    selected_texts = []
+    selected_vecs = []
 
-    sim_to_q = cand_vecs @ query_vec
-    free_idx = np.arange(cand_vecs.shape[0])
+    sim_to_query = cand_vecs @ query_vec
+    free_idx = np.arange(len(cand_texts))
 
-    while len(selected_texts) < min(k, cand_vecs.shape[0]):
+    while len(selected_texts) < min(k, len(cand_texts)):
         if selected_vecs:
             div_penalty = np.max(cand_vecs[free_idx] @ np.stack(selected_vecs, axis=1), axis=1)
         else:
-            div_penalty = 0.0
+            div_penalty = np.zeros(len(free_idx))
 
-        mmr_score = (1 - lambda_) * sim_to_q[free_idx] - lambda_ * div_penalty
-        best = int(free_idx[np.argmax(mmr_score)])
+        mmr_scores = lambda_ * sim_to_query[free_idx] - (1 - lambda_) * div_penalty
+        best_idx = free_idx[np.argmax(mmr_scores)]
 
-        selected_vecs.append(cand_vecs[best])
-        selected_texts.append(cand_texts[best])
-        free_idx = free_idx[free_idx != best]
+        selected_texts.append(cand_texts[best_idx])
+        selected_vecs.append(cand_vecs[best_idx])
+        free_idx = free_idx[free_idx != best_idx]
 
     return selected_texts
+
+def _deduplicate(
+        method: str,
+        query_vec: np.ndarray,
+        cand_vecs: np.ndarray,
+        cand_texts: List[str],
+        top_k: int,
+        lambda_: float,
+        diversity_threshold: float,
+    ) -> List[str]:
+        
+        if not method:
+            return cand_texts[:top_k]
+
+        elif method == "mmr":
+            return _mmr(query_vec, cand_vecs, cand_texts, top_k, lambda_)
+
+        elif method == "filter":
+            kept_texts = []
+            kept_vecs = []
+            for vec, text in zip(cand_vecs, cand_texts):
+                if not kept_vecs:
+                    kept_vecs.append(vec)
+                    kept_texts.append(text)
+                else:
+                    sims = np.dot(np.stack(kept_vecs), vec)
+                    if np.max(sims) < diversity_threshold:
+                        kept_vecs.append(vec)
+                        kept_texts.append(text)
+                if len(kept_texts) == top_k:
+                    break
+            return kept_texts
+
+        else:
+            raise ValueError(f"Unknown re_rank method: {method}")

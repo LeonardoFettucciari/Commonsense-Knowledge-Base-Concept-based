@@ -163,6 +163,13 @@ def get_latest_datetime_dir(base_dir):
         return None
 
     latest_dt, latest_path = max(dt_dirs, key=lambda x: x[0])
+    '''
+    if len(dt_dirs) >= 2:
+        sorted_dirs = sorted(dt_dirs, key=lambda x: x[0], reverse=True)
+        second_dt, second_path = sorted_dirs[1]
+    else:
+        second_dt, second_path = None, None  # or raise an error
+    '''
     return latest_path
 
 def main(args):

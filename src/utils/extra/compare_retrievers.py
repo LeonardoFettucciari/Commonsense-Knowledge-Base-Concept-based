@@ -85,7 +85,6 @@ def main():
             stmts = base_r.retrieve_top_k(
                 formatted_query,
                 top_k=20,
-                diversify=False
             )
             print("\n".join(stmts), "\n")
 
@@ -93,7 +92,6 @@ def main():
             stmts_tr = tr_r.retrieve_top_k(
                 formatted_query,
                 top_k=20,
-                diversify=False
             )
             print("\n".join(stmts_tr), "\n")
 
@@ -101,7 +99,6 @@ def main():
             stmts_tr_mmr = tr_r.retrieve_top_k(
                 formatted_query,
                 top_k=20,
-                diversify=True,
                 re_rank="mmr",
                 lambda_=0.8
             )
@@ -111,7 +108,6 @@ def main():
             stmts_tr_filt = tr_r.retrieve_top_k(
                 formatted_query,
                 top_k=20,
-                diversify=True,
                 re_rank="filter",
                 diversity_threshold=0.9
             )
@@ -121,7 +117,6 @@ def main():
             stmts_tr = tr_r_2.retrieve_top_k(
                 formatted_query,
                 top_k=20,
-                diversify=False
             )
             print("\n".join(stmts_tr), "\n")
 
@@ -129,7 +124,6 @@ def main():
             stmts_tr_mmr = tr_r_2.retrieve_top_k(
                 formatted_query,
                 top_k=20,
-                diversify=True,
                 re_rank="mmr",
                 lambda_=0.8
             )
@@ -139,7 +133,6 @@ def main():
             stmts_tr_filt = tr_r_2.retrieve_top_k(
                 formatted_query,
                 top_k=20,
-                diversify=True,
                 re_rank="filter",
                 diversity_threshold=0.9
             )
