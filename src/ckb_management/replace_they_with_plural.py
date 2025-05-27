@@ -1,12 +1,14 @@
 import inflect
 import json
 import re
+from tqdm import tqdm
 
 # Initialize inflect engine
 p = inflect.engine()
 
 def replace_they_with_plural_lemma(entry):
     lemma = entry["synset_lemma"]
+    lemma = lemma.replace("_", " ")  # Replace underscores with spaces for display
     plural = p.plural(lemma)
 
     updated_statements = []
@@ -19,10 +21,14 @@ def replace_they_with_plural_lemma(entry):
     return entry
 
 def process_jsonl(input_path, output_path):
+    # Count total lines for progress bar
+    with open(input_path, "r", encoding="utf-8") as f:
+        total_lines = sum(1 for line in f if line.strip())
+
     with open(input_path, "r", encoding="utf-8") as infile, \
          open(output_path, "w", encoding="utf-8") as outfile:
-        for line in infile:
-            if line.strip():  # skip empty lines
+        for line in tqdm(infile, total=total_lines, desc="Processing"):
+            if line.strip():
                 entry = json.loads(line)
                 updated_entry = replace_they_with_plural_lemma(entry)
                 json.dump(updated_entry, outfile)

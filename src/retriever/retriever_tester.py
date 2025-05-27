@@ -45,37 +45,83 @@ def run_retriever_test(
     lambda_: float,
     diversity_threshold: float,
 ) -> None:
-    logging.info("Loading configuration from %s", config_path)
     config = load_yaml(config_path)
 
-    dataset_tag = DATASET_NAME_TO_TAG[dataset_name]
-    logging.info("Loading dataset %s", dataset_name)
-    eval_dataset = load_hf_dataset(config[dataset_tag])
-    eval_dataset = preprocess_dataset(eval_dataset, dataset_tag)
-    logging.info("Dataset loaded (size=%d)", len(eval_dataset))
-
-    logging.info("Loading CKB from %s", ckb_path)
-    ckb = load_ckb(ckb_path, retrieval_strategy)
-
-    retriever = Retriever(
-        model_name_or_path=retriever_model,
-        retrieval_strategy=retrieval_strategy,
-        ckb=ckb,
-        passage_prompt="passage: ",
-        query_prompt="query: ",
-    )
+    datasets_cache = {}
+    retriever = None
+    current_dataset_name = dataset_name
+    current_rerank = rerank_type
 
     while True:
-        index = _prompt_for_index_or_id(eval_dataset)
-        if index is None:
+        command = input(f"\nType sample ID, index, 'set dataset <name>', 'set rerank <type>', or 'q' to quit: ").strip()
+        
+        if command.lower() in {"q", "quit", "exit"}:
             print("\n👋  Exiting… have a nice day!")
             break
 
-        sample = eval_dataset[index]
+        if command.startswith("set dataset "):
+            new_name = command[len("set dataset "):].strip()
+            new_name = DATASET_TAG_TO_NAME.get(new_name, new_name)
+            if new_name not in DATASET_NAME_TO_TAG:
+                print(f"❌ Unknown dataset '{new_name}'. Available: {', '.join(DATASET_NAME_TO_TAG.keys())}")
+                continue
+            current_dataset_name = new_name
+            print(f"✅ Dataset switched to {current_dataset_name}")
+            continue
+
+        if command.startswith("set rerank "):
+            new_rerank = command[len("set rerank "):].strip().lower()
+            if new_rerank not in {"mmr", "filter", "none"}:
+                print("❌ Rerank type must be one of: mmr, filter, none")
+                continue
+            current_rerank = None if new_rerank == "none" else new_rerank
+            print(f"✅ Rerank type set to {current_rerank}")
+            continue
+
+        # Load dataset if needed
+        if current_dataset_name not in datasets_cache:
+            print(f"📦 Loading dataset {current_dataset_name}")
+            tag = DATASET_NAME_TO_TAG[current_dataset_name]
+            raw = load_hf_dataset(config[tag])
+            dataset = preprocess_dataset(raw, tag)
+            datasets_cache[current_dataset_name] = dataset
+        else:
+            dataset = datasets_cache[current_dataset_name]
+
+        # Init retriever if needed
+        if retriever is None:
+            print(f"🔎 Loading retriever for strategy {retrieval_strategy}")
+            ckb = load_ckb(ckb_path, retrieval_strategy)
+            retriever = Retriever(
+                model_name_or_path=retriever_model,
+                retrieval_strategy=retrieval_strategy,
+                ckb=ckb,
+                passage_prompt="passage: ",
+                query_prompt="query: ",
+            )
+
+        # Try parsing as index or ID
+        '''
+        try:
+            idx = int(command)
+            if 0 <= idx < len(dataset):
+                sample_index = idx
+            else:
+                print("❌ Index out of range.")
+                continue
+        except ValueError:
+        '''
+        matches = [i for i, s in enumerate(dataset) if str(s.get("id")) == command]
+        if not matches:
+            print("❌ No sample found with that ID.")
+            continue
+        sample_index = matches[0]
+
+        sample = dataset[sample_index]
         question_choices = concatenate_question_choices(sample)
 
         print("\n" + "=" * 80)
-        print(f"📄  SAMPLE {index}")
+        print(f"📄  SAMPLE {sample_index}")
         print("-" * 80)
         print(f"Question: {sample.get('question', 'N/A')}")
         if "choices" in sample:
@@ -88,7 +134,7 @@ def run_retriever_test(
             question_choices,
             top_k=top_k,
             pool_size=top_k * 2,
-            re_rank=rerank_type,
+            re_rank=current_rerank,
             lambda_=lambda_,
             diversity_threshold=diversity_threshold,
         )
@@ -100,6 +146,7 @@ def run_retriever_test(
         else:
             print("  (No statements retrieved.)")
         print("=" * 80)
+
 
 
 def main() -> None:
