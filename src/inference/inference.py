@@ -249,6 +249,7 @@ def main() -> None:
     args.dataset_name = DATASET_TAG_TO_NAME.get(args.dataset_name, args.dataset_name)
     args.prompt_types = [PROMPT_TYPE_ALIASES.get(t.lower(), t.lower()) for t in args.prompt_types.split(",")]
     args.top_k_values = [int(val) for val in args.top_k_values.split(",")]
+    args.rerank_type = None if args.rerank_type == "" else args.rerank_type
 
     logging.info("Launching inference script...")
     inference(

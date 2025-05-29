@@ -68,7 +68,7 @@ class Retriever:
         queries: Union[str, List[str]],
         top_k: int,
         *,
-        re_rank: str = "mmr",
+        re_rank: str = None,
         lambda_: float = 0.7,
         pool_size: int | None = None,
         diversity_threshold: float = 0.9,
@@ -130,7 +130,7 @@ class Retriever:
         queries: Union[str, List[str]],
         top_k: int,
         *,
-        re_rank: str = "none",  # 'none', 'mmr', or 'filter'
+        re_rank: str = None,  # 'mmr', or 'filter' or None
         lambda_: float = 0.7,
         pool_size: int | None = None,
         diversity_threshold: float = 0.9,
@@ -157,7 +157,7 @@ class Retriever:
                 cand_texts = [self.passages[i] for i in top_ix]
                 cand_vecs = self._inmem_embs[top_ix]
                 results.append(_deduplicate(
-                    method=re_rank,
+                    re_rank=re_rank,
                     query_vec=q_emb[qi],
                     cand_vecs=cand_vecs,
                     cand_texts=cand_texts,
@@ -171,7 +171,7 @@ class Retriever:
         if self.index is None:
             raise RuntimeError("No FAISS index available. Did you forget to call set_passages?")
 
-        cand = pool_size or top_k if re_rank != "none" else top_k
+        cand = pool_size or top_k if re_rank else top_k
         cand = min(cand, len(self.passages))
         scores, idx = self.index.search(q_emb, cand)
 
@@ -183,7 +183,7 @@ class Retriever:
 
 
             hits.append(_deduplicate(
-                method=re_rank,
+                re_rank=re_rank,
                 query_vec=q_emb[q_i],
                 cand_vecs=cand_vecs,
                 cand_texts=cand_texts,
@@ -298,7 +298,7 @@ def _mmr(
     return selected_texts
 
 def _deduplicate(
-        method: str,
+        re_rank: str,
         query_vec: np.ndarray,
         cand_vecs: np.ndarray,
         cand_texts: List[str],
@@ -307,13 +307,13 @@ def _deduplicate(
         diversity_threshold: float,
     ) -> List[str]:
         
-        if not method:
+        if not re_rank:
             return cand_texts[:top_k]
 
-        elif method == "mmr":
+        elif re_rank == "mmr":
             return _mmr(query_vec, cand_vecs, cand_texts, top_k, lambda_)
 
-        elif method == "filter":
+        elif re_rank == "filter":
             kept_texts = []
             kept_vecs = []
             for vec, text in zip(cand_vecs, cand_texts):
@@ -330,4 +330,4 @@ def _deduplicate(
             return kept_texts
 
         else:
-            raise ValueError(f"Unknown re_rank method: {method}")
+            raise ValueError(f"Unknown re_rank method: {re_rank}")
