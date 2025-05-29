@@ -11,13 +11,10 @@ def build_ctx_noun(syn_name):
     s = wn.synset(syn_name)
     parts = [
         syn_name,
-        "[LEMMA]", s.lemma_names()[0],
-        "[DEF]", s.definition(),
+        s.lemma_names()[0],
+        s.definition(),
     ]
-    return " ".join(parts)
-
-import random
-from nltk.corpus import wordnet as wn
+    return "\n".join(parts)
 
 def get_negative_synsets(original_synset_name, pos_count=6):
 
@@ -29,22 +26,18 @@ def get_negative_synsets(original_synset_name, pos_count=6):
 
     # Same Lemma Different Meaning (SLDM)
     candidate_synsets = wn.synsets(lemma, pos=original_synset.pos())
-    sldm_synsets = [s.name() for s in candidate_synsets if s.name() != original_synset.name()][:sldm_count]
+    sldm_synsets = [s.name() for s in candidate_synsets if s.name() != original_synset.name() and original_synset.wup_similarity(s)][:sldm_count]
 
     # Random synsets
     random_count = pos_count - len(sldm_synsets)
     remaining_synsets = [s for s in all_noun_syns if s != original_synset.name()]
     random_synsets = random.sample(remaining_synsets, k=random_count)
 
-    return sldm_synsets + random_synsets
-
-                
-
-
+    return sldm_synsets + random_synsets              
 
 
 input_path = f"data/ckb/cleaned/merged_filtered.jsonl"
-output_path = f"outputs/classifier/newTrainSet.jsonl"
+output_path = f"outputs/classifier/trainset_wup.jsonl"
 os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
 ckb = load_local_file(input_path)

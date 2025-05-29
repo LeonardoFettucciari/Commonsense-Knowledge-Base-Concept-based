@@ -25,10 +25,6 @@ from src.retriever.retriever import Retriever
 from src.utils.io_utils import load_ckb, load_yaml, prepare_output
 from src.utils.model_utils import load_model_and_tokenizer, batched_generate_text
 from src.utils.prompt_utils import build_prompts, get_prompt_requirements
-from src.utils.retriever_utils import (
-    add_ckb_statements_to_samples,
-    retrieve_top_k_statements,
-)
 from src.utils.string_utils import (
     extract_base_model_name,
     prepare_prompt_output_filename,
@@ -54,7 +50,8 @@ def inference(
     retriever_model: str,
     diversity_threshold: float,
     run_name: str,
-    batch_size: int = 1,  # new parameter
+    batch_size: int = 1,
+    timestamp: str = datetime.now().strftime("%Y%m%d_%H%M%S"),
 ) -> None:
     """
     Run inference on a dataset using a specified model and optionally retrieve
@@ -86,7 +83,15 @@ def inference(
 
     # Few-shot
     fewshot_dataset = None
-    if prompt_requires["fewshot"]:
+    if prompt_requires["fewshot"] and prompt_requires["knowledge"]:
+        fewshot_tag = f"{dataset_tag}_fscotk"
+        fewshot_dataset = load_local_dataset(
+            local_path=config[fewshot_tag]['path'],
+            max_samples=config[fewshot_tag]['max_samples']
+        )
+        fewshot_dataset = preprocess_dataset(fewshot_dataset, fewshot_tag)
+        logging.info("Loaded %d fewshot examples.", len(fewshot_dataset))
+    elif prompt_requires["fewshot"]:
         fewshot_tag = f"{dataset_tag}_fewshot"
         fewshot_dataset = load_local_dataset(
             local_path=config[fewshot_tag]['path'],
@@ -110,14 +115,16 @@ def inference(
         if prompt_requires["fewshot"]:
             for example in fewshot_dataset:
                 qc = concatenate_question_choices(example)
-                fs_ckb = retriever.retrieve_top_k(
-                    qc,
-                    top_k=max(top_k_values),
-                    pool_size= max(top_k_values) * 2,  # Ensure enough candidates
-                    re_rank=rerank_type,
-                    lambda_=lambda_,
-                    diversity_threshold=diversity_threshold,
-                )
+                fs_ckb = example.get("ckb_statements").split("\n")
+                if fs_ckb is None:
+                    fs_ckb = retriever.retrieve_top_k(
+                        qc,
+                        top_k=max(top_k_values),
+                        pool_size= max(top_k_values) * 2,  # Ensure enough candidates
+                        re_rank=rerank_type,
+                        lambda_=lambda_,
+                        diversity_threshold=diversity_threshold,
+                    )
                 example["ckb_statements"] = fs_ckb
 
     # Load model/tokenizer
@@ -188,8 +195,10 @@ def inference(
         dataset_tag,
         extract_base_model_name(model_name),
         run_name,
-        datetime.now().strftime("%Y-%m-%d_%H-%M-%S"),
+        timestamp,
     )
+
+
     os.makedirs(model_output_dir, exist_ok=True)
     logging.info("Saving inference results to: %s", model_output_dir)
 
@@ -226,6 +235,7 @@ def main() -> None:
     parser.add_argument("--retriever_model", type=str)
     parser.add_argument("--diversity_threshold", type=float)
     parser.add_argument("--batch_size", type=int, default=1, help="Batch size for inference generation.")
+    parser.add_argument("--timestamp", type=str, required=False, help="Global timestamp from the bash script.")
     parser.add_argument(
         "--run_name",
         type=str,

@@ -3,7 +3,8 @@ import os
 import sys
 import argparse
 import glob
-from src.utils.io_utils import load_local_file, save_local_file
+import random
+from src.utils.io_utils import load_local_file, append_to_local_file
 from src.utils.string_utils import extract_key_value_pairs_from_filename, kwargs_to_filename
 from settings.aliases import (
     DATASET_NAME_TO_TAG,
@@ -32,7 +33,7 @@ def find_latest_accuracy_file(base_path, prompt):
         if candidates:
             return candidates[0]
         else:
-            raise FileNotFoundError(f"No TSV file with prompt '{prompt}' found in {direct_accuracy}")
+            raise FileNotFoundError(f"no TSV file with prompt '{prompt}' found in {direct_accuracy}")
 
     # 2. Else, find latest dated subfolder and look there
     date_folders = [d for d in glob.glob(os.path.join(base_path, "*/")) if os.path.isdir(d)]
@@ -51,72 +52,18 @@ def find_latest_accuracy_file(base_path, prompt):
     return candidates[0]
 
 
-def compare(input_path1, input_path2, root, exp1, exp2):
+def compare_for_annotation(input_path1,
+            input_path2,
+            root,
+            exp1,
+            exp2,
+            dataset,
+            model,
+            output_dir,
+            n=10,):
+    
     input1 = load_local_file(input_path1)
     input2 = load_local_file(input_path2)
-
-    output_data = []
-    counter = 0
-    correct2correct = correct2wrong = wrong2correct = wrong2wrong = 0
-
-    for row1, row2 in zip(input1, input2):
-        counter += 1
-        if row1["id"] != row2["id"]:
-            raise ValueError(f"ID mismatch: {row1['id']} != {row2['id']}")
-        if int(row1['xfinder_extracted_answers_mismatch']) == 1:
-            continue
-        if int(row2['xfinder_extracted_answers_mismatch']) == 1:
-            continue
-
-        new_row = {
-                "id": row1["id"],
-                "question": row1["question"],
-                "choices": row1["choices"],
-                "ground_truth": row1["ground_truth"],
-                "output 1": row1["model_output"],
-                "output 2": row2["model_output"],
-                "ckb_statements": row2["ckb_statements"],
-                "answer 1": row1["xfinder_extracted_answer_llama"],
-                "answer 2": row2["xfinder_extracted_answer_llama"],
-            }
-        # correct2correct
-        if int(row1['xfinder_acc_llama']) == 1 and int(row2['xfinder_acc_llama']) == 1:
-            correct2correct += 1
-            new_row["case"] = "✅✅"
-            continue
-
-        # correct2wrong
-        if int(row1['xfinder_acc_llama']) == 1 and int(row2['xfinder_acc_llama']) == 0:
-            correct2wrong += 1
-            new_row["case"] = "✅❌"
-            continue
-
-        # wrong2correct
-        if int(row1['xfinder_acc_llama']) == 0 and int(row2['xfinder_acc_llama']) == 1:
-            wrong2correct += 1
-            new_row["case"] = "❌✅"
-            continue
-
-        # wrong2wrong
-        if int(row1['xfinder_acc_llama']) == 0 and int(row2['xfinder_acc_llama']) == 0:
-            wrong2wrong += 1
-            new_row["case"] = "❌❌"
-            continue
-
-        output_data.append(new_row)
-
-    stats_data = [{
-        "total_rows": counter,
-        "correct2correct": correct2correct,
-        "wrong2correct": wrong2correct,
-        "correct2wrong": correct2wrong,
-        "wrong2wrong": wrong2wrong,
-        "correct2correct%": round((correct2correct / counter) * 100, 2) if counter > 0 else 0,
-        "wrong2correct%": round((wrong2correct / counter) * 100, 2) if counter > 0 else 0,
-        "correct2wrong%": round((correct2wrong / counter) * 100, 2) if counter > 0 else 0,
-        "wrong2wrong%": round((wrong2wrong / counter) * 100, 2) if counter > 0 else 0,
-
-    }]
 
     base_fname = os.path.splitext(os.path.basename(input_path1))[0]
     kb_fname = os.path.splitext(os.path.basename(input_path2))[0]
@@ -126,22 +73,107 @@ def compare(input_path1, input_path2, root, exp1, exp2):
     prompt2 = kb_meta.get('prompt', 'unknown2')
     prompt_prefix = f"{prompt1}_vs_{prompt2}"
 
+
+    output_data = []
+    correct2correct_samples = []
+    correct2wrong_samples = []
+    wrong2correct_samples = []
+    wrong2wrong_samples = []
+
+    counter = 0
+    correct2correct = 0
+    correct2wrong = 0
+    wrong2correct = 0
+    wrong2wrong = 0
+
+    for row1, row2 in zip(input1, input2):
+        counter += 1
+
+        # Rule out mismatched IDs
+        if row1["id"] != row2["id"]:
+            raise ValueError(f"ID mismatch: {row1['id']} != {row2['id']}")
+        # Rule out mismatched answers on exp1
+        if int(row1['xfinder_extracted_answers_mismatch']) == 1:
+            continue
+        # Rule out mismatched answers on exp2
+        if int(row2['xfinder_extracted_answers_mismatch']) == 1:
+            continue
+
+        # Prepare new row
+        new_row = {
+                "dataset": dataset,
+                "model": model,
+            }
+        
+        new_row["id"] = row1["id"]
+        new_row["question"] = row1["question"]
+        new_row["choices"] = row1["choices"]
+        new_row["ground_truth"] = row1["ground_truth"]
+        new_row[f"output_{prompt1}"] = row1["model_output"]
+        new_row[f"output_{prompt2}"] = row2["model_output"]
+        new_row["ckb_statements"] = "\n\n".join(row2["ckb_statements"].split("\n"))
+        new_row[f"answer_{prompt1}"] = row1["xfinder_extracted_answer_llama"]
+        new_row[f"answer_{prompt2}"] = row2["xfinder_extracted_answer_llama"]
+        
+        # correct2correct
+        if int(row1['xfinder_acc_llama']) == 1 and int(row2['xfinder_acc_llama']) == 1:
+            correct2correct += 1
+            new_row["case"] = "✅✅"
+            correct2correct_samples.append(new_row)
+            continue
+
+        # correct2wrong
+        if int(row1['xfinder_acc_llama']) == 1 and int(row2['xfinder_acc_llama']) == 0:
+            correct2wrong += 1
+            new_row["case"] = "✅❌"
+            correct2wrong_samples.append(new_row)
+            continue
+
+        # wrong2correct
+        if int(row1['xfinder_acc_llama']) == 0 and int(row2['xfinder_acc_llama']) == 1:
+            wrong2correct += 1
+            new_row["case"] = "❌✅"
+            wrong2correct_samples.append(new_row)
+            continue
+
+        # wrong2wrong
+        if int(row1['xfinder_acc_llama']) == 0 and int(row2['xfinder_acc_llama']) == 0:
+            wrong2wrong += 1
+            new_row["case"] = "❌❌"
+            wrong2wrong_samples.append(new_row)
+            continue
+        
+        
+
+    for samples in [correct2correct_samples, correct2wrong_samples, wrong2correct_samples, wrong2wrong_samples]:
+        random.shuffle(samples)  # Shuffle samples for randomness
+        output_data.extend(random.sample(samples, min(n, len(samples))))  # Take up to N samples
+
+
+
+
+
+
+
+    
+
+    
+
     # Determine experiment names from paths
     experiment_prefix = f"{exp1}_vs_{exp2}"
 
     # Output folder structure
-    out_dir = os.path.join(root, "compare_experiments", experiment_prefix)
+    out_dir = os.path.join(output_dir, experiment_prefix)
     os.makedirs(out_dir, exist_ok=True)
 
     # Build output filename
     base_meta.pop('prompt', None)
     kb_meta.pop('prompt', None)
     output_filename = f"{prompt_prefix}|{kwargs_to_filename(extension='tsv', **kb_meta)}"
-    output_stats_filename = f"stats|{output_filename}"
 
     print(f"✅ Saved output in: {out_dir}")
-    save_local_file(output_data, os.path.join(out_dir, output_filename))
-    save_local_file(stats_data, os.path.join(out_dir, output_stats_filename))
+    fieldnames = ["dataset", "model", "case", "id", "question", "choices", "ground_truth", f"output_{prompt1}", f"output_{prompt2}", "ckb_statements", f"answer_{prompt1}", f"answer_{prompt2}"]
+    append_to_local_file(output_data, os.path.join(out_dir, output_filename), fieldnames=fieldnames)
 
     print(f"✅ Compared: {os.path.basename(input_path1)} vs {os.path.basename(input_path2)}")
 
@@ -153,6 +185,9 @@ def main():
     parser.add_argument("--prompt1", required=True)
     parser.add_argument("--exp2", required=True)
     parser.add_argument("--prompt2", required=True)
+    parser.add_argument("--output_dir", required=True)
+    parser.add_argument("--n", required=False, default=10, type=int,
+                        help="Number of samples to include in the output for each case (default: 10).")
     args = parser.parse_args()
 
     args.model = MODEL_TAG_TO_NAME.get(args.model, args.model)
@@ -162,7 +197,17 @@ def main():
     path1 = find_latest_accuracy_file(os.path.join(root, args.exp1), args.prompt1)
     path2 = find_latest_accuracy_file(os.path.join(root, args.exp2), args.prompt2)
 
-    compare(path1, path2, root, args.exp1, args.exp2)
+    compare_for_annotation(
+        input_path1=path1,
+        input_path2=path2,
+        root=root,
+        exp1=args.exp1,
+        exp2=args.exp2,
+        dataset=args.dataset,
+        model=args.model,
+        output_dir=args.output_dir,
+        n=args.n
+    )
 
 if __name__ == "__main__":
     main()

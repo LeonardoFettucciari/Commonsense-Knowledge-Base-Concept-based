@@ -18,6 +18,9 @@ DATASET_NAME_TO_TAG = {
     "allenai/openbookqa": "obqa",
     "tau/commonsense_qa": "csqa",
     "allenai/qasc": "qasc",
+    "obqa": "obqa",
+    "csqa": "csqa",
+    "qasc": "qasc",
 }
 
 DATASET_TAG_TO_NAME = {
@@ -66,6 +69,11 @@ PROMPT_TYPE_ALIASES = {
     "few_shot_with_knowledge": "fewshot_with_knowledge",
     "fewshot_with_knowledge": "fewshot_with_knowledge",
 
+    "fscotk": "fewshot_cot_with_knowledge",
+    "fs_cot_k": "fewshot_cot_with_knowledge",
+    "few-shot_cot_with_knowledge": "fewshot_cot_with_knowledge",
+    "fewshot_cot_with_knowledge": "fewshot_cot_with_knowledge",
+
 }
 
 FULL_PROMPT_TO_SHORT_PROMPT = {
@@ -73,6 +81,7 @@ FULL_PROMPT_TO_SHORT_PROMPT = {
     "zeroshot_with_knowledge": "zsk",
     "zeroshot_cot": "zscot",
     "zeroshot": "zs",
+    "fewshot_cot_with_knowledge": "fscotk",
     "fewshot_with_knowledge": "fsk",
     "fewshot_cot": "fscot",
     "fewshot": "fs",    

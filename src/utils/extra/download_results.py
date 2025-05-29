@@ -41,7 +41,7 @@ def copy_accuracy_tsv_files(
 if __name__ == "__main__":
     SOURCE_ROOT = Path("outputs/inference")
     OUTPUT_ROOT = Path("outputs/download")
-    RUN_NAMES = ["trained_retriever", "trained_retriever_mmr"]
+    RUN_NAMES = ["trained_retriever_mmr_fewshot"]
     DATASETS = ["csqa", "obqa", "qasc"]
     MODELS = [
         "Llama-3.1-8B-Instruct",

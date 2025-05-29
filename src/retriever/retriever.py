@@ -9,7 +9,7 @@ from sentence_transformers import SentenceTransformer
 from sentence_transformers.models import Transformer, StaticEmbedding
 
 from src.utils.model_utils import get_ner_pipeline
-from src.utils.data_utils import synsets_from_samples
+from src.utils.data_utils import synsets_from_batch
 
 
 class Retriever:
@@ -76,30 +76,38 @@ class Retriever:
     ) -> Union[List[str], List[List[str]]]:
         """
         Retrieve top_k passages for either a single query (str) or a batch of queries (List[str]).
-        If using "cner+retriever" strategy, extracts synsets per query, subsets the CKB,
-        rebuilds passages, then delegates to self.retrieve().
+        If using "cner+retriever" strategy, extracts synsets per query in batch by calling
+        the NER pipeline once on the full list, subsets the CKB, rebuilds passages, then delegates
+        to self.retrieve().
         """
         single = isinstance(queries, str)
         queries_list: List[str] = [queries] if single else queries  # type: ignore
 
+        # Pre-allocate batch_synsets
+        batch_synsets: List[List] = []
+        if self.retrieval_strategy == "cner+retriever" and queries_list:
+            # Batch-extract synsets once via raw Python list batching
+            from src.utils.data_utils import synsets_from_batch
+            batch_synsets = synsets_from_batch(
+                samples=queries_list,
+                ner_pipeline=self.ner_pipeline,
+                batch_size=32,
+            )
+
         all_results: List[Union[str, List[str]]] = []
 
-        for query in queries_list:
+        for idx, query in enumerate(queries_list):
+            # For cner+retriever, use precomputed synsets and filter the CKB
             if self.retrieval_strategy == "cner+retriever":
-                # 1) extract synsets for this query
-                sample_synsets = synsets_from_samples(query, self.ner_pipeline)
-
-                # 2) gather all unique statements for those synsets (default to empty list)
+                sample_synsets = batch_synsets[idx] if batch_synsets else []
                 ckb_statements = list({
                     stmt
                     for syn in sample_synsets
                     for stmt in self.ckb.get(syn.name(), [])
                 })
-
-                # 3) reset passages to only those CKB statements
                 self.set_passages(ckb_statements)
 
-            # 4) perform the (dense) retrieval for this single query
+            # Perform the (dense) retrieval for this single query
             result = self.retrieve(
                 query,
                 top_k,
@@ -113,6 +121,8 @@ class Retriever:
 
         # if single query, return flat list; else return list-of-lists
         return all_results[0] if single else all_results
+
+
 
 
     def retrieve(

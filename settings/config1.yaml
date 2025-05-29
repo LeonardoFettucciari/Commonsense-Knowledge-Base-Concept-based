@@ -5,7 +5,7 @@ seed: 150
 obqa:
     name: "obqa"
     path: "allenai/openbookqa"
-    split: "test"
+    split: "train"
     subset: "main"
     max_samples: 
     shuffle: false
@@ -13,7 +13,7 @@ obqa:
 qasc:
     name: "qasc"
     path: "allenai/qasc"
-    split: validation
+    split: train
     subset:
     max_samples: 
     shuffle: false
@@ -21,7 +21,7 @@ qasc:
 csqa:
     name: "csqa"
     path: "tau/commonsense_qa"
-    split: "validation"
+    split: "train"
     subset:
     max_samples: 
     shuffle: false
@@ -29,35 +29,17 @@ csqa:
 
 obqa_fewshot:
     name: "obqa_fewshot"
-    path: "data/obqa/data=obqa|fewshot_examples.csv"
+    path: "data/obqa/data=obqa|fscotk_examples.csv"
     max_samples:
     shuffle: false
 
 qasc_fewshot:
     name: "qasc_fewshot"
-    path: "data/qasc/data=qasc|fewshot_examples.csv"
-    max_samples:
-    shuffle: false
-
-csqa_fewshot:
-    name: "csqa_fewshot"
-    path: "data/csqa/data=csqa|fewshot_examples.csv"
-    max_samples:
-    shuffle: false
-
-obqa_fscotk:
-    name: "obqa_fewshot"
-    path: "data/obqa/data=obqa|fscotk_examples.csv"
-    max_samples:
-    shuffle: false
-
-qasc_fscotk:
-    name: "qasc_fewshot"
     path: "data/qasc/data=qasc|fscotk_examples.csv"
     max_samples:
     shuffle: false
 
-csqa_fscotk:
+csqa_fewshot:
     name: "csqa_fewshot"
     path: "data/csqa/data=csqa|fscotk_examples.csv"
     max_samples:

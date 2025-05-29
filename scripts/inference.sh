@@ -5,20 +5,23 @@
 set -Eeuo pipefail
 IFS=$'\n\t'
 
+
 # ── defaults ────────────────────────────────────────────────────────────────
 OUTPUT_DIR="outputs/inference"
 PROMPT_TYPES="zscotk"
 CKB_PATH="data/ckb/cleaned/merged_filtered.jsonl"
 DATASET_LIST="obqa,csqa,qasc"
 MODEL_NAMES="llama8B,llama3B,qwen1.5B,qwen7B"
-RETRIEVAL_STRATEGY_LIST="retriever,cner+retriever"
+RETRIEVAL_STRATEGY_LIST="cner+retriever"
 TOP_K_VALUES="5"
-RETRIEVER_MODEL="intfloat/e5-base-v2"
+RETRIEVER_MODEL="models/retriever_trained_all_datasets/final"
 LAMBDA=0.8
 DIVERSITY_THRESHOLD=0.9
-RERANK_TYPE=""
+RERANK_TYPE="mmr"
 RUN_NAME="run_$(date +%Y%m%d_%H%M%S)"
-BATCH_SIZE=16
+BATCH_SIZE=4
+TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
+
 # ────────────────────────────────────────────────────────────────────────────
 
 die() { printf "❌  %s\n" "$*" >&2; exit 1; }
@@ -102,7 +105,8 @@ for DATASET in "${DATASETS[@]}"; do
         --retriever_model     "$RETRIEVER_MODEL" \
         --diversity_threshold "$DIVERSITY_THRESHOLD" \
         --run_name            "$RUN_NAME" \
-        --batch_size          "$BATCH_SIZE"
+        --batch_size          "$BATCH_SIZE" \
+        --timestamp           "$TIMESTAMP"
     done
   done
 done

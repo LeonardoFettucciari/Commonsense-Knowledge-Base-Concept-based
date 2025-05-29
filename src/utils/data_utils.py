@@ -5,9 +5,9 @@ import csv
 import logging
 from nltk.wsd import lesk
 from nltk.tokenize import word_tokenize
+from datasets import Dataset
 import nltk
-#nltk.download('wordnet')
-#nltk.download('punkt_tab')
+from typing import Dict, List
 from src.utils.model_utils import get_ner_pipeline
 
 
@@ -39,21 +39,30 @@ def from_words_to_synsets(list_of_words):
     return [synset for word in list_of_words for synset in wordnet.synsets(word) if wordnet.synsets(word) and synset.pos() == 'n']
 
 
-def synsets_from_samples(samples, ner_pipeline):
-    if isinstance(samples, str):
-        samples = [samples]
 
-    # Run NER pipeline
-    #ner_pipeline = get_ner_pipeline("Babelscape/cner-base")
-    ner_results = ner_pipeline(samples)
+def synsets_from_batch(
+    samples: List[str],
+    ner_pipeline,
+    batch_size: int = 32,
+):
+    """
+    Run the CNER pipeline once on a list of samples (strings) in batches,
+    then convert each sample's span results into WordNet synsets.
+    """
+    # Batch inference: ner_pipeline accepts Python lists directly
+    ner_results: List[List[dict]] = ner_pipeline(
+        samples,
+        batch_size=batch_size,
+    )
 
-    # Extract unique words for each sample separately
-    unique_words_per_sample = [extract_unique_words(ner_result) for ner_result in ner_results]
-
-    # Convert words to synsets for each sample separately
-    synsets = [from_words_to_synsets(unique_words) for unique_words in unique_words_per_sample]
-
-    return synsets[0] if len(synsets) == 1 else synsets
+    batch_synsets: List[List] = []
+    for spans in ner_results:
+        # Extract unique words from token-classification spans
+        unique_words = extract_unique_words(spans)
+        # Map words to noun synsets
+        syns = from_words_to_synsets(unique_words)
+        batch_synsets.append(syns)
+    return batch_synsets
 
 def extract_synsets(samples, ner_pipeline):
     if isinstance(samples, str):

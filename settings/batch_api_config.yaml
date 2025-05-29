@@ -34,15 +34,15 @@ system_instruction: |
 obqa:            
   path: allenai/openbookqa
   subset: main
-  split: train
+  split: test
 
 qasc:            
   path: allenai/qasc
   subset: 
-  split: train
+  split: validation
 
 csqa:            
   path: tau/commonsense_qa
   subset:
-  split: train
+  split: validation
 

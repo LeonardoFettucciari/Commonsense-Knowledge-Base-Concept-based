@@ -69,6 +69,40 @@ def save_local_file(data, file_path):
     else:
         raise ValueError(f"Unsupported file extension: {file_path}")
 
+def append_to_local_file(data, file_path, fieldnames=None):
+    """
+    Appends `data` to an existing file if it exists, or creates a new one if it doesn't.
+    Supported formats: .jsonl, .csv, .tsv
+    """
+    if not data:
+        return
+    
+    if not fieldnames:
+        fieldnames = data[0].keys()
+
+    file_exists = os.path.exists(file_path)
+
+    if file_path.endswith(".jsonl"):
+        # Append line-by-line JSON entries
+        mode = 'a' if file_exists else 'w'
+        with open(file_path, mode, encoding='utf-8') as f:
+            for item in data:
+                f.write(json.dumps(item, ensure_ascii=False) + '\n')
+
+    elif file_path.endswith(".csv") or file_path.endswith(".tsv"):
+        # Delimiter based on file type
+        delimiter = ',' if file_path.endswith(".csv") else '\t'
+        mode = 'a' if file_exists else 'w'
+
+        with open(file_path, mode, newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames, delimiter=delimiter)
+            if not file_exists:
+                writer.writeheader()
+            writer.writerows(data)
+
+    else:
+        raise ValueError(f"Unsupported file extension for append: {file_path}")
+
 
 
 def save_output_to_file(relative_path,

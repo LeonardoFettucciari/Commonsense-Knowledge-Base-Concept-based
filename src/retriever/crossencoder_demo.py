@@ -6,15 +6,7 @@ from src.utils.model_utils import get_ner_pipeline
 from src.utils.data_utils import extract_synsets, synsets_from_samples
 from transformers import DebertaV2Tokenizer, DebertaV2ForSequenceClassification
 from nltk.corpus import wordnet as wn
-
-def build_ctx_noun(syn_name):
-    s = wn.synset(syn_name)
-    parts = [
-        syn_name,
-        "[LEMMA]", s.lemma_names()[0],
-        "[DEF]", s.definition(),
-    ]
-    return " ".join(parts)
+from src.datasets.create_trainingdata_crossencoder import build_ctx_noun
 
 
 # Load the trained DeBERTa model
