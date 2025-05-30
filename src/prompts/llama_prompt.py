@@ -70,6 +70,8 @@ class LlamaPrompt(Prompt):
 
         # 2. Final shot
         question = self.sample["question"]
+        if isinstance(self.sample['choices'], str):
+            self.sample['choices'] = json.loads(self.sample['choices'])  # Ensure choices is a dict
         choices = "\n".join([f"{label}. {choice}" for label, choice in zip(self.sample['choices']['label'], self.sample['choices']['text'])])
 
         user_string = f'Question:\n{question}\n\nChoices:\n{choices}'

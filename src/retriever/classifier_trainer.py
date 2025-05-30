@@ -12,7 +12,8 @@ model = DebertaV2ForSequenceClassification.from_pretrained(model_name, num_label
 
 # Example dataset
 
-input_path = "outputs/classifier/newTrainSet.jsonl"
+input_path = "outputs/classifier/trainset_wup.jsonl"
+output_dir = "models/deberta-v3-classifier_wup"
 
 # Load raw data from JSONL
 with open(input_path, "r", encoding="utf-8") as f:
@@ -60,7 +61,7 @@ tok_eval_dataset.set_format(type="torch", columns=["input_ids", "attention_mask"
 
 # Training setup
 training_args = TrainingArguments(
-    output_dir="models/deberta-v3-classifier",
+    output_dir=output_dir,
     evaluation_strategy="epoch",
     logging_strategy="epoch",
     save_strategy="epoch",
@@ -109,4 +110,4 @@ print(f"Precision: {results['eval_precision']:.4f}")
 print(f"Recall: {results['eval_recall']:.4f}")
 print(f"F1-score: {results['eval_f1']:.4f}")
 
-model.save_pretrained("models/deberta-v3-classifier/final")
+model.save_pretrained(f"{output_dir}/final")

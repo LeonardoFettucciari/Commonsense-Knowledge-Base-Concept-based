@@ -27,7 +27,7 @@ INPUT_DIR_ROOT="outputs/inference"
 OUTPUT_DIR="outputs/inference"
 CKB_PATH="data/ckb/cleaned/merged_filtered.jsonl"
 TOP_K="20"
-CONFIG_PATH="settings/config.yaml"
+CONFIG_PATH="settings/config1.yaml"
 
 # Print what will be run
 echo "Datasets: ${DATASETS[*]}"

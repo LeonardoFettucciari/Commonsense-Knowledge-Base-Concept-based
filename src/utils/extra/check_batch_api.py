@@ -35,7 +35,7 @@ def main(dataset_name: str,
     
 
 
-    config = load_yaml("settings/config1.yaml")
+    config = load_yaml("settings/config.yaml")
     # Step 1 – Load and preprocess dataset
     dataset_tag = DATASET_NAME_TO_TAG[dataset_name]
     logging.info("Loading dataset: %s", dataset_name)
@@ -43,7 +43,7 @@ def main(dataset_name: str,
     eval_dataset = preprocess_dataset(eval_dataset, dataset_tag)
     logging.info("Loaded %d samples for evaluation.", len(eval_dataset))
 
-    output_tsv=f"outputs/batches/{dataset_tag}.tsv"
+    output_tsv=f"outputs/batches/oracle/{dataset_tag}.tsv"
 
     # Step 2 – Build metadata dictionary from HF dataset
     metadata = {}
@@ -76,12 +76,12 @@ def main(dataset_name: str,
 
         for qid, statements in statements_per_id.items():
             if qid in metadata:
-                merged_statements = "\n\n".join(statements)
+                merged_statements = "\n".join(statements)
                 row = metadata[qid]
                 tsv_writer.writerow([
                     qid,
                     row["question"],
-                    "\n".join([f"{label}. {choice}" for label, choice in zip(row['choices']['label'], row['choices']['text'])]),
+                    json.dumps(row["choices"]),  # Convert choices dict to JSON string
                     row["ground_truth"],
                     merged_statements
                 ])
@@ -93,5 +93,5 @@ def main(dataset_name: str,
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     main(dataset_name="qasc",
-         statement_dir="outputs/batches/results",
+         statement_dir="outputs/batches/oracle/results",
          )

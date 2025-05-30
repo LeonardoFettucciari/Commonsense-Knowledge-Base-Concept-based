@@ -150,15 +150,6 @@ def compare_for_annotation(input_path1,
         output_data.extend(random.sample(samples, min(n, len(samples))))  # Take up to N samples
 
 
-
-
-
-
-
-    
-
-    
-
     # Determine experiment names from paths
     experiment_prefix = f"{exp1}_vs_{exp2}"
 
