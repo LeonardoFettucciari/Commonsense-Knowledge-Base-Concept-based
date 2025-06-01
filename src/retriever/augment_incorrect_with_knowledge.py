@@ -61,7 +61,6 @@ def augment_incorrect_with_knowledge(
     prompt_name: str,
     model_name: str,
     dataset_name: str,
-    config_path: str,
     output_dir: str,
     retrieval_strategy: str,
     ckb_path: str,
@@ -73,8 +72,6 @@ def augment_incorrect_with_knowledge(
     LIMIT_SAMPLES = 300  # Limit to first 1000 samples for testing
 
     logging.info("=== Starting augment_incorrect_with_knowledge ===")
-    logging.info("Loading YAML config from %s", config_path)
-    cfg = load_yaml(config_path)
     # Load and clean your config dict
     raw_config = load_yaml("settings/model_config.json")["generation_config"]
 
@@ -251,8 +248,6 @@ def main() -> None:
                         help="Root path to store outputs.")
     parser.add_argument("--retrieval_strategy", type=str, required=False,
                         help="Retrieval strategy, e.g. 'retriever'.")
-    parser.add_argument("--config_path", default="settings/config.yaml",
-                        type=str, help="Path to config file.")
     parser.add_argument("--retriever_model", required=True,
                         type=str, help="Name or path for retriever model.")
     parser.add_argument("--top_k", default=20, type=int,
@@ -273,7 +268,6 @@ def main() -> None:
         prompt_name=args.prompt_name,
         model_name=args.model_name,
         dataset_name=args.dataset_name,
-        config_path=args.config_path,
         output_dir=args.output_dir,
         retrieval_strategy=args.retrieval_strategy,
         ckb_path=args.ckb_path,

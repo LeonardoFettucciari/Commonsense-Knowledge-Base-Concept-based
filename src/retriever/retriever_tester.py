@@ -1,3 +1,5 @@
+import glob
+import os
 import logging
 from argparse import ArgumentParser
 from typing import List
@@ -9,6 +11,21 @@ from src.utils.io_utils import load_ckb, load_yaml
 from src.utils.data_utils import concatenate_question_choices
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+
+BASE_RETRIEVER = "intfloat/e5-base-v2"
+
+
+def discover_models() -> List[str]:
+    """
+    Find all directories matching models/retriever*/final and prepend the base retriever.
+    Only directories under 'models/' whose name starts with 'retriever' will be picked.
+    """
+    pattern = os.path.join("models", "retriever*", "final")
+    found = sorted(glob.glob(pattern))
+    valid = [p for p in found if os.path.isdir(p) or os.path.isfile(p)]
+    models = [BASE_RETRIEVER] + valid
+    logging.info(f"Auto-discovered retriever models: {models}")
+    return models
 
 
 def run_retriever_test(
@@ -30,8 +47,10 @@ def run_retriever_test(
     current_rerank = rerank_type
 
     while True:
-        command = input(f"\nType sample ID, index, 'set dataset <name>', 'set rerank <type>', or 'q' to quit: ").strip()
-        
+        command = input(
+            "\nType sample ID, index, 'set dataset <name>', 'set rerank <type>', or 'q' to quit: "
+        ).strip()
+
         if command.lower() in {"q", "quit", "exit"}:
             print("\n👋  Exiting… have a nice day!")
             break
@@ -40,7 +59,9 @@ def run_retriever_test(
             new_name = command[len("set dataset "):].strip()
             new_name = DATASET_TAG_TO_NAME.get(new_name, new_name)
             if new_name not in DATASET_NAME_TO_TAG:
-                print(f"❌ Unknown dataset '{new_name}'. Available: {', '.join(DATASET_NAME_TO_TAG.keys())}")
+                print(
+                    f"❌ Unknown dataset '{new_name}'. Available: {', '.join(DATASET_NAME_TO_TAG.keys())}"
+                )
                 continue
             current_dataset_name = new_name
             print(f"✅ Dataset switched to {current_dataset_name}")
@@ -99,11 +120,14 @@ def run_retriever_test(
         print(f"Question: {sample.get('question', 'N/A')}")
         if "choices" in sample:
             formatted_choices = "\n".join(
-                [f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]
+                [
+                    f"{label}. {choice}"
+                    for label, choice in zip(sample["choices"]["label"], sample["choices"]["text"])
+                ]
             )
             print("Choices:\n" + formatted_choices)
         if "ground_truth" in sample:
-            print(f"Answer: {sample['ground_truth']}")
+            print(f'Answer: {sample["ground_truth"]}')
 
         for model_name, retriever in retrievers.items():
             retrieved_statements = retriever.retrieve_top_k(
@@ -114,7 +138,7 @@ def run_retriever_test(
                 lambda_=lambda_,
                 diversity_threshold=diversity_threshold,
             )
-            print(f"\n📚 Top‑k from {model_name}")
+            print(f"\n📚 Top-k from {model_name}")
             if retrieved_statements:
                 for stmt in retrieved_statements:
                     print(f" - {stmt}")
@@ -129,7 +153,17 @@ def main() -> None:
     parser.add_argument("--ckb_path", type=str, required=True)
     parser.add_argument("--retrieval_strategy", type=str, default="bm25")
     parser.add_argument("--config_path", type=str, default="settings/config.yaml")
-    parser.add_argument("--retriever_models", type=str, nargs="+", required=True)
+    parser.add_argument(
+        "--retriever_models",
+        type=str,
+        nargs="*",
+        default=None,
+        help=(
+            "Space-separated list of retriever model paths. "
+            "If omitted, auto-discover under models/retriever*/final and prepend "
+            "'intfloat/e5-base-v2'."
+        ),
+    )
     parser.add_argument("--top_k", type=int, default=5)
     parser.add_argument("--lambda_", type=float, default=0.0)
     parser.add_argument("--rerank_type", type=str, default=None)
@@ -139,7 +173,23 @@ def main() -> None:
     args.dataset_name = DATASET_TAG_TO_NAME.get(args.dataset_name, args.dataset_name)
     args.rerank_type = args.rerank_type if args.rerank_type != "" else None
 
-    run_retriever_test(**vars(args))
+    if not args.retriever_models:
+        retriever_models = discover_models()
+    else:
+        retriever_models = args.retriever_models
+        logging.info(f"Using retriever models from CLI: {retriever_models}")
+
+    run_retriever_test(
+        dataset_name=args.dataset_name,
+        config_path=args.config_path,
+        retrieval_strategy=args.retrieval_strategy,
+        ckb_path=args.ckb_path,
+        retriever_models=retriever_models,
+        top_k=args.top_k,
+        rerank_type=args.rerank_type,
+        lambda_=args.lambda_,
+        diversity_threshold=args.diversity_threshold,
+    )
 
 
 if __name__ == "__main__":

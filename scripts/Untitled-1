@@ -1,0 +1,16 @@
+bash scripts/augment_incorrect_with_knowledge.sh 
+--retriever-model models/retriever_trained_iteration_1/final
+--run-name iteration_2
+
+bash scripts/compute_accuracy.sh
+--run-name iteration_2
+--input-dir-root outputs/retriever_trainset
+
+bash scripts/extract_positives_negatives.sh
+--run-name iteration_2
+
+bash scripts/retriever_trainer.sh
+--retriever-model intfloat/e5-base-v2
+--run-name iteration_2
+--trainset-base-dir outputs/retriever_trainset
+--output-dir models/retriever_trained_iteration_2

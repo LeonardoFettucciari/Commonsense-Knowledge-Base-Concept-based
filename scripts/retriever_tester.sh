@@ -9,7 +9,6 @@ IFS=$'\n\t'
 CKB_PATH="data/ckb/cleaned/merged_filtered.jsonl"
 DATASET_LIST="obqa,csqa,qasc"
 RETRIEVAL_STRATEGY_LIST="retriever"
-RETRIEVER_MODELS=(models/retriever_trained_all_datasets/final models/retriever_trained_iteration_2/final)
 RERANK_TYPE=""
 LAMBDA=0.8
 DIVERSITY_THRESHOLD=0.9
@@ -20,7 +19,7 @@ die() { printf "❌  %s\n" "$*" >&2; exit 1; }
 
 PARSED=$(getopt -o h \
   --long help,rerank-type:,lambda:,ckb-path:,dataset-list:,\
-retrieval-strategy-list:,retriever-models:,config-path:,diversity-threshold: \
+retrieval-strategy-list:,config-path:,diversity-threshold: \
   -- "$@") || exit 1
 eval set -- "$PARSED"
 
@@ -31,9 +30,6 @@ while true; do
     --ckb-path)               CKB_PATH=$2; shift 2 ;;
     --dataset-list)           DATASET_LIST=$2; shift 2 ;;
     --retrieval-strategy-list) RETRIEVAL_STRATEGY_LIST=$2; shift 2 ;;
-    --retriever-models)
-        IFS=' ' read -r -a RETRIEVER_MODELS <<< "$2"
-        shift 2 ;;
     --config-path)            CONFIG_PATH=$2; shift 2 ;;
     --diversity-threshold)    DIVERSITY_THRESHOLD=$2; shift 2 ;;
     -h|--help)
@@ -46,12 +42,15 @@ Required:
 Optional (defaults in brackets):
   --lambda <FLOAT>              balance factor [$LAMBDA]
   --ckb-path <PATH>             cleaned CKB jsonl [$CKB_PATH]
-  --dataset-list <LIST>         datasets comma‑sep [$DATASET_LIST]
+  --dataset-list <LIST>         datasets comma-sep [$DATASET_LIST]
   --retrieval-strategy-list     retrieval strategies [$RETRIEVAL_STRATEGY_LIST]
-  --retriever-models <LIST>     space‑sep list of retriever model paths
   --config-path <PATH>          config YAML [$CONFIG_PATH]
   --diversity-threshold <FLOAT> MMR diversity [$DIVERSITY_THRESHOLD]
   -h, --help                    show this help
+
+Notes:
+  • Do not pass --retriever-models here. The Python script will auto-discover
+    “intfloat/e5-base-v2” plus every folder matching models/*/final.
 EOF
         exit 0 ;;
     --) shift; break ;;
@@ -74,7 +73,6 @@ for DATASET in "${DATASETS[@]}"; do
       --dataset_name        "$DATASET" \
       --ckb_path            "$CKB_PATH" \
       --retrieval_strategy  "$RETRIEVAL" \
-      --retriever_models    "${RETRIEVER_MODELS[@]}" \
       --rerank_type         "$RERANK_TYPE" \
       --lambda_             "$LAMBDA" \
       --diversity_threshold "$DIVERSITY_THRESHOLD" \
