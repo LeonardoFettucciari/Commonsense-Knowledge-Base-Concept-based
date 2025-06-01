@@ -4,10 +4,17 @@
 DEFAULT_DATASETS="obqa,qasc,csqa"
 DEFAULT_MODELS="llama8B,qwen7B"
 DEFAULT_RETRIEVAL_STRATEGIES="retriever"
-DEFAULT_INPUT_RUN_NAME="my_experiment"
-DEFAULT_OUTPUT_RUN_NAME="my_experiment_augmented"
+DEFAULT_INPUT_RUN_NAME="zscot_augment_incorrect"
+DEFAULT_OUTPUT_RUN_NAME="iteration_3"
 DEFAULT_PROMPT_NAME="zscot"
-DEFAULT_BATCH_SIZE=1
+DEFAULT_BATCH_SIZE=2
+
+INPUT_DIR_ROOT="outputs/inference"
+OUTPUT_DIR="outputs/retriever_trainset"
+CKB_PATH="data/ckb/cleaned/merged_filtered.jsonl"
+TOP_K="20"
+CONFIG_PATH="settings/config1.yaml"
+RETRIEVER_MODEL="models/retriever_trained_iteration_2/final"
 
 # Parse input arguments or use defaults
 RETRIEVAL_STRATEGY_LIST=${1:-$DEFAULT_RETRIEVAL_STRATEGIES}
@@ -23,11 +30,7 @@ IFS=',' read -r -a RETRIEVAL_STRATEGIES <<< "$RETRIEVAL_STRATEGY_LIST"
 IFS=',' read -r -a DATASETS <<< "$DATASET_LIST"
 IFS=',' read -r -a MODELS <<< "$MODEL_LIST"
 
-INPUT_DIR_ROOT="outputs/inference"
-OUTPUT_DIR="outputs/inference"
-CKB_PATH="data/ckb/cleaned/merged_filtered.jsonl"
-TOP_K="20"
-CONFIG_PATH="settings/config1.yaml"
+
 
 # Print what will be run
 echo "Datasets: ${DATASETS[*]}"
@@ -53,6 +56,7 @@ for DATASET_NAME in "${DATASETS[@]}"; do
         --retrieval_strategy "$RETRIEVAL_STRATEGY" \
         --top_k "$TOP_K" \
         --config_path "$CONFIG_PATH" \
+        --retriever_model "$RETRIEVER_MODEL" \
         --batch_size "$BATCH_SIZE"
     done
   done

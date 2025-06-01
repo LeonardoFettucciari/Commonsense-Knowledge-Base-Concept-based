@@ -3,14 +3,14 @@ import torch.nn as nn
 import torch
 import torch.nn.functional as F
 from src.utils.model_utils import get_ner_pipeline
-from src.utils.data_utils import extract_synsets, synsets_from_samples
+from src.utils.data_utils import extract_synsets, synsets_from_batch
 from transformers import DebertaV2Tokenizer, DebertaV2ForSequenceClassification
 from nltk.corpus import wordnet as wn
-from src.datasets.create_trainingdata_crossencoder import build_ctx_noun
+from src.datasets.create_trainingdata_classifier import build_ctx_noun
 
 
 # Load the trained DeBERTa model
-model_path = "models/deberta-v3-classifier/checkpoint-20529"  # adjust if you use a checkpoint dir
+model_path = "models/deberta-v3-classifier_wup/final"  # adjust if you use a checkpoint dir
 tokenizer = DebertaV2Tokenizer.from_pretrained("microsoft/deberta-v3-base")
 model = DebertaV2ForSequenceClassification.from_pretrained(model_path)
 model.eval()
@@ -33,7 +33,7 @@ sentences = [
 
 
 # Synset extraction
-synsets_per_sample = synsets_from_samples(sentences, ner_pipeline)
+synsets_per_sample = synsets_from_batch(sentences, ner_pipeline)
 
 # Inference loop
 scores = []

@@ -242,7 +242,7 @@ class Retriever:
 
     def _cache_key(self) -> str:
         md5 = hashlib.md5()
-        md5.update(_get_model_id(self.model).encode())
+        md5.update(self.model_name_or_path.encode())
         for p in self.passages:
             md5.update(p.encode())
         return md5.hexdigest()

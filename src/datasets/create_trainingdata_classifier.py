@@ -1,11 +1,15 @@
 import os
+import random
+import collections
 from typing import List, Dict
+
 import nltk
 from nltk.corpus import wordnet as wn
 from tqdm import tqdm
+
 from src.utils.io_utils import load_local_file, save_local_file
-import random, collections
-nltk.download("wordnet")
+
+nltk.download("wordnet", quiet=True)
 
 WUP_THRESHOLD = 0.8  # Threshold for Wu-Palmer similarity
 
@@ -18,8 +22,8 @@ def build_ctx_noun(syn_name):
     ]
     return "\n".join(parts)
 
-def get_negative_synsets(original_synset_name, pos_count=6):
 
+def get_negative_synsets(original_synset_name, all_noun_syns, pos_count=6):
     sldm_count = pos_count // 2
 
     # Parse the original synset
@@ -35,45 +39,52 @@ def get_negative_synsets(original_synset_name, pos_count=6):
     remaining_synsets = [s for s in all_noun_syns if s != original_synset.name()]
     random_synsets = random.sample(remaining_synsets, k=random_count)
 
-    return sldm_synsets + random_synsets              
+    return sldm_synsets + random_synsets
 
 
-input_path = f"data/ckb/cleaned/merged_filtered.jsonl"
-output_path = f"outputs/classifier/trainset_wup_as_positive_label.jsonl"
-os.makedirs(os.path.dirname(output_path), exist_ok=True)
+def main():
+    input_path = f"data/ckb/cleaned/merged_filtered.jsonl"
+    output_path = f"outputs/classifier/trainset_wup_as_positive_label.jsonl"
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
-ckb = load_local_file(input_path)
-print(f"Loaded {len(ckb)} samples from {input_path}")
+    ckb = load_local_file(input_path)
+    print(f"Loaded {len(ckb)} samples from {input_path}")
 
-# Pre-compute lookup tables
-all_noun_syns = [s.name() for s in wn.all_synsets('n')]
-ctx = {s: build_ctx_noun(s) for s in tqdm(all_noun_syns, desc="Generating ctx lookup...")}
-syn2statements = {s['synset_name']: s['statements'] for s in tqdm(ckb, desc="Generating ctx lookup...")}
+    # Pre-compute lookup tables
+    all_noun_syns = [s.name() for s in wn.all_synsets('n')]
+    ctx = {s: build_ctx_noun(s) for s in tqdm(all_noun_syns, desc="Generating ctx lookup...")}
+    syn2statements = {s['synset_name']: s['statements'] for s in tqdm(ckb, desc="Generating ctx lookup...")}
 
-# Generate dataset
-dataset = []
-pos_count = 6
-for row in tqdm(ckb, desc="Generating triples..."):  
-    syn = row['synset_name']
+    # Generate dataset
+    dataset = []
+    pos_count = 6
+    for row in tqdm(ckb, desc="Generating triples..."):  
+        syn = row['synset_name']
 
-    # Add negative samples
-    for neg in get_negative_synsets(syn, pos_count=pos_count):
-            wup_sim = wn.synset(syn).wup_similarity(wn.synset(neg))
+        # Add negative samples
+        for neg in get_negative_synsets(syn, all_noun_syns, pos_count=pos_count):
+            try:
+                wup_sim = wn.synset(syn).wup_similarity(wn.synset(neg))
+            except Exception:
+                wup_sim = 0.0
+
             dataset.append({
                 'synset': ctx[syn],
                 'statement': random.choice(syn2statements[neg]),
-                'label': wup_sim if wup_sim > WUP_THRESHOLD else 0.0, 
+                'label': wup_sim if wup_sim and wup_sim > WUP_THRESHOLD else 0.0, 
             })
 
-    # Add positive samples
-    for st in random.sample(row['statements'], k=min(pos_count, len(row['statements']))):
-        dataset.append({
-            'synset': ctx[syn],
-            'statement': st,
-            'label': 1.0
-        })
+        # Add positive samples
+        for st in random.sample(row['statements'], k=min(pos_count, len(row['statements']))):
+            dataset.append({
+                'synset': ctx[syn],
+                'statement': st,
+                'label': 1.0
+            })
 
-save_local_file(
-    dataset,
-    output_path,
-)
+    save_local_file(dataset, output_path)
+    print(f"Saved {len(dataset)} examples to {output_path}")
+
+
+if __name__ == "__main__":
+    main()

@@ -8,6 +8,7 @@ from typing import Dict, List
 
 import torch
 from tqdm import tqdm
+from transformers import GenerationConfig
 
 # Local imports
 from settings.aliases import (
@@ -66,11 +67,24 @@ def augment_incorrect_with_knowledge(
     ckb_path: str,
     top_k: int,
     batch_size: int,
+    retriever_model: str,
 ) -> None:
+    
+    LIMIT_SAMPLES = 300  # Limit to first 1000 samples for testing
+
     logging.info("=== Starting augment_incorrect_with_knowledge ===")
     logging.info("Loading YAML config from %s", config_path)
     cfg = load_yaml(config_path)
-    gen_config = load_yaml("settings/model_config.json")["generation_config"]
+    # Load and clean your config dict
+    raw_config = load_yaml("settings/model_config.json")["generation_config"]
+
+    # Remove sampling args if not needed
+    if not raw_config.get("do_sample", False):
+        raw_config.pop("top_k", None)
+        raw_config.pop("top_p", None)
+
+    # Create a new, explicit GenerationConfig
+    gen_config = GenerationConfig(**raw_config)
 
     # Determine input run directory
     run_dir = os.path.join(
@@ -104,7 +118,7 @@ def augment_incorrect_with_knowledge(
     # Load & filter dataset
     input_dataset = load_local_dataset(input_path)
     input_dataset = input_dataset.map(split_choices, remove_columns=["choices"])
-    
+
     total = len(input_dataset)
     logging.info("Loaded and preprocessed %d samples", total)
 
@@ -112,7 +126,9 @@ def augment_incorrect_with_knowledge(
         lambda s: int(s["xfinder_extracted_answers_mismatch"]) == 0
                   and int(s["xfinder_acc_llama"]) == 0
     )
-    input_dataset = input_dataset.select(range(1))
+    input_dataset = input_dataset.shuffle()
+    input_dataset = input_dataset.select(range(min(len(input_dataset), LIMIT_SAMPLES)))
+
     incorrect_count = len(input_dataset)
     logging.info("Filtered to %d incorrect samples", incorrect_count)
 
@@ -120,7 +136,7 @@ def augment_incorrect_with_knowledge(
     logging.info("Loading CKB from %s with strategy %s", ckb_path, retrieval_strategy)
     ckb = load_ckb(ckb_path, retrieval_strategy)
     retriever = Retriever(
-        model_name_or_path=cfg["retriever"]["model_name"],
+        model_name_or_path=retriever_model,
         retrieval_strategy=retrieval_strategy,
         ckb=ckb,
         passage_prompt="passage: ",
@@ -135,50 +151,55 @@ def augment_incorrect_with_knowledge(
     torch.set_grad_enabled(False)
     logging.info("Model ready for inference")
 
-    # Batch‐processing loop
+    # ---- Updated batching logic (mirroring script 1) ------------------------
     outputs: List[Dict[str, str]] = []
-    n_batches = ceil(incorrect_count / batch_size)
-    pbar = tqdm(range(n_batches), desc=f"Batching {model_name}", total=n_batches)
 
-    for b in pbar:
-        start = b * batch_size
-        end = min((b + 1) * batch_size, incorrect_count)
-        batch = input_dataset.select(range(start, end))
+    # Estimate total batches for tqdm progress bar
+    n_batches = ceil(incorrect_count / batch_size) if batch_size else 0
 
-        # 1) Batch retrieval
-        queries = [concatenate_question_choices(s) for s in batch]
-        batch_ckb_lists = retriever.retrieve(
+    for batch in tqdm(
+        input_dataset.batch(batch_size=batch_size),
+        desc=f"Batched inference ({batch_size})",
+        total=n_batches
+    ):
+        # Number of samples in this batch
+        batch_len = len(next(iter(batch.values())))
+
+        # Re-create sample dictionaries for this batch
+        samples = [{k: batch[k][i] for k in batch} for i in range(batch_len)]
+
+        # 1) Batched retrieval
+        queries = [concatenate_question_choices(s) for s in samples]
+        batch_ckb_lists = retriever.retrieve_top_k(
             queries,
             top_k=top_k,
-            diversify=False,
-            batch_size=512
+            batch_size=512,
         )
 
-        # 2) Build prompts + mapping
+        # 2) Build prompts + bookkeeping
         batch_prompts = []
-        prompt_map = []  # list of (sample_idx, prompt_idx)
-        for i, sample in enumerate(batch):
-            ckb_stmts = batch_ckb_lists[i]
+        prompt_meta = []          # (sample_dict, prompt_obj, rank)
+        for sample, ckb_stmts in zip(samples, batch_ckb_lists):
             prompts = build_prompts_for_retriever_training(
                 sample=sample,
                 ckb_statements=ckb_stmts,
                 top_k=top_k,
             )
-            for j, p in enumerate(prompts):
-                batch_prompts.append(p)
-                prompt_map.append((i, j))
+            for rank, pr in enumerate(prompts):
+                batch_prompts.append(pr)
+                prompt_meta.append((sample, pr, rank))
 
         # 3) Batched generation
         decoded_texts = batched_generate_text(
             model, tokenizer, batch_prompts, gen_config
         )
 
-        # 4) Re-associate outputs
-        for text, (i, j) in zip(decoded_texts, prompt_map):
-            sample = batch[i]
+        # 4) Collect outputs
+        for text, (sample, pr, rank) in zip(decoded_texts, prompt_meta):
             outputs.append(
-                prepare_output_retriever_training(sample, batch_prompts[i * top_k + j], text, j)
+                prepare_output_retriever_training(sample, pr, text, rank)
             )
+    # ------------------------------------------------------------------------
 
     logging.info("Inference complete: generated %d outputs", len(outputs))
 
@@ -232,9 +253,11 @@ def main() -> None:
                         help="Retrieval strategy, e.g. 'retriever'.")
     parser.add_argument("--config_path", default="settings/config.yaml",
                         type=str, help="Path to config file.")
+    parser.add_argument("--retriever_model", required=True,
+                        type=str, help="Name or path for retriever model.")
     parser.add_argument("--top_k", default=20, type=int,
                         help="Top k retrieval count.")
-    parser.add_argument("--batch_size", type=int, default=16,
+    parser.add_argument("--batch_size", type=int, default=4,
                         help="Number of samples to process per batch.")
     args = parser.parse_args()
 
@@ -256,6 +279,7 @@ def main() -> None:
         ckb_path=args.ckb_path,
         top_k=args.top_k,
         batch_size=args.batch_size,
+        retriever_model=args.retriever_model
     )
 
 

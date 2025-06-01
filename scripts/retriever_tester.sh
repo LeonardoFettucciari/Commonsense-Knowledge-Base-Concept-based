@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # -----------------------------------------
-# run_retriever_tester.sh – interactive retriever test loop
+# run_retriever_tester.sh – interactive retriever test loop (multi-model)
 # -----------------------------------------
 set -Eeuo pipefail
 IFS=$'\n\t'
@@ -9,8 +9,8 @@ IFS=$'\n\t'
 CKB_PATH="data/ckb/cleaned/merged_filtered.jsonl"
 DATASET_LIST="obqa,csqa,qasc"
 RETRIEVAL_STRATEGY_LIST="retriever"
-RETRIEVER_MODEL="models/retriever_trained_all_datasets/final"
-RERANK_TYPE="mmr"
+RETRIEVER_MODELS=(models/retriever_trained_all_datasets/final models/retriever_trained_iteration_2/final)
+RERANK_TYPE=""
 LAMBDA=0.8
 DIVERSITY_THRESHOLD=0.9
 CONFIG_PATH="settings/config.yaml"
@@ -18,10 +18,9 @@ CONFIG_PATH="settings/config.yaml"
 
 die() { printf "❌  %s\n" "$*" >&2; exit 1; }
 
-# GNU getopt for long‑flag parsing
 PARSED=$(getopt -o h \
   --long help,rerank-type:,lambda:,ckb-path:,dataset-list:,\
-retrieval-strategy-list:,retriever-model:,config-path:,diversity-threshold: \
+retrieval-strategy-list:,retriever-models:,config-path:,diversity-threshold: \
   -- "$@") || exit 1
 eval set -- "$PARSED"
 
@@ -32,13 +31,15 @@ while true; do
     --ckb-path)               CKB_PATH=$2; shift 2 ;;
     --dataset-list)           DATASET_LIST=$2; shift 2 ;;
     --retrieval-strategy-list) RETRIEVAL_STRATEGY_LIST=$2; shift 2 ;;
-    --retriever-model)        RETRIEVER_MODEL=$2; shift 2 ;;
+    --retriever-models)
+        IFS=' ' read -r -a RETRIEVER_MODELS <<< "$2"
+        shift 2 ;;
     --config-path)            CONFIG_PATH=$2; shift 2 ;;
     --diversity-threshold)    DIVERSITY_THRESHOLD=$2; shift 2 ;;
     -h|--help)
         cat <<EOF
-Retriever-only tester
----------------------
+Retriever-only tester (multi-model)
+-----------------------------------
 Required:
   --rerank-type <TYPE>          rerank strategy (e.g. mmr, none…)
 
@@ -47,7 +48,7 @@ Optional (defaults in brackets):
   --ckb-path <PATH>             cleaned CKB jsonl [$CKB_PATH]
   --dataset-list <LIST>         datasets comma‑sep [$DATASET_LIST]
   --retrieval-strategy-list     retrieval strategies [$RETRIEVAL_STRATEGY_LIST]
-  --retriever-model <PATH>      retriever checkpoint [$RETRIEVER_MODEL]
+  --retriever-models <LIST>     space‑sep list of retriever model paths
   --config-path <PATH>          config YAML [$CONFIG_PATH]
   --diversity-threshold <FLOAT> MMR diversity [$DIVERSITY_THRESHOLD]
   -h, --help                    show this help
@@ -73,7 +74,7 @@ for DATASET in "${DATASETS[@]}"; do
       --dataset_name        "$DATASET" \
       --ckb_path            "$CKB_PATH" \
       --retrieval_strategy  "$RETRIEVAL" \
-      --retriever_model     "$RETRIEVER_MODEL" \
+      --retriever_models    "${RETRIEVER_MODELS[@]}" \
       --rerank_type         "$RERANK_TYPE" \
       --lambda_             "$LAMBDA" \
       --diversity_threshold "$DIVERSITY_THRESHOLD" \
