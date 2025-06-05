@@ -67,9 +67,12 @@ def augment_incorrect_with_knowledge(
     top_k: int,
     batch_size: int,
     retriever_model: str,
+    rerank_type: str = None,
+    mmr_threshold: float = 0.8,
+    filter_threshold: float = 0.85,
 ) -> None:
     
-    LIMIT_SAMPLES = 300  # Limit to first 1000 samples for testing
+    LIMIT_SAMPLES = 300  # Limit samples for testing
 
     logging.info("=== Starting augment_incorrect_with_knowledge ===")
     # Load and clean your config dict
@@ -171,6 +174,10 @@ def augment_incorrect_with_knowledge(
             queries,
             top_k=top_k,
             batch_size=512,
+            re_rank=rerank_type,
+            lambda_=mmr_threshold,
+            diversity_threshold=filter_threshold,
+            pool_size=top_k * 100,
         )
 
         # 2) Build prompts + bookkeeping
@@ -254,6 +261,12 @@ def main() -> None:
                         help="Top k retrieval count.")
     parser.add_argument("--batch_size", type=int, default=4,
                         help="Number of samples to process per batch.")
+    parser.add_argument("--mmr_threshold", default=0.8, type=float,
+                        help="MMR threshold value.")
+    parser.add_argument("--filter_threshold", default=0.85, type=float,
+                        help="Filter threshold value.")
+    parser.add_argument("--rerank_type", type=str, default=None,
+                        help="Reranking strategy, e.g. 'mmr', 'filter', None.")
     args = parser.parse_args()
 
     # Resolve any aliases
@@ -273,7 +286,11 @@ def main() -> None:
         ckb_path=args.ckb_path,
         top_k=args.top_k,
         batch_size=args.batch_size,
-        retriever_model=args.retriever_model
+        retriever_model=args.retriever_model,
+        rerank_type=args.rerank_type,
+        mmr_threshold=args.mmr_threshold,
+        filter_threshold=args.filter_threshold,
+
     )
 
 

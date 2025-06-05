@@ -90,8 +90,30 @@ def main(dataset_name: str,
 
     logging.info("✅ TSV written to: %s", output_tsv)
 
+
+    output_jsonl = f"outputs/batches/oracle/{dataset_tag}.jsonl"
+    os.makedirs(os.path.dirname(output_jsonl), exist_ok=True)
+
+    with open(output_jsonl, "w", encoding="utf-8") as out_f:
+        for qid, statements in statements_per_id.items():
+            if qid in metadata:
+                row = metadata[qid]
+                example = {
+                    "id": qid,
+                    "question": row["question"],
+                    "choices": row["choices"],  # keep as dict
+                    "ground_truth": row["ground_truth"],
+                    "ckb_statements": statements  # list of strings
+                }
+                out_f.write(json.dumps(example, ensure_ascii=False) + "\n")
+            else:
+                logging.warning("custom_id %s not found in HF metadata", qid)
+
+    logging.info("✅ JSONL written to: %s", output_jsonl)
+
+
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    main(dataset_name="qasc",
+    main(dataset_name="csqa",
          statement_dir="outputs/batches/oracle/results",
          )

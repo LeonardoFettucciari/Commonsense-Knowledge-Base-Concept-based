@@ -251,6 +251,21 @@ def main() -> None:
     args.top_k_values = [int(val) for val in args.top_k_values.split(",")]
     args.rerank_type = None if args.rerank_type == "" else args.rerank_type
 
+
+
+    # Ensure log directory exists
+    os.makedirs("log", exist_ok=True)
+
+    # Log run name and args to a global log file
+    log_path = os.path.join("log", "inference_runs.log")
+    with open(log_path, "a", encoding="utf-8") as log_file:
+        log_file.write(f"[{datetime.now().isoformat()}] Run: {args.run_name}\n")
+        for k, v in vars(args).items():
+            log_file.write(f"    {k}: {v}\n")
+        log_file.write("\n")
+
+
+
     logging.info("Launching inference script...")
     inference(
         **vars(args)

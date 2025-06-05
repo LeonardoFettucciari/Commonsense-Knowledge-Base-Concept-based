@@ -12,6 +12,9 @@ RETRIEVAL_STRATEGIES="retriever"
 CKB_PATH="data/ckb/cleaned/merged_filtered.jsonl"
 TOP_K=20
 BATCH_SIZE=2
+RERANK_TYPE=""
+FILTER_THRESHOLD=0.85
+MMR_THRESHOLD=0.8
 
 INPUT_DIR_ROOT="outputs/inference"
 INPUT_RUN_NAME="zscot_augment_incorrect"
@@ -23,7 +26,7 @@ OUTPUT_DIR="outputs/retriever_trainset"
 
 die() { printf "❌  %s\n" "$*" >&2; exit 1; }
 
-PARSED=$(getopt -o h --long help,datasets:,models:,retrieval-strategies:,run-name:,input-run-name:,prompt-name:,input-dir-root:,ckb-path:,top-k:,batch-size:,retriever-model:,output-dir: -- "$@") || die
+PARSED=$(getopt -o h --long help,rerank-type:,mmr-threshold:,filter-threshold:,datasets:,models:,retrieval-strategies:,run-name:,input-run-name:,prompt-name:,input-dir-root:,ckb-path:,top-k:,batch-size:,retriever-model:,output-dir: -- "$@") || die
 eval set -- "$PARSED"
 
 while true; do
@@ -40,6 +43,9 @@ while true; do
     --batch-size)            BATCH_SIZE=$2; shift 2 ;;
     --retriever-model)       RETRIEVER_MODEL=$2; shift 2 ;;
     --output-dir)            OUTPUT_DIR=$2; shift 2 ;;
+    --rerank-type)           RERANK_TYPE=$2; shift 2 ;;
+    --filter-threshold)      FILTER_THRESHOLD=$2; shift 2 ;;
+    --mmr-threshold)         MMR_THRESHOLD=$2; shift 2 ;;
     -h|--help)
       cat <<EOF
 Generate positives/negatives for retriever training.
@@ -90,7 +96,10 @@ for DATASET in "${DATASETS[@]}"; do
         --top_k            "$TOP_K" \
         --batch_size       "$BATCH_SIZE" \
         --retriever_model  "$RETRIEVER_MODEL" \
-        --output_dir       "$OUTPUT_DIR"
+        --output_dir       "$OUTPUT_DIR" \
+        --rerank_type      "$RERANK_TYPE" \
+        --filter_threshold "$FILTER_THRESHOLD" \
+        --mmr_threshold    "$MMR_THRESHOLD" 
     done
   done
 done

@@ -53,14 +53,14 @@ def find_latest_accuracy_file(base_path, prompt):
 
 
 def compare_for_annotation(input_path1,
-            input_path2,
-            root,
-            exp1,
-            exp2,
-            dataset,
-            model,
-            output_dir,
-            n=10,):
+    input_path2,
+    root,
+    exp1,
+    exp2,
+    dataset,
+    model,
+    output_dir,
+    n=10,):
     
     input1 = load_local_file(input_path1)
     input2 = load_local_file(input_path2)

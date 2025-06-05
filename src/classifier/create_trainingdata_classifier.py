@@ -17,7 +17,7 @@ def build_ctx_noun(syn_name):
     s = wn.synset(syn_name)
     parts = [
         syn_name,
-        s.lemma_names()[0],
+        ", ".join(s.lemma_names()),
         s.definition(),
     ]
     return "\n".join(parts)
@@ -32,7 +32,9 @@ def get_negative_synsets(original_synset_name, all_noun_syns, pos_count=6):
 
     # Same Lemma Different Meaning (SLDM)
     candidate_synsets = wn.synsets(lemma, pos=original_synset.pos())
-    sldm_synsets = [s.name() for s in candidate_synsets if s.name() != original_synset.name()][:sldm_count]
+    sldm_synsets = [s.name() for s in candidate_synsets
+                    if s.name() != original_synset.name()
+                    and original_synset.wup_similarity(s) < WUP_THRESHOLD][:sldm_count]
 
     # Random synsets
     random_count = pos_count - len(sldm_synsets)
@@ -44,7 +46,7 @@ def get_negative_synsets(original_synset_name, all_noun_syns, pos_count=6):
 
 def main():
     input_path = f"data/ckb/cleaned/merged_filtered.jsonl"
-    output_path = f"outputs/classifier/trainset_wup_as_positive_label.jsonl"
+    output_path = f"outputs/classifier/trainset_all_lemmas_wup_threshold.jsonl"
     os.makedirs(os.path.dirname(output_path), exist_ok=True)
 
     ckb = load_local_file(input_path)
@@ -63,15 +65,11 @@ def main():
 
         # Add negative samples
         for neg in get_negative_synsets(syn, all_noun_syns, pos_count=pos_count):
-            try:
-                wup_sim = wn.synset(syn).wup_similarity(wn.synset(neg))
-            except Exception:
-                wup_sim = 0.0
 
             dataset.append({
                 'synset': ctx[syn],
                 'statement': random.choice(syn2statements[neg]),
-                'label': wup_sim if wup_sim and wup_sim > WUP_THRESHOLD else 0.0, 
+                'label': 0.0, 
             })
 
         # Add positive samples

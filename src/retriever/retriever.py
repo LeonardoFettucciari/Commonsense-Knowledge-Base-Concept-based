@@ -13,14 +13,6 @@ from src.utils.data_utils import synsets_from_batch
 
 
 class Retriever:
-    """
-    Dense retriever with optional Maximal Marginal Relevance (MMR) post-filtering.
-
-    Strategies:
-      - "retriever"      – index the full CKB once and cache the FAISS file.
-      - "cner+retriever" – passages provided later (set_passages); no caching.
-    """
-
     def __init__(
         self,
         model_name_or_path: str,
@@ -38,19 +30,15 @@ class Retriever:
         self.passage_prompt = passage_prompt
         self.query_prompt = query_prompt
 
-        # For "retriever", we'll maintain a FAISS index on disk;
-        # for small-scale "cner+retriever", we'll do in-memory brute force.
         self.save_index = retrieval_strategy == "retriever"
         self.cache_dir = Path(cache_dir)
 
-        # Only build index for full-retriever immediately
         if self.save_index:
             self.cache_dir.mkdir(parents=True, exist_ok=True)
             self.passages = ckb
-            self.index_path = (self.cache_dir / f"{self._cache_key()}.faiss")
+            self.index_path = self.cache_dir / f"{self._cache_key()}.faiss"
             self.index = self._load_or_build_index()
             self._inmem_embs: np.ndarray | None = None
-            
         else:
             self.passages = []
             self.index_path = None
@@ -58,10 +46,6 @@ class Retriever:
             self._inmem_embs: np.ndarray | None = None
 
         self.ner_pipeline = get_ner_pipeline("Babelscape/cner-base")
-
-    from typing import Union, List
-
-
 
     def retrieve_top_k(
         self,
@@ -74,20 +58,11 @@ class Retriever:
         diversity_threshold: float = 0.9,
         batch_size: int = 512,
     ) -> Union[List[str], List[List[str]]]:
-        """
-        Retrieve top_k passages for either a single query (str) or a batch of queries (List[str]).
-        If using "cner+retriever" strategy, extracts synsets per query in batch by calling
-        the NER pipeline once on the full list, subsets the CKB, rebuilds passages, then delegates
-        to self.retrieve().
-        """
         single = isinstance(queries, str)
-        queries_list: List[str] = [queries] if single else queries  # type: ignore
+        queries_list = [queries] if single else queries
 
-        # Pre-allocate batch_synsets
         batch_synsets: List[List] = []
         if self.retrieval_strategy == "cner+retriever" and queries_list:
-            # Batch-extract synsets once via raw Python list batching
-            from src.utils.data_utils import synsets_from_batch
             batch_synsets = synsets_from_batch(
                 samples=queries_list,
                 ner_pipeline=self.ner_pipeline,
@@ -97,7 +72,6 @@ class Retriever:
         all_results: List[Union[str, List[str]]] = []
 
         for idx, query in enumerate(queries_list):
-            # For cner+retriever, use precomputed synsets and filter the CKB
             if self.retrieval_strategy == "cner+retriever":
                 sample_synsets = batch_synsets[idx] if batch_synsets else []
                 ckb_statements = list({
@@ -107,7 +81,6 @@ class Retriever:
                 })
                 self.set_passages(ckb_statements)
 
-            # Perform the (dense) retrieval for this single query
             result = self.retrieve(
                 query,
                 top_k,
@@ -119,18 +92,14 @@ class Retriever:
             )
             all_results.append(result)
 
-        # if single query, return flat list; else return list-of-lists
         return all_results[0] if single else all_results
-
-
-
 
     def retrieve(
         self,
         queries: Union[str, List[str]],
         top_k: int,
         *,
-        re_rank: str = None,  # 'mmr', or 'filter' or None
+        re_rank: str = None,
         lambda_: float = 0.7,
         pool_size: int | None = None,
         diversity_threshold: float = 0.9,
@@ -148,65 +117,61 @@ class Retriever:
             batch_size=batch_size
         ).astype(np.float32)
 
-        # In-memory retrieval for 'CNER+retriever' strategy
-        if self._inmem_embs is not None:
-            sims = self._inmem_embs @ q_emb.T
-            results = []
-            for qi in range(sims.shape[1]):
-                top_ix = np.argsort(-sims[:, qi])[:top_k]
-                cand_texts = [self.passages[i] for i in top_ix]
-                cand_vecs = self._inmem_embs[top_ix]
-                results.append(_deduplicate(
+        def _dedup_until_k(query_vec, score_fn):
+            cand = pool_size or (top_k if re_rank else top_k)
+            cand = min(cand, len(self.passages))
+
+            while True:
+                ids = score_fn(cand)
+                valid = [i for i in ids if i != -1]
+                texts = [self.passages[i] for i in valid]
+                vecs = np.stack([
+                    self.index.reconstruct(int(i)) if self.index is not None
+                    else self._inmem_embs[i]
+                    for i in valid
+                ])
+
+                picked = _deduplicate(
                     re_rank=re_rank,
-                    query_vec=q_emb[qi],
-                    cand_vecs=cand_vecs,
-                    cand_texts=cand_texts,
+                    query_vec=query_vec,
+                    cand_vecs=vecs,
+                    cand_texts=texts,
                     top_k=top_k,
                     lambda_=lambda_,
                     diversity_threshold=diversity_threshold,
-                ))
-            return results[0] if single else results
+                )
 
-        # FAISS-based retrieval for 'retriever' strategy
-        if self.index is None:
-            raise RuntimeError("No FAISS index available. Did you forget to call set_passages?")
+                if len(picked) == top_k or cand >= len(self.passages):
+                    return picked
 
-        cand = pool_size or top_k if re_rank else top_k
-        cand = min(cand, len(self.passages))
-        scores, idx = self.index.search(q_emb, cand)
+                cand = min(cand * 2, len(self.passages))
 
         hits = []
-        for q_i, ids in enumerate(idx):
-            valid_ids = [i for i in ids if i != -1]
-            cand_texts = [self.passages[i] for i in valid_ids]
-            cand_vecs = np.stack([self.index.reconstruct(int(i)) for i in valid_ids])
-
-
-            hits.append(_deduplicate(
-                re_rank=re_rank,
-                query_vec=q_emb[q_i],
-                cand_vecs=cand_vecs,
-                cand_texts=cand_texts,
-                top_k=top_k,
-                lambda_=lambda_,
-                diversity_threshold=diversity_threshold,
-            ))
+        if self.index is not None:
+            for q_i, q_vec in enumerate(q_emb):
+                hits.append(
+                    _dedup_until_k(
+                        q_vec,
+                        lambda c: self.index.search(q_vec[None, :], c)[1][0],
+                    )
+                )
+        else:
+            sims = self._inmem_embs @ q_emb.T
+            for qi in range(sims.shape[1]):
+                def top_ids(c):
+                    part = np.argpartition(-sims[:, qi], c - 1)[:c]
+                    return part[np.argsort(-sims[part, qi])]
+                hits.append(_dedup_until_k(q_emb[qi], top_ids))
 
         return hits[0] if single else hits
 
-
     def set_passages(self, passages: Union[str, List[str]]):
-        """
-        Replace current passages and rebuild either FAISS index or in-memory embeddings.
-        """
         self.passages = [passages] if isinstance(passages, str) else passages
         if self.save_index:
-            # full-retriever: build or reload disk-based FAISS index
             self.index_path = self.cache_dir / f"{self._cache_key()}.faiss"
             self.index = self._load_or_build_index()
             self._inmem_embs = None
         else:
-            # small-scale: encode all passages in-memory
             self._inmem_embs = self._encode(
                 self.passages,
                 prompt=self.passage_prompt,
@@ -253,18 +218,6 @@ class Retriever:
         return nb > 10
 
 
-def _get_model_id(model: SentenceTransformer) -> str:
-    first = model._first_module()
-    if isinstance(first, Transformer):
-        return first.auto_model.config.name_or_path
-    if isinstance(first, StaticEmbedding):
-        return first.base_model
-    for m in model._modules.values():
-        if hasattr(m, "auto_model"):
-            return m.auto_model.config.name_or_path
-    raise RuntimeError("Cannot determine model identifier")
-
-
 def _mmr(
     query_vec: np.ndarray,
     cand_vecs: np.ndarray,
@@ -272,10 +225,7 @@ def _mmr(
     k: int,
     lambda_: float = 0.8,
 ) -> List[str]:
-    
-    # 0 means diversity, 1 means relevance
     assert 0.0 <= lambda_ <= 1.0
-
     selected_texts = []
     selected_vecs = []
 
@@ -298,36 +248,35 @@ def _mmr(
     return selected_texts
 
 def _deduplicate(
-        re_rank: str,
-        query_vec: np.ndarray,
-        cand_vecs: np.ndarray,
-        cand_texts: List[str],
-        top_k: int,
-        lambda_: float,
-        diversity_threshold: float,
-    ) -> List[str]:
-        
-        if not re_rank:
-            return cand_texts[:top_k]
+    re_rank: str,
+    query_vec: np.ndarray,
+    cand_vecs: np.ndarray,
+    cand_texts: List[str],
+    top_k: int,
+    lambda_: float,
+    diversity_threshold: float,
+) -> List[str]:
+    if not re_rank:
+        return cand_texts[:top_k]
 
-        elif re_rank == "mmr":
-            return _mmr(query_vec, cand_vecs, cand_texts, top_k, lambda_)
+    elif re_rank == "mmr":
+        return _mmr(query_vec, cand_vecs, cand_texts, top_k, lambda_)
 
-        elif re_rank == "filter":
-            kept_texts = []
-            kept_vecs = []
-            for vec, text in zip(cand_vecs, cand_texts):
-                if not kept_vecs:
+    elif re_rank == "filter":
+        kept_texts = []
+        kept_vecs = []
+        for vec, text in zip(cand_vecs, cand_texts):
+            if not kept_vecs:
+                kept_vecs.append(vec)
+                kept_texts.append(text)
+            else:
+                sims = np.dot(np.stack(kept_vecs), vec)
+                if np.max(sims) < diversity_threshold:
                     kept_vecs.append(vec)
                     kept_texts.append(text)
-                else:
-                    sims = np.dot(np.stack(kept_vecs), vec)
-                    if np.max(sims) < diversity_threshold:
-                        kept_vecs.append(vec)
-                        kept_texts.append(text)
-                if len(kept_texts) == top_k:
-                    break
-            return kept_texts
+            if len(kept_texts) == top_k:
+                break
+        return kept_texts
 
-        else:
-            raise ValueError(f"Unknown re_rank method: {re_rank}")
+    else:
+        raise ValueError(f"Unknown re_rank method: {re_rank}")

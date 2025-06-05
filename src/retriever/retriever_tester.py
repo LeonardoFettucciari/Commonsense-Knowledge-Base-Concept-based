@@ -48,13 +48,15 @@ def run_retriever_test(
 
     while True:
         command = input(
-            "\nType sample ID, index, 'set dataset <name>', 'set rerank <type>', or 'q' to quit: "
+            "\nType sample ID, index, 'set dataset <name>', 'set rerank <type>', "
+            "'set k <number>', or 'q' to quit: "
         ).strip()
 
         if command.lower() in {"q", "quit", "exit"}:
             print("\n👋  Exiting… have a nice day!")
             break
 
+        # Switch dataset
         if command.startswith("set dataset "):
             new_name = command[len("set dataset "):].strip()
             new_name = DATASET_TAG_TO_NAME.get(new_name, new_name)
@@ -67,6 +69,7 @@ def run_retriever_test(
             print(f"✅ Dataset switched to {current_dataset_name}")
             continue
 
+        # Switch rerank type
         if command.startswith("set rerank "):
             new_rerank = command[len("set rerank "):].strip().lower()
             if new_rerank not in {"mmr", "filter", "none"}:
@@ -76,6 +79,21 @@ def run_retriever_test(
             print(f"✅ Rerank type set to {current_rerank}")
             continue
 
+        # NEW: Switch top_k value
+        if command.startswith("set k "):
+            value_str = command[len("set k "):].strip()
+            try:
+                new_k = int(value_str)
+                if new_k <= 0:
+                    print("❌ top_k must be a positive integer.")
+                    continue
+                top_k = new_k
+                print(f"✅ top_k set to {top_k}")
+            except ValueError:
+                print("❌ Invalid number format. Usage: set k <positive integer>")
+            continue
+
+        # Load dataset if not already
         if current_dataset_name not in datasets_cache:
             print(f"📦 Loading dataset {current_dataset_name}")
             tag = DATASET_NAME_TO_TAG[current_dataset_name]
@@ -85,6 +103,7 @@ def run_retriever_test(
         else:
             dataset = datasets_cache[current_dataset_name]
 
+        # Load retrievers if not already
         for model_path in retriever_models:
             if model_path not in retrievers:
                 print(f"🔎 Loading retriever: {model_path}")
@@ -97,6 +116,7 @@ def run_retriever_test(
                     query_prompt="query: ",
                 )
 
+        # Interpret command as an index or ID
         try:
             idx = int(command)
             if 0 <= idx < len(dataset):
@@ -138,7 +158,7 @@ def run_retriever_test(
                 lambda_=lambda_,
                 diversity_threshold=diversity_threshold,
             )
-            print(f"\n📚 Top-k from {model_name}")
+            print(f"\n📚 Top-k (k={top_k}) from {model_name}")
             if retrieved_statements:
                 for stmt in retrieved_statements:
                     print(f" - {stmt}")
