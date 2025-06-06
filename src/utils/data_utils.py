@@ -9,6 +9,7 @@ from datasets import Dataset
 import nltk
 from typing import Dict, List
 from src.utils.model_utils import get_ner_pipeline
+from tqdm import tqdm
 
 
 def extract_unique_words(ner_results):
@@ -39,30 +40,31 @@ def from_words_to_synsets(list_of_words):
     return [synset for word in list_of_words for synset in wordnet.synsets(word) if wordnet.synsets(word) and synset.pos() == 'n']
 
 
+def synsets_from_batch(samples, ner_pipeline, batch_size=32):
+             # generator = iterator
+    batch_synsets = []
 
-def synsets_from_batch(
-    samples: List[str],
-    ner_pipeline,
-    batch_size: int = 32,
-):
-    """
-    Run the CNER pipeline once on a list of samples (strings) in batches,
-    then convert each sample's span results into WordNet synsets.
-    """
-    # Batch inference: ner_pipeline accepts Python lists directly
-    ner_results: List[List[dict]] = ner_pipeline(
-        samples,
-        batch_size=batch_size,
-    )
-
-    batch_synsets: List[List] = []
-    for spans in ner_results:
-        # Extract unique words from token-classification spans
-        unique_words = extract_unique_words(spans)
-        # Map words to noun synsets
-        syns = from_words_to_synsets(unique_words)
-        batch_synsets.append(syns)
+    for spans in ner_pipeline(samples, batch_size=batch_size):
+        batch_synsets.append(
+            from_words_to_synsets(extract_unique_words(spans))
+        )
     return batch_synsets
+
+# For progress bar
+'''
+def synsets_from_batch(samples, ner_pipeline, batch_size=32):
+    sample_iter = (s for s in samples)          # generator = iterator
+    batch_synsets = []
+
+    for spans in tqdm(
+            ner_pipeline(sample_iter, batch_size=batch_size),
+            total=len(samples),
+            desc="Extracting synsets"):
+        batch_synsets.append(
+            from_words_to_synsets(extract_unique_words(spans))
+        )
+    return batch_synsets
+'''
 
 def extract_synsets(samples, ner_pipeline):
     if isinstance(samples, str):

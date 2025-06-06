@@ -46,7 +46,12 @@ fi
 # 2. Derived paths & names
 ########################################
 PREV_ITER=$((ITER - 1))
-RUN_NAME="iteration_${ITER}"
+if [[ -n "$RERANK_TYPE" ]]; then
+  RUN_NAME="${RERANK_TYPE}/iteration_${ITER}"
+else
+  RUN_NAME="iteration_${ITER}"
+fi
+
 OUTPUT_DIR="models/retriever_trained_iteration_${RERANK_TYPE}${ITER}"
 
 if [[ "$PREV_ITER" -eq 0 ]]; then

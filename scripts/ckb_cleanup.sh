@@ -2,4 +2,4 @@
 
 
 python src/ckb_management/ckb_cleanup.py \
-    --input_path "data/ckb/raw/merged.jsonl"
+    --input_path "data/ckb/raw/merged_8files.jsonl"
