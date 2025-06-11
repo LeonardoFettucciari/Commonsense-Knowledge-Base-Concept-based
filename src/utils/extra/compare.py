@@ -13,9 +13,6 @@ from settings.aliases import (
 )
 from src.utils.string_utils import extract_base_model_name
 
-import os
-import glob
-
 def find_latest_accuracy_file(base_path, prompt):
     """
     Given a base experiment path (e.g., outputs/inference/obqa/llama8B/baseline),
@@ -52,8 +49,8 @@ def find_latest_accuracy_file(base_path, prompt):
 
 
 def compare(input_path1, input_path2, root, exp1, exp2):
-    input1 = load_local_file(input_path1)
-    input2 = load_local_file(input_path2)
+    input1 = sorted(load_local_file(input_path1), key=lambda x: x["id"])
+    input2 = sorted(load_local_file(input_path2), key=lambda x: x["id"])
 
     output_data = []
     counter = 0
@@ -63,47 +60,53 @@ def compare(input_path1, input_path2, root, exp1, exp2):
         counter += 1
         if row1["id"] != row2["id"]:
             raise ValueError(f"ID mismatch: {row1['id']} != {row2['id']}")
-        if int(row1['xfinder_extracted_answers_mismatch']) == 1:
+
+        if int(row1.get('xfinder_extracted_answers_mismatch', "1")) == 1:
             continue
-        if int(row2['xfinder_extracted_answers_mismatch']) == 1:
+        if int(row2.get('xfinder_extracted_answers_mismatch', "1")) == 1:
             continue
 
         new_row = {
-                "id": row1["id"],
-                "question": row1["question"],
-                "choices": row1["choices"],
-                "ground_truth": row1["ground_truth"],
-                "output 1": row1["model_output"],
-                "output 2": row2["model_output"],
-                "ckb_statements": row2["ckb_statements"],
-                "answer 1": row1["xfinder_extracted_answer_llama"],
-                "answer 2": row2["xfinder_extracted_answer_llama"],
-            }
+            "id": row1["id"],
+            "question": row1["question"],
+            "choices": row1["choices"],
+            "ground_truth": row1["ground_truth"],
+            "output 1": row1["model_output"],
+            "output 2": row2["model_output"],
+            "ckb_statements 1": row1["ckb_statements"],
+            "ckb_statements 2": row2["ckb_statements"],
+            "answer 1": row1["xfinder_extracted_answer_llama"],
+            "answer 2": row2["xfinder_extracted_answer_llama"],
+        }
+
+
         # correct2correct
         if int(row1['xfinder_acc_llama']) == 1 and int(row2['xfinder_acc_llama']) == 1:
             correct2correct += 1
             new_row["case"] = "✅✅"
+            output_data.append(new_row)
             continue
 
         # correct2wrong
         if int(row1['xfinder_acc_llama']) == 1 and int(row2['xfinder_acc_llama']) == 0:
             correct2wrong += 1
             new_row["case"] = "✅❌"
+            output_data.append(new_row)
             continue
 
         # wrong2correct
         if int(row1['xfinder_acc_llama']) == 0 and int(row2['xfinder_acc_llama']) == 1:
             wrong2correct += 1
             new_row["case"] = "❌✅"
+            output_data.append(new_row)
             continue
 
         # wrong2wrong
         if int(row1['xfinder_acc_llama']) == 0 and int(row2['xfinder_acc_llama']) == 0:
             wrong2wrong += 1
             new_row["case"] = "❌❌"
+            output_data.append(new_row)
             continue
-
-        output_data.append(new_row)
 
     stats_data = [{
         "total_rows": counter,
@@ -115,7 +118,6 @@ def compare(input_path1, input_path2, root, exp1, exp2):
         "wrong2correct%": round((wrong2correct / counter) * 100, 2) if counter > 0 else 0,
         "correct2wrong%": round((correct2wrong / counter) * 100, 2) if counter > 0 else 0,
         "wrong2wrong%": round((wrong2wrong / counter) * 100, 2) if counter > 0 else 0,
-
     }]
 
     base_fname = os.path.splitext(os.path.basename(input_path1))[0]

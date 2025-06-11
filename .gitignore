@@ -11,3 +11,5 @@ data/**/*
 !data/.gitkeep
 !data/**/
 cache
+settings/client_secret_447940440966-4k538cb6d68qtrgukofc7lg486ia14em.apps.googleusercontent.com.json
+settings/gen-lang-client-0439062772-a6373d0d2e85.json

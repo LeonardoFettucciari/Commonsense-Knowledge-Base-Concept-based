@@ -55,10 +55,8 @@ def get_latest_datetime_dir(base_dir: str) -> str:
 
 
 def augment_incorrect_with_knowledge(
-    input_dir_root: str,
-    input_run_name: str,
+    input_path: str,
     output_run_name: str,
-    prompt_name: str,
     model_name: str,
     dataset_name: str,
     output_dir: str,
@@ -77,60 +75,20 @@ def augment_incorrect_with_knowledge(
     logging.info("=== Starting augment_incorrect_with_knowledge ===")
     # Load and clean your config dict
     raw_config = load_yaml("settings/model_config.json")["generation_config"]
-
     # Remove sampling args if not needed
     if not raw_config.get("do_sample", False):
         raw_config.pop("top_k", None)
         raw_config.pop("top_p", None)
-
     # Create a new, explicit GenerationConfig
     gen_config = GenerationConfig(**raw_config)
 
-    # Determine input run directory
-    run_dir = os.path.join(
-        input_dir_root,
-        DATASET_NAME_TO_TAG.get(dataset_name, dataset_name),
-        extract_base_model_name(model_name),
-        input_run_name
-    )
-    logging.info("Searching for runs in: %s", run_dir)
-    latest_run_dir = get_latest_datetime_dir(run_dir)
-
-    # Locate accuracy folder
-    accuracy_dir = os.path.join(latest_run_dir, "accuracy")
-    logging.info("Verifying accuracy directory: %s", accuracy_dir)
-    if not os.path.isdir(accuracy_dir):
-        logging.error("Accuracy folder not found: %s", accuracy_dir)
-        raise FileNotFoundError(f"Accuracy folder not found in {latest_run_dir}")
-
-    # Select TSV input
-    input_path = next(
-        (os.path.join(accuracy_dir, f)
-         for f in os.listdir(accuracy_dir)
-         if f.endswith(".tsv") and prompt_name in f),
-        None
-    )
-    if not input_path:
-        logging.error("No TSV file containing '%s' in %s", prompt_name, accuracy_dir)
-        raise FileNotFoundError(f"No TSV file containing '{prompt_name}' found in {accuracy_dir}")
-    logging.info("Found input TSV: %s", input_path)
-
+    
     # Load & filter dataset
     input_dataset = load_local_dataset(input_path)
-    input_dataset = input_dataset.map(split_choices, remove_columns=["choices"])
-    
     total = len(input_dataset)
+    input_dataset = input_dataset.select(range(min(len(input_dataset), LIMIT_SAMPLES)))
     logging.info("Loaded and preprocessed %d samples", total)
 
-    input_dataset = input_dataset.filter(
-        lambda s: int(s["xfinder_extracted_answers_mismatch"]) == 0
-                  and int(s["xfinder_acc_llama"]) == 0
-    )
-    input_dataset = input_dataset.shuffle()
-    input_dataset = input_dataset.select(range(min(len(input_dataset), LIMIT_SAMPLES)))
-
-    incorrect_count = len(input_dataset)
-    logging.info("Filtered to %d incorrect samples", incorrect_count)
 
     # Initialize CKB and retriever
     logging.info("Loading CKB from %s with strategy %s", ckb_path, retrieval_strategy)
