@@ -6,18 +6,16 @@ set -Eeuo pipefail
 IFS=$'\n\t'
 
 # ── defaults (edit as desired) ──────────────────────────────────────────────
-OUTPUT_NAME="retrievers"
+OUTPUT_NAME="RACo"
 DATASET_LIST="csqa,obqa,qasc"
 RUN_NAMES="\
 zs,\
 zscot,\
-untrained_retriever_zscotk5,\
-tr_zscotk5_it1,\
-tr_zscotk5_it2,\
-tr_zscotk5_it3"
-GROUPING="2,1,1,1,1"
-COLORS="pink:1,pink:2,blue:1,green:1,orange:1,purple:1"
-COLUMN_NAMES="zs,zscot,zscot\\nBase Retriever,zscot\\nTrained Retriever 1,zscot\\nTrained Retriever 2,zscot\\nTrained Retriever 3"
+untrained_retriever_zscotk5_retriever_filter,\
+untrained_retriever_zscotk5_RACo_filter"
+GROUPING="2,2"
+COLORS="pink:1,pink:2,blue:1,green:1"
+COLUMN_NAMES="zs,zscot,zscot\\nOur KB,zscot\\nRACo KB"
 
 PYTHON_SCRIPT="src/utils/extra/avg_accuracy_plot.py"
 

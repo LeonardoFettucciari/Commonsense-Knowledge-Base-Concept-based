@@ -2,7 +2,7 @@ import json
 
 total_statements = 0
 
-with open('data/ckb/raw/merged.jsonl', 'r') as f:
+with open('data/ckb/cleaned/merged_filtered.jsonl', 'r') as f:
     for line in f:
         if line.strip():  # Skip empty lines
             data = json.loads(line)
