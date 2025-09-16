@@ -1,0 +1,66 @@
+#!/usr/bin/env bash
+# -----------------------------------------
+# run_accuracy_plot.sh – per-dataset grouped accuracy plots
+# -----------------------------------------
+set -Eeuo pipefail
+IFS=$'\n\t'
+
+# ── defaults (edit as desired) ──────────────────────────────────────────────
+OUTPUT_NAME="retrievers"
+DATASET_LIST="csqa,obqa,qasc"
+RUN_NAMES="\
+zs,\
+zscot,\
+untrained_retriever_zscotk5,\
+tr_zscotk5_it1,\
+tr_zscotk5_it2,\
+tr_zscotk5_it3"
+GROUPING="2,1,1,1,1"
+COLORS="pink:1,pink:2,blue:1,green:1,orange:1,purple:1"
+COLUMN_NAMES="zs,zscot,zscot\\nBase Retriever,zscot\\nTrained Retriever 1,zscot\\nTrained Retriever 2,zscot\\nTrained Retriever 3"
+
+PYTHON_SCRIPT="src/utils/extra/avg_accuracy_plot.py"
+
+die() { printf "❌  %s\n" "$*\n" >&2; exit 1; }
+
+# ── long-flag parsing ───────────────────────────────────────────────────────
+PARSED=$(getopt -o h --long help,dataset-list:,run-names:,grouping:,colors:,column-names:,output-name: -- "$@") || exit 1
+eval set -- "$PARSED"
+
+while true; do
+  case "$1" in
+    --dataset-list)  DATASET_LIST=$2; shift 2 ;;
+    --run-names)     RUN_NAMES=$2;    shift 2 ;;
+    --grouping)      GROUPING=$2;     shift 2 ;;
+    --colors)        COLORS=$2;       shift 2 ;;
+    --column-names)  COLUMN_NAMES=$2; shift 2 ;;
+    --output-name)   OUTPUT_NAME=$2;  shift 2 ;;
+    -h|--help)
+cat <<EOF
+Per-Dataset Accuracy Plot Generator
+-----------------------------------
+Optional flags (defaults shown):
+  --dataset-list  <LIST>   datasets           [$DATASET_LIST]
+  --run-names     <LIST>   run names          [$RUN_NAMES]
+  --grouping      <LIST>   grouping sizes     [$GROUPING]
+  --colors        <LIST>   color:shade list   [$COLORS]
+  --column-names  <LIST>   x-axis labels      [$COLUMN_NAMES]
+  --output-name   <STR>    output file name   [$OUTPUT_NAME]
+  -h, --help               show this help
+EOF
+      exit 0 ;;
+    --) shift; break ;;
+    *) die "Unknown flag: $1" ;;
+  esac
+done
+
+echo "📊  Datasets : $DATASET_LIST"
+echo "📊  Run names: $RUN_NAMES"
+python3 "$PYTHON_SCRIPT" \
+  --datasets   "$DATASET_LIST" \
+  --run_names  "$RUN_NAMES" \
+  --grouping   "$GROUPING" \
+  --colors     "$COLORS" \
+  --column_names "$COLUMN_NAMES" \
+  --output_name "$OUTPUT_NAME"
+echo "✅  Plotting complete."

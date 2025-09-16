@@ -71,13 +71,18 @@ def compare(input_path1, input_path2, root, exp1, exp2):
             "question": row1["question"],
             "choices": row1["choices"],
             "ground_truth": row1["ground_truth"],
-            "output 1": row1["model_output"],
-            "output 2": row2["model_output"],
-            "ckb_statements 1": row1["ckb_statements"],
-            "ckb_statements 2": row2["ckb_statements"],
-            "answer 1": row1["xfinder_extracted_answer_llama"],
-            "answer 2": row2["xfinder_extracted_answer_llama"],
+            f"{exp1}": row1.get("model_output", ""),
+            f"{exp2}": row2.get("model_output", ""),
+            f"answer_{exp1}": row1.get("xfinder_extracted_answer_llama", ""),
+            f"answer_{exp2}": row2.get("xfinder_extracted_answer_llama", ""),
         }
+
+        # Only include ckb_statements fields if present
+        if "ckb_statements" in row1:
+            new_row[f"ckb_statements_{exp1}"] = row1["ckb_statements"]
+        if "ckb_statements" in row2:
+            new_row[f"ckb_statements_{exp2}"] = row2["ckb_statements"]
+
 
 
         # correct2correct

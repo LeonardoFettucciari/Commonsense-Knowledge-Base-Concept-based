@@ -17,6 +17,6 @@ def delete_folders_by_name(parent_folder, target_folder_name):
 
 if __name__ == "__main__":
     parent = "outputs/inference"  # <-- Replace with your folder path
-    folder_name_to_delete = "prompt_vs_knowledge"   # <-- Replace with the folder name you want to delete
+    folder_name_to_delete = "tr_fscotk5_it2_newkb_contextual_counter"   # <-- Replace with the folder name you want to delete
 
     delete_folders_by_name(parent, folder_name_to_delete)

@@ -9,6 +9,7 @@ torch==2.6.0
 transformers==4.50.3
 natsort==8.4.0
 matplotlib==3.10.1
+numpy==1.26.4
 faiss-cpu==1.10.0
 openai==1.78.1
 loguru==0.7.3
@@ -19,4 +20,5 @@ google-api-python-client==2.166.0
 google-auth==2.38.0
 google-auth-httplib2==0.2.0
 google-auth-oauthlib==1.2.2
+hf_xet==1.1.5
 git+https://github.com/Andrew-Wyn/xFinder.git@decode-fix

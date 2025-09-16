@@ -165,11 +165,21 @@ def load_ckb(ckb_path: str, retrieval_scope: str):
 def load_ckb_statements(ckb_path):
     # Load ckb from path
     ckb = load_local_file(ckb_path)
-    # Load statements from unknown generic ckb file
+    
+    # Load statements from generic ckb file
     ckb_statements = []
     for line in ckb:
-        ckb_statements.extend(line['statements'])
+        statements = line.get('statements', [])
+        if isinstance(statements, str):
+            ckb_statements.append(statements)
+        elif isinstance(statements, list):
+            ckb_statements.extend(statements)
+        else:
+            # Skip or handle other unexpected formats
+            logging.warning(f"Unexpected type for 'statements': {type(statements)}")
+
     return ckb_statements
+
 
 def load_kb_as_dict(jsonl_path):
     kb_dict = {}

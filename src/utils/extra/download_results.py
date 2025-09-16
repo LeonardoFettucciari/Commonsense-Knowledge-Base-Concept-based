@@ -62,6 +62,30 @@ def copy_accuracy_tsv_files(
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(
+        "--source_root",
+        type=str,
+        default="outputs/inference",
+        help="Root input directory (default: outputs/inference)"
+    )
+    parser.add_argument(
+        "--output_root",
+        type=str,
+        default="outputs/upload2gdrive/inference",
+        help="Output directory (default: outputs/upload2gdrive/inference)"
+    )
+    parser.add_argument(
+        "--dataset_list",
+        type=str,
+        default="obqa,qasc,csqa",
+        help="Comma-separated list of datasets (default: obqa,qasc,csqa)"
+    )
+    parser.add_argument(
+        "--models",
+        type=str,
+        default="Llama-3.1-8B-Instruct,Llama-3.2-3B-Instruct,Qwen2.5-1.5B-Instruct,Qwen2.5-7B-Instruct",
+        help="Comma-separated list of models"
+    )
+    parser.add_argument(
         "--run_names",
         nargs="+",
         required=True,
@@ -74,19 +98,14 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
 
-    SOURCE_ROOT = Path("outputs/inference")
-    OUTPUT_ROOT = Path("outputs/upload2gdrive")
-    DATASETS = ["csqa", "obqa", "qasc"]
-    MODELS = [
-        "Llama-3.1-8B-Instruct",
-        "Llama-3.2-3B-Instruct",
-        "Qwen2.5-1.5B-Instruct",
-        "Qwen2.5-7B-Instruct",
-    ]
+    # Parse comma-separated lists
+    DATASETS = args.dataset_list.split(",")
+    MODELS = args.models.split(",")
 
+    # Run
     copy_accuracy_tsv_files(
-        SOURCE_ROOT,
-        OUTPUT_ROOT,
+        Path(args.source_root),
+        Path(args.output_root),
         args.run_names,
         DATASETS,
         MODELS,

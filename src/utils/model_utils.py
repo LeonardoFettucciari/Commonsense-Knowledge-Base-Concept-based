@@ -8,32 +8,50 @@ from src.utils.io_utils import load_json
 from typing import List, Dict, Any
 
 
+
+
 def get_model_settings(config_path: str) -> Dict[str, Any]:
     with open(config_path, 'r') as f:
         return json.load(f)
 
 
+import time
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from huggingface_hub.utils import HfHubHTTPError, RepositoryNotFoundError
+
 def load_model_and_tokenizer(
     model_name: str,
-    device: torch.device = None
+    device: torch.device = None,
+    max_retries: int = 5,
+    retry_wait: int = 30
 ):
-    import torch
     if device is None:
         device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-    model = AutoModelForCausalLM.from_pretrained(
-        model_name,
-        device_map=device,
-        trust_remote_code=True,
-        torch_dtype=torch.bfloat16,
-    )
-    tokenizer = AutoTokenizer.from_pretrained(
-        model_name,
-        trust_remote_code=True,
-        padding_side="left",
-    )
-    tokenizer.pad_token = tokenizer.eos_token
-    tokenizer.pad_token_id = tokenizer.eos_token_id
-    return model, tokenizer
+
+    for attempt in range(1, max_retries + 1):
+        try:
+            model = AutoModelForCausalLM.from_pretrained(
+                model_name,
+                device_map=device,
+                trust_remote_code=True,
+                torch_dtype=torch.bfloat16,
+            )
+            tokenizer = AutoTokenizer.from_pretrained(
+                model_name,
+                trust_remote_code=True,
+                padding_side="left",
+            )
+            tokenizer.pad_token = tokenizer.eos_token
+            tokenizer.pad_token_id = tokenizer.eos_token_id
+            return model, tokenizer
+        except (HfHubHTTPError, OSError, RepositoryNotFoundError) as e:
+            print(f"[Attempt {attempt}] Download failed: {e}")
+            if attempt == max_retries:
+                raise
+            print(f"Retrying in {retry_wait} seconds...")
+            time.sleep(retry_wait)
+
 
 
 def get_ner_pipeline(model_name: str):

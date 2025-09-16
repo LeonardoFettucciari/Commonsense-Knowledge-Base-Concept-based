@@ -2,8 +2,10 @@ import hashlib
 import logging
 from pathlib import Path
 from typing import List, Union
-
+import psutil
+import time
 import faiss
+from tqdm import tqdm
 import numpy as np
 from sentence_transformers import SentenceTransformer
 from sentence_transformers.models import Transformer, StaticEmbedding
@@ -189,21 +191,84 @@ class Retriever:
             show_progress_bar=self._show_progress_bar(texts, batch_size),
         )
 
-    def _load_or_build_index(self):
+
+
+
+    from tqdm import tqdm
+    import faiss
+    import numpy as np
+
+    def _load_or_build_index(self) -> faiss.Index:
+        """
+        Build (or load) a FAISS inner-product index.
+
+        * Streams embeddings in batches – no need to hold the full matrix.
+        * Uses GPU (fp16) when available, then converts back to CPU for saving / querying.
+        """
+        # ------------------------------------------------------------------ #
+        # 1. If an index file already exists just read it.
+        # ------------------------------------------------------------------ #
         if self.save_index and self.index_path.exists():
-            logging.info(f"Loading FAISS index from {self.index_path}")
+            logging.info("Loading FAISS index from %s", self.index_path)
             return faiss.read_index(str(self.index_path))
 
-        logging.info("Building FAISS index …")
-        embs = (
-            self._encode(self.passages, prompt=self.passage_prompt, batch_size=1024)
-            .astype(np.float32)
+        # ------------------------------------------------------------------ #
+        # 2. Decide device & create an empty index.
+        # ------------------------------------------------------------------ #
+        logging.info("Building FAISS index (streaming)…")
+
+        # Encode one passage to get embedding dimensionality
+        dim = int(
+            self._encode(self.passages[:1],
+                        prompt=self.passage_prompt,
+                        batch_size=1)[0].shape[0]
         )
-        index = faiss.IndexFlatIP(embs.shape[1])
-        index.add(embs)
+
+        use_gpu = faiss.get_num_gpus() > 0
+
+        if use_gpu:
+            res = faiss.StandardGpuResources()
+
+            # Build GPU index directly (no CPU cloner)
+            config = faiss.GpuIndexFlatConfig()
+            config.device = 0  # first GPU
+            config.useFloat16 = True  # directly use fp16 inside GPU index
+
+            index = faiss.GpuIndexFlatIP(res, dim, config)
+            logging.info("  • using native GPU GpuIndexFlatIP (fp16)")
+        else:
+            index = faiss.IndexFlatIP(dim)
+            logging.info("  • using CPU-based IndexFlatIP")
+
+        # ------------------------------------------------------------------ #
+        # 3. Stream-encode passages and add to the index batch-by-batch.
+        # ------------------------------------------------------------------ #
+        BATCH = 512
+        for b in tqdm(range(0, len(self.passages), BATCH),
+                    desc="Adding embeddings",
+                    unit="vec"):
+            chunk = self.passages[b:b+BATCH]
+            embs  = self._encode(chunk,
+                                prompt=self.passage_prompt,
+                                batch_size=BATCH).astype(np.float32)
+            index.add(embs)
+
+        # ------------------------------------------------------------------ #
+        # 4. Persist (always save a CPU index so other machines can load it).
+        # ------------------------------------------------------------------ #
+        if use_gpu:
+            index_to_save = faiss.index_gpu_to_cpu(index)
+        else:
+            index_to_save = index
+
         if self.save_index:
-            faiss.write_index(index, str(self.index_path))
-        return index
+            faiss.write_index(index_to_save, str(self.index_path))
+            logging.info("Saved FAISS index to %s", self.index_path)
+
+        return index_to_save
+
+
+
 
     def _cache_key(self) -> str:
         md5 = hashlib.md5()
