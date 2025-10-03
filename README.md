@@ -1,3 +1,9 @@
+<div align="center">
+  <img src="https://github.com/LeonardoFettucciari/Commonsense-Knowledge-Base-Concept-based/blob/master/assets/sapienzanlp.png" width="200">
+</div>
+
+<div align="center">
+
 # Retrieval-Augmented Generation for Commonsense Reasoning: An Empirical Investigation of Challenges and Limitations
 
 This repository provides the code and resources for investigating how retrieval-augmented generation (RAG) systems handle commonsense reasoning tasks. We focus on three key research questions:
