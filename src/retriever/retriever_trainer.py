@@ -1,4 +1,4 @@
-from datasets import load_dataset, concatenate_datasets, Dataset
+from datasets import Dataset
 from sentence_transformers import (
     SentenceTransformer,
     SentenceTransformerTrainer,
@@ -7,13 +7,11 @@ from sentence_transformers import (
 )
 from sentence_transformers.losses import MultipleNegativesRankingLoss
 from sentence_transformers.training_args import BatchSamplers
-from sentence_transformers.evaluation import RerankingEvaluator
 import glob
 import os
-from src.datasets.dataset_loader import load_local_dataset, load_hf_dataset, preprocess_dataset
-from src.datasets.dataset_loader import split_choices
 import logging
 from argparse import ArgumentParser
+from src.datasets.dataset_loader import load_local_dataset
 
 
 def train_retriever(
@@ -23,10 +21,10 @@ def train_retriever(
     output_dir: str,
 ) -> None:
     
-    # 0. Specify training data input paths
+    # Specify training data input paths
     GLOB_PATTERN = f"{trainset_base_dir}/*/*/{run_name}_positives_negatives/*/*.jsonl"
 
-    # 1. Load a model to finetune with model card metadata
+    # Load a model to finetune with model card metadata
     model = SentenceTransformer(
         retriever_model_to_finetune,
         model_card_data=SentenceTransformerModelCardData(
@@ -36,21 +34,15 @@ def train_retriever(
         )
     )
 
-    # Load training datasets
-
-    # Filter: include only files that start with 'prompt=' and exclude 'triplets_'
+    # Load training datasets and apply preprocessing
     all_files = sorted([
         path for path in glob.glob(GLOB_PATTERN)
         if os.path.basename(path).startswith("prompt=")
     ])
-
     print(f"Found {len(all_files)} valid input files:")
     for f in all_files:
-        print("→", f)
-
-    # Load datasets
+        print(f)
     positive_datasets = [load_local_dataset(path) for path in all_files]
-
 
     pairs = []
     for positive_dataset in positive_datasets:
@@ -68,16 +60,15 @@ def train_retriever(
                 pairs.append(row)
     train_dataset = Dataset.from_list(pairs)
 
-    # 5. Train/test split
+    # Train/test split
     split = train_dataset.train_test_split(0.1, shuffle=True, seed=42)
     train_dataset = split["train"]
     eval_dataset = split["test"]
 
-
-    # 6. Define the MNR loss
+    # Define the MNR loss
     loss = MultipleNegativesRankingLoss(model)
 
-    # 7. Training arguments
+    # Training arguments
     num_train_epochs = 5
     batch_size = 256
     total_steps = len(train_dataset) // batch_size * num_train_epochs
@@ -85,17 +76,17 @@ def train_retriever(
     args = SentenceTransformerTrainingArguments(
         output_dir=output_dir,
         overwrite_output_dir=True,
-        num_train_epochs=num_train_epochs,    # try fewer and watch eval loss
-        per_device_train_batch_size=batch_size,      # halves memory, still plenty of negatives
+        num_train_epochs=num_train_epochs,    
+        per_device_train_batch_size=batch_size,      
         per_device_eval_batch_size=batch_size,
-        learning_rate=2e-5,                   # a bit lower for contrastive
-        warmup_steps=warmup_steps,  # 10% of all steps
+        learning_rate=2e-5,                   
+        warmup_steps=warmup_steps,  
         weight_decay=0.01,
-        fp16=True,                # enable fp16 if supported
+        fp16=True,                
         bf16=False,
         batch_sampler=BatchSamplers.NO_DUPLICATES,
         eval_strategy="epoch",
-        eval_steps=None,           # evaluate less often
+        eval_steps=None,           
         save_strategy="epoch",
         save_steps=None,
         save_total_limit=2,
@@ -105,7 +96,7 @@ def train_retriever(
         run_name=run_name,
     )
 
-    # 8. Trainer
+    # Trainer
     trainer = SentenceTransformerTrainer(
         model=model,
         args=args,
@@ -114,18 +105,15 @@ def train_retriever(
         loss=loss,
     )
 
-    # 9. Train
+    # Train
     trainer.train()
 
-    # 10. Save the trained model
+    # Save the trained model
     model.save_pretrained(f"{output_dir}/final")
-
-    # 11. Optional: Push to hub
-    # model.push_to_hub("e5-base-mnr")
 
 
 def main() -> None:
-    parser = ArgumentParser(description="Batched CKB-based QA inference.")
+    parser = ArgumentParser(description="Retriever training.")
     parser.add_argument("--retriever_model_to_finetune", type=str, required=True,
                         help="Base model to fine-tune.")
     parser.add_argument("--run_name", type=str, required=True,

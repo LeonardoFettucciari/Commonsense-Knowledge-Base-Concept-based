@@ -8,32 +8,23 @@ from typing import Dict, List
 from transformers import GenerationConfig
 import torch
 import tqdm
-import json
-
-# Local imports
-from settings.aliases import (
-    DATASET_NAME_TO_TAG,
-    DATASET_TAG_TO_NAME,
-    MODEL_TAG_TO_NAME,
-    PROMPT_TYPE_ALIASES,
-)
-from src.datasets.dataset_loader import (
-    load_hf_dataset,
-    load_local_dataset,
-    preprocess_dataset,
-)
-from src.retriever.retriever import Retriever
-from src.utils.io_utils import load_ckb, load_yaml, prepare_output
+from src.utils.io_utils import load_yaml, prepare_output
 from src.utils.model_utils import load_model_and_tokenizer, batched_generate_text
 from src.utils.prompt_utils import build_prompts, get_prompt_requirements
 from src.utils.string_utils import (
     extract_base_model_name,
     prepare_prompt_output_filename,
 )
-from src.utils.data_utils import concatenate_question_choices
-
-
-# Configure logging
+from src.datasets.dataset_loader import (
+    load_local_dataset,
+    preprocess_dataset,
+)
+from settings.aliases import (
+    DATASET_NAME_TO_TAG,
+    DATASET_TAG_TO_NAME,
+    MODEL_TAG_TO_NAME,
+    PROMPT_TYPE_ALIASES,
+)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
@@ -48,25 +39,21 @@ def inference(
     batch_size: int = 1,
     timestamp: str = datetime.now().strftime("%Y%m%d_%H%M%S"),
 ) -> None:
-    """
-    Run inference on a dataset using a specified model and optionally retrieve
-    knowledge base statements, now with batched generation.
-    """
+
     logging.info("Starting inference process...")
+    
+
+    # Load config files
     config = load_yaml(config_path)
-
-    # Load and clean your config dict
-    raw_config = load_yaml("settings/model_config.json")["generation_config"]
-
+    gen_config = load_yaml("settings/model_config.json")["generation_config"]
     # Remove sampling args if not needed
-    if not raw_config.get("do_sample", False):
-        raw_config.pop("top_k", None)
-        raw_config.pop("top_p", None)
-
+    if not gen_config.get("do_sample", False):
+        gen_config.pop("top_k", None)
+        gen_config.pop("top_p", None)
     # Create a new, explicit GenerationConfig
-    gen_config = GenerationConfig(**raw_config)
+    gen_config = GenerationConfig(**gen_config)
 
-
+    # Determine prompt requirements
     prompt_requires = get_prompt_requirements(prompt_types)
 
     # Load dataset
@@ -78,7 +65,8 @@ def inference(
 
     logging.info("Loaded %d samples for evaluation.", len(eval_dataset))
 
-    # Few-shot
+
+    # Load fewshot examples if needed
     fewshot_dataset = None
     if prompt_requires["fewshot"] and prompt_requires["knowledge"]:
         fewshot_tag = f"{dataset_tag}_fscotk"
@@ -97,7 +85,7 @@ def inference(
         fewshot_dataset = preprocess_dataset(fewshot_dataset, fewshot_tag)
         logging.info("Loaded %d fewshot examples.", len(fewshot_dataset))
 
-    # Knowledge base & retriever
+    # Load knowledge and retrieve
     if prompt_requires["knowledge"]:
         if prompt_requires["fewshot"]:
             for example in fewshot_dataset:
@@ -166,7 +154,6 @@ def inference(
         run_name,
         timestamp,
     )
-
 
     os.makedirs(model_output_dir, exist_ok=True)
     logging.info("Saving inference results to: %s", model_output_dir)

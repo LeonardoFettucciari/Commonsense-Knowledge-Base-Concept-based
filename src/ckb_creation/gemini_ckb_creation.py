@@ -5,10 +5,9 @@ import torch
 from tqdm import tqdm
 from argparse import ArgumentParser
 from typing import Optional
-from datasets import load_dataset
 from transformers import set_seed
-from src.utils.model_utils import get_ner_pipeline, load_gemini_model, get_model_settings, clean_statement
-from src.utils.data_utils import extract_unique_words, get_all_wordnet_synsets, from_words_to_synsets
+from src.utils.model_utils import load_gemini_model, get_model_settings
+from src.utils.data_utils import get_all_wordnet_synsets
 from src.ckb_creation.gemini_prompts import GeminiPrompt
 ADJ, ADJ_SAT, ADV, NOUN, VERB = "a", "s", "r", "n", "v"
 POS_LIST = [NOUN, VERB, ADJ, ADV]

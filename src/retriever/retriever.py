@@ -2,14 +2,10 @@ import hashlib
 import logging
 from pathlib import Path
 from typing import List, Union
-import psutil
-import time
 import faiss
 from tqdm import tqdm
 import numpy as np
 from sentence_transformers import SentenceTransformer
-from sentence_transformers.models import Transformer, StaticEmbedding
-
 from src.utils.model_utils import get_ner_pipeline
 from src.utils.data_utils import synsets_from_batch
 
@@ -24,6 +20,7 @@ class Retriever:
         query_prompt: str | None = None,
         cache_dir: str = "cache/index",
     ):
+        
         self.model_name_or_path = model_name_or_path
         assert retrieval_strategy in {"retriever", "cner+retriever"}
         self.ckb = ckb
@@ -31,7 +28,6 @@ class Retriever:
         self.retrieval_strategy = retrieval_strategy
         self.passage_prompt = passage_prompt
         self.query_prompt = query_prompt
-
         self.save_index = retrieval_strategy == "retriever"
         self.cache_dir = Path(cache_dir)
 
@@ -55,7 +51,6 @@ class Retriever:
         top_k: int,
         *,
         re_rank: str = None,
-        lambda_: float = 0.7,
         pool_size: int | None = None,
         diversity_threshold: float = 0.9,
         batch_size: int = 512,
@@ -63,6 +58,7 @@ class Retriever:
         single = isinstance(queries, str)
         queries_list = [queries] if single else queries
 
+        # Extracy synsets if using CNER strategy
         batch_synsets: List[List] = []
         if self.retrieval_strategy == "cner+retriever" and queries_list:
             batch_synsets = synsets_from_batch(
@@ -87,7 +83,6 @@ class Retriever:
                 query,
                 top_k,
                 re_rank=re_rank,
-                lambda_=lambda_,
                 pool_size=pool_size,
                 diversity_threshold=diversity_threshold,
                 batch_size=batch_size,
@@ -102,14 +97,13 @@ class Retriever:
         top_k: int,
         *,
         re_rank: str = None,
-        lambda_: float = 0.7,
         pool_size: int | None = None,
         diversity_threshold: float = 0.9,
         batch_size: int = 512,
     ) -> Union[List[str], List[List[str]]]:
+        
         single = isinstance(queries, str)
         queries_list = [queries] if single else queries
-
         if not self.passages:
             return [] if single else [[] for _ in queries_list]
 
@@ -119,53 +113,94 @@ class Retriever:
             batch_size=batch_size
         ).astype(np.float32)
 
-        def _dedup_until_k(query_vec, score_fn):
-            cand = pool_size or (top_k if re_rank else top_k)
-            cand = min(cand, len(self.passages))
-
-            while True:
-                ids = score_fn(cand)
-                valid = [i for i in ids if i != -1]
-                texts = [self.passages[i] for i in valid]
-                vecs = np.stack([
-                    self.index.reconstruct(int(i)) if self.index is not None
-                    else self._inmem_embs[i]
-                    for i in valid
-                ])
-
-                picked = _deduplicate(
-                    re_rank=re_rank,
-                    query_vec=query_vec,
-                    cand_vecs=vecs,
-                    cand_texts=texts,
-                    top_k=top_k,
-                    lambda_=lambda_,
-                    diversity_threshold=diversity_threshold,
-                )
-
-                if len(picked) == top_k or cand >= len(self.passages):
-                    return picked
-
-                cand = min(cand * 2, len(self.passages))
-
         hits = []
+        # FAISS search
         if self.index is not None:
-            for q_i, q_vec in enumerate(q_emb):
-                hits.append(
-                    _dedup_until_k(
-                        q_vec,
-                        lambda c: self.index.search(q_vec[None, :], c)[1][0],
-                    )
-                )
+            for q_vec in q_emb:
+                hits.append(self._dedup_until_k(
+                    lambda c: self.index.search(q_vec[None, :], c)[1][0],
+                    top_k=top_k,
+                    pool_size=pool_size,
+                    diversity_threshold=diversity_threshold,
+                    re_rank=re_rank,
+                ))
+        # In-memory search
         else:
             sims = self._inmem_embs @ q_emb.T
             for qi in range(sims.shape[1]):
                 def top_ids(c):
                     part = np.argpartition(-sims[:, qi], c - 1)[:c]
                     return part[np.argsort(-sims[part, qi])]
-                hits.append(_dedup_until_k(q_emb[qi], top_ids))
-
+                hits.append(self._dedup_until_k(
+                    top_ids,
+                    top_k=top_k,
+                    pool_size=pool_size,
+                    diversity_threshold=diversity_threshold,
+                    re_rank=re_rank,
+                ))
         return hits[0] if single else hits
+
+    def _dedup_until_k(
+        self,
+        score_fn: callable,
+        *,
+        top_k: int,
+        pool_size: int | None,
+        diversity_threshold: float,
+        re_rank: str | None,
+    ) -> List[str]:
+        
+        cand = min(pool_size, len(self.passages))
+        while True:
+            ids = score_fn(cand)
+            texts = [self.passages[i] for i in ids]
+            vecs = np.stack([
+                self.index.reconstruct(int(i))
+                for i in ids
+            ])
+
+            picked = self._deduplicate(
+                re_rank=re_rank,
+                cand_vecs=vecs,
+                cand_texts=texts,
+                top_k=top_k,
+                diversity_threshold=diversity_threshold,
+            )
+
+            if len(picked) == top_k or cand >= len(self.passages):
+                return picked
+
+            cand = min(cand * 2, len(self.passages))
+
+    # Deduplication
+    def _deduplicate(
+        re_rank: str,
+        cand_vecs: np.ndarray,
+        cand_texts: List[str],
+        top_k: int,
+        diversity_threshold: float,
+    ) -> List[str]:
+        if not re_rank:
+            return cand_texts[:top_k]
+
+        elif re_rank == "filter":
+            kept_texts = []
+            kept_vecs = []
+            for vec, text in zip(cand_vecs, cand_texts):
+                if not kept_vecs:
+                    kept_vecs.append(vec)
+                    kept_texts.append(text)
+                else:
+                    sims = np.dot(np.stack(kept_vecs), vec)
+                    if np.max(sims) < diversity_threshold:
+                        kept_vecs.append(vec)
+                        kept_texts.append(text)
+                if len(kept_texts) == top_k:
+                    break
+            return kept_texts
+
+        else:
+            raise ValueError(f"Unknown re_rank method: {re_rank}")
 
     def set_passages(self, passages: Union[str, List[str]]):
         self.passages = [passages] if isinstance(passages, str) else passages
@@ -191,58 +226,24 @@ class Retriever:
             show_progress_bar=self._show_progress_bar(texts, batch_size),
         )
 
-
-
-
-    from tqdm import tqdm
-    import faiss
-    import numpy as np
-
+    # FAISS index
     def _load_or_build_index(self) -> faiss.Index:
-        """
-        Build (or load) a FAISS inner-product index.
-
-        * Streams embeddings in batches – no need to hold the full matrix.
-        * Uses GPU (fp16) when available, then converts back to CPU for saving / querying.
-        """
-        # ------------------------------------------------------------------ #
-        # 1. If an index file already exists just read it.
-        # ------------------------------------------------------------------ #
+        # Load existing index if available
         if self.save_index and self.index_path.exists():
             logging.info("Loading FAISS index from %s", self.index_path)
             return faiss.read_index(str(self.index_path))
 
-        # ------------------------------------------------------------------ #
-        # 2. Decide device & create an empty index.
-        # ------------------------------------------------------------------ #
+        # Build a new index
         logging.info("Building FAISS index (streaming)…")
-
-        # Encode one passage to get embedding dimensionality
         dim = int(
             self._encode(self.passages[:1],
                         prompt=self.passage_prompt,
                         batch_size=1)[0].shape[0]
         )
+        index = faiss.IndexFlatIP(dim)
+        logging.info("  • using CPU-based IndexFlatIP")
 
-        use_gpu = faiss.get_num_gpus() > 0
-
-        if use_gpu:
-            res = faiss.StandardGpuResources()
-
-            # Build GPU index directly (no CPU cloner)
-            config = faiss.GpuIndexFlatConfig()
-            config.device = 0  # first GPU
-            config.useFloat16 = True  # directly use fp16 inside GPU index
-
-            index = faiss.GpuIndexFlatIP(res, dim, config)
-            logging.info("  • using native GPU GpuIndexFlatIP (fp16)")
-        else:
-            index = faiss.IndexFlatIP(dim)
-            logging.info("  • using CPU-based IndexFlatIP")
-
-        # ------------------------------------------------------------------ #
-        # 3. Stream-encode passages and add to the index batch-by-batch.
-        # ------------------------------------------------------------------ #
+        # Enocde passages and add them to the index
         BATCH = 512
         for b in tqdm(range(0, len(self.passages), BATCH),
                     desc="Adding embeddings",
@@ -253,23 +254,14 @@ class Retriever:
                                 batch_size=BATCH).astype(np.float32)
             index.add(embs)
 
-        # ------------------------------------------------------------------ #
-        # 4. Persist (always save a CPU index so other machines can load it).
-        # ------------------------------------------------------------------ #
-        if use_gpu:
-            index_to_save = faiss.index_gpu_to_cpu(index)
-        else:
-            index_to_save = index
-
+        # Save index  
+        index_to_save = index
         if self.save_index:
             faiss.write_index(index_to_save, str(self.index_path))
             logging.info("Saved FAISS index to %s", self.index_path)
-
         return index_to_save
 
-
-
-
+    # FAISS Utils
     def _cache_key(self) -> str:
         md5 = hashlib.md5()
         md5.update(self.model_name_or_path.encode())
@@ -282,66 +274,3 @@ class Retriever:
         nb = max(1, len(inputs) // batch_size + (len(inputs) % batch_size > 0))
         return nb > 10
 
-
-def _mmr(
-    query_vec: np.ndarray,
-    cand_vecs: np.ndarray,
-    cand_texts: List[str],
-    k: int,
-    lambda_: float = 0.8,
-) -> List[str]:
-    assert 0.0 <= lambda_ <= 1.0
-    selected_texts = []
-    selected_vecs = []
-
-    sim_to_query = cand_vecs @ query_vec
-    free_idx = np.arange(len(cand_texts))
-
-    while len(selected_texts) < min(k, len(cand_texts)):
-        if selected_vecs:
-            div_penalty = np.max(cand_vecs[free_idx] @ np.stack(selected_vecs, axis=1), axis=1)
-        else:
-            div_penalty = np.zeros(len(free_idx))
-
-        mmr_scores = lambda_ * sim_to_query[free_idx] - (1 - lambda_) * div_penalty
-        best_idx = free_idx[np.argmax(mmr_scores)]
-
-        selected_texts.append(cand_texts[best_idx])
-        selected_vecs.append(cand_vecs[best_idx])
-        free_idx = free_idx[free_idx != best_idx]
-
-    return selected_texts
-
-def _deduplicate(
-    re_rank: str,
-    query_vec: np.ndarray,
-    cand_vecs: np.ndarray,
-    cand_texts: List[str],
-    top_k: int,
-    lambda_: float,
-    diversity_threshold: float,
-) -> List[str]:
-    if not re_rank:
-        return cand_texts[:top_k]
-
-    elif re_rank == "mmr":
-        return _mmr(query_vec, cand_vecs, cand_texts, top_k, lambda_)
-
-    elif re_rank == "filter":
-        kept_texts = []
-        kept_vecs = []
-        for vec, text in zip(cand_vecs, cand_texts):
-            if not kept_vecs:
-                kept_vecs.append(vec)
-                kept_texts.append(text)
-            else:
-                sims = np.dot(np.stack(kept_vecs), vec)
-                if np.max(sims) < diversity_threshold:
-                    kept_vecs.append(vec)
-                    kept_texts.append(text)
-            if len(kept_texts) == top_k:
-                break
-        return kept_texts
-
-    else:
-        raise ValueError(f"Unknown re_rank method: {re_rank}")

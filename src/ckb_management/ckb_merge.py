@@ -12,14 +12,14 @@ def merge_jsonl(source1_path: str, source2_path: str, output_dir: str):
 
     merged_data = defaultdict(lambda: {"synset_lemma": "", "synset_definition": "", "statements": []})
 
-    # First pass: source 1
+    # Source 1
     for entry in source1_data:
         name = entry["synset_name"]
         merged_data[name]["synset_lemma"] = entry["synset_lemma"]
         merged_data[name]["synset_definition"] = entry["synset_definition"]
         merged_data[name]["statements"].extend(entry["statements"])
 
-    # Second pass: source 2
+    # Source 2
     for entry in source2_data:
         name = entry["synset_name"]
         if not merged_data[name]["synset_lemma"]:
@@ -28,7 +28,6 @@ def merge_jsonl(source1_path: str, source2_path: str, output_dir: str):
             merged_data[name]["synset_definition"] = entry["synset_definition"]
         merged_data[name]["statements"].extend(entry["statements"])
 
-    # Deduplicate and format
     merged_ckb = []
     for name, data in merged_data.items():
         merged_ckb.append({
@@ -38,7 +37,7 @@ def merge_jsonl(source1_path: str, source2_path: str, output_dir: str):
             "statements": list(set(data["statements"]))
         })
 
-    # === Construct output filename ===
+    # Output
     def base_no_ext(path):
         return os.path.splitext(os.path.basename(path))[0]
 

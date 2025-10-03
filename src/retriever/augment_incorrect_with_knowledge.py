@@ -5,16 +5,9 @@ import datetime
 from argparse import ArgumentParser
 from math import ceil
 from typing import Dict, List
-
 import torch
 from tqdm import tqdm
 from transformers import GenerationConfig
-
-# Local imports
-from settings.aliases import (
-    DATASET_NAME_TO_TAG,
-    MODEL_TAG_TO_NAME,
-)
 from src.datasets.dataset_loader import load_local_dataset, split_choices
 from src.retriever.retriever import Retriever
 from src.utils.io_utils import load_ckb, load_yaml, prepare_output_retriever_training
@@ -25,15 +18,14 @@ from src.utils.string_utils import (
     extract_base_model_name,
     prepare_prompt_output_filename,
 )
-
+from settings.aliases import (
+    DATASET_NAME_TO_TAG,
+    MODEL_TAG_TO_NAME,
+)
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 
 def get_latest_datetime_dir(base_dir: str) -> str:
-    """
-    Scan direct subdirectories of base_dir for timestamped names
-    and return the most recent. If none, returns base_dir.
-    """
     dt_dirs = []
     for name in os.listdir(base_dir):
         path = os.path.join(base_dir, name)
@@ -68,23 +60,20 @@ def augment_incorrect_with_knowledge(
     batch_size: int,
     retriever_model: str,
     rerank_type: str = None,
-    mmr_threshold: float = 0.8,
     filter_threshold: float = 0.85,
 ) -> None:
     
     LIMIT_SAMPLES = 300  # Limit samples for testing
 
     logging.info("=== Starting augment_incorrect_with_knowledge ===")
-    # Load and clean your config dict
-    raw_config = load_yaml("settings/model_config.json")["generation_config"]
-
+    # Load config files
+    gen_config = load_yaml("settings/model_config.json")["generation_config"]
     # Remove sampling args if not needed
-    if not raw_config.get("do_sample", False):
-        raw_config.pop("top_k", None)
-        raw_config.pop("top_p", None)
-
+    if not gen_config.get("do_sample", False):
+        gen_config.pop("top_k", None)
+        gen_config.pop("top_p", None)
     # Create a new, explicit GenerationConfig
-    gen_config = GenerationConfig(**raw_config)
+    gen_config = GenerationConfig(**gen_config)
 
     # Determine input run directory
     run_dir = os.path.join(
@@ -115,20 +104,17 @@ def augment_incorrect_with_knowledge(
         raise FileNotFoundError(f"No TSV file containing '{prompt_name}' found in {accuracy_dir}")
     logging.info("Found input TSV: %s", input_path)
 
-    # Load & filter dataset
+    # Load & preprocess dataset
     input_dataset = load_local_dataset(input_path)
     input_dataset = input_dataset.map(split_choices, remove_columns=["choices"])
-    
     total = len(input_dataset)
     logging.info("Loaded and preprocessed %d samples", total)
-
     input_dataset = input_dataset.filter(
         lambda s: int(s["xfinder_extracted_answers_mismatch"]) == 0
                   and int(s["xfinder_acc_llama"]) == 0
     )
     input_dataset = input_dataset.shuffle()
     input_dataset = input_dataset.select(range(min(len(input_dataset), LIMIT_SAMPLES)))
-
     incorrect_count = len(input_dataset)
     logging.info("Filtered to %d incorrect samples", incorrect_count)
 
@@ -151,12 +137,8 @@ def augment_incorrect_with_knowledge(
     torch.set_grad_enabled(False)
     logging.info("Model ready for inference")
 
-    # ---- Updated batching logic (mirroring script 1) ------------------------
     outputs: List[Dict[str, str]] = []
-
-    # Estimate total batches for tqdm progress bar
     n_batches = ceil(incorrect_count / batch_size) if batch_size else 0
-
     for batch in tqdm(
         input_dataset.batch(batch_size=batch_size),
         desc=f"Batched inference ({batch_size})",
@@ -168,19 +150,18 @@ def augment_incorrect_with_knowledge(
         # Re-create sample dictionaries for this batch
         samples = [{k: batch[k][i] for k in batch} for i in range(batch_len)]
 
-        # 1) Batched retrieval
+        # Retrieve knowledge
         queries = [concatenate_question_choices(s) for s in samples]
         batch_ckb_lists = retriever.retrieve_top_k(
             queries,
             top_k=top_k,
             batch_size=512,
             re_rank=rerank_type,
-            lambda_=mmr_threshold,
             diversity_threshold=filter_threshold,
             pool_size=top_k * 100,
         )
 
-        # 2) Build prompts + bookkeeping
+        # Build prompts
         batch_prompts = []
         prompt_meta = []          # (sample_dict, prompt_obj, rank)
         for sample, ckb_stmts in zip(samples, batch_ckb_lists):
@@ -193,18 +174,16 @@ def augment_incorrect_with_knowledge(
                 batch_prompts.append(pr)
                 prompt_meta.append((sample, pr, rank))
 
-        # 3) Batched generation
+        # Generate Outputs
         decoded_texts = batched_generate_text(
             model, tokenizer, batch_prompts, gen_config
         )
 
-        # 4) Collect outputs
+        # Collect outputs
         for text, (sample, pr, rank) in zip(decoded_texts, prompt_meta):
             outputs.append(
                 prepare_output_retriever_training(sample, pr, text, rank)
             )
-    # ------------------------------------------------------------------------
-
     logging.info("Inference complete: generated %d outputs", len(outputs))
 
     # Prepare output directory
@@ -232,9 +211,6 @@ def augment_incorrect_with_knowledge(
         writer.writerows(outputs)
     logging.info("Wrote %d rows to %s", len(outputs), prompt_output_path)
 
-    logging.info("=== augment_incorrect_with_knowledge completed ===")
-
-
 def main() -> None:
     parser = ArgumentParser(description="Batched CKB-based QA inference.")
     parser.add_argument("--input_dir_root", type=str, required=True,
@@ -261,12 +237,10 @@ def main() -> None:
                         help="Top k retrieval count.")
     parser.add_argument("--batch_size", type=int, default=4,
                         help="Number of samples to process per batch.")
-    parser.add_argument("--mmr_threshold", default=0.8, type=float,
-                        help="MMR threshold value.")
     parser.add_argument("--filter_threshold", default=0.85, type=float,
                         help="Filter threshold value.")
     parser.add_argument("--rerank_type", type=str, default=None,
-                        help="Reranking strategy, e.g. 'mmr', 'filter', None.")
+                        help="Reranking strategy, e.g. 'filter', None.")
     args = parser.parse_args()
 
     # Resolve any aliases
@@ -288,7 +262,6 @@ def main() -> None:
         batch_size=args.batch_size,
         retriever_model=args.retriever_model,
         rerank_type=args.rerank_type,
-        mmr_threshold=args.mmr_threshold,
         filter_threshold=args.filter_threshold,
 
     )

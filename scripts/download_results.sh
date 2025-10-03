@@ -10,8 +10,8 @@ SOURCE_ROOT="outputs/inference"
 OUTPUT_ROOT="outputs/upload2gdrive/inference"
 DATASET_LIST="obqa,qasc,csqa"
 MODELS="Llama-3.1-8B-Instruct,Llama-3.2-3B-Instruct,Qwen2.5-1.5B-Instruct,Qwen2.5-7B-Instruct"
-RUN_NAMES="tr_fscotk5_it2_newkb_contextual_counter"
-NO_ACCURACY=true
+RUN_NAMES="tr_fscotk5_it2,fscot,fs"
+NO_ACCURACY=false
 # ────────────────────────────────────────────────────────────────────────────
 
 die() { printf "❌  %s\n" "$*" >&2; exit 1; }

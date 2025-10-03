@@ -29,7 +29,6 @@ def merge_jsonl_directory(source_dir: str, output_dir: str):
                 merged_data[name]["synset_definition"] = entry["synset_definition"]
             merged_data[name]["statements"].extend(entry["statements"])
 
-    # Deduplicate and format
     merged_ckb = []
     for name, data in merged_data.items():
         merged_ckb.append({
@@ -48,11 +47,9 @@ def merge_jsonl_directory(source_dir: str, output_dir: str):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-
     parser = ArgumentParser(description="Merge all CKB JSONL files in a directory.")
     parser.add_argument("--source_dir", type=str, required=True, help="Directory containing JSONL files to merge.")
     parser.add_argument("--output_dir", type=str, required=False, help="Directory to store the merged output.")
-
     args = parser.parse_args()
 
     if not args.output_dir:
