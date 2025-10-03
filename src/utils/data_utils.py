@@ -41,7 +41,7 @@ def from_words_to_synsets(list_of_words):
 
 
 def synsets_from_batch(samples, ner_pipeline, batch_size=32):
-             # generator = iterator
+    # generator = iterator
     batch_synsets = []
 
     for spans in ner_pipeline(samples, batch_size=batch_size):
@@ -49,22 +49,6 @@ def synsets_from_batch(samples, ner_pipeline, batch_size=32):
             from_words_to_synsets(extract_unique_words(spans))
         )
     return batch_synsets
-
-# For progress bar
-'''
-def synsets_from_batch(samples, ner_pipeline, batch_size=32):
-    sample_iter = (s for s in samples)          # generator = iterator
-    batch_synsets = []
-
-    for spans in tqdm(
-            ner_pipeline(sample_iter, batch_size=batch_size),
-            total=len(samples),
-            desc="Extracting synsets"):
-        batch_synsets.append(
-            from_words_to_synsets(extract_unique_words(spans))
-        )
-    return batch_synsets
-'''
 
 def extract_synsets(samples, ner_pipeline):
     if isinstance(samples, str):
@@ -87,7 +71,6 @@ def extract_synsets(samples, ner_pipeline):
         synsets_per_sample.append(synsets)
 
     return synsets_per_sample[0] if len(synsets_per_sample) == 1 else synsets_per_sample
-
 
 def concatenate_question_choices(samples):
     samples = [samples] if not isinstance(samples, list) else samples # Reads single string or list of strings

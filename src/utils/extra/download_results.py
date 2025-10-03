@@ -28,7 +28,6 @@ def copy_accuracy_tsv_files(
                 # Check if subfolders exist
                 latest_date_folder = find_latest_subdir(source_run_path)
                 if latest_date_folder is None:
-                    # No subfolders → use source_run_path itself
                     selected_source_folder = source_run_path
                     selected_folder_name = "root"
                 else:
@@ -57,7 +56,7 @@ def copy_accuracy_tsv_files(
 
                 for file in tsv_files:
                     shutil.copy(file, dest_path / file.name)
-                    print(f"✅ Copied {file} → {dest_path / file.name}")
+                    print(f"Copied {file} to {dest_path / file.name}")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()

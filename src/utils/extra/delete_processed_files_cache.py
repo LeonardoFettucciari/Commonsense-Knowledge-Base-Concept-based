@@ -11,17 +11,17 @@ def delete_cache(input_dir: str):
                 logging.info(f"Deleted: {full_path}")
 
 if __name__ == "__main__":
-    parser = ArgumentParser(description="Inference script for CKB-based QA tasks.")
+    parser = ArgumentParser(description="Delete cache files.")
     parser.add_argument(
         "--input_dir",
         type=str,
         required=True,
-        help="Input directory to get files to extract positives/negatives from."
+        help="Input directory."
     )
 
     args = parser.parse_args()
 
     logging.basicConfig(level=logging.INFO)
-    logging.info("Launching extraction script...")
+    logging.info("Deleting cache...")
     delete_cache(**vars(args))
-    logging.info("Extraction complete.")
+    logging.info("Cache deleted.")

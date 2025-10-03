@@ -6,27 +6,13 @@ import glob
 import random
 from src.utils.io_utils import load_local_file, append_to_local_file
 from src.utils.string_utils import extract_key_value_pairs_from_filename, kwargs_to_filename
-from settings.aliases import (
-    DATASET_NAME_TO_TAG,
-    DATASET_TAG_TO_NAME,
-    MODEL_TAG_TO_NAME,
-    PROMPT_TYPE_ALIASES,
-)
+from settings.aliases import MODEL_TAG_TO_NAME
 from src.utils.string_utils import extract_base_model_name
-
 import os
 import glob
 
 def find_latest_accuracy_file(base_path, prompt):
-    """
-    Given a base experiment path (e.g., outputs/inference/obqa/llama8B/baseline),
-    this function:
-      1. Uses base_path/accuracy if it exists
-      2. Otherwise, finds the latest-dated subfolder (lexically sorted) under base_path,
-         and uses its accuracy/ folder.
-    Returns the path to the first TSV file matching the given prompt in its name.
-    """
-    # 1. Check if base_path/accuracy exists
+    # Check if base_path/accuracy exists
     direct_accuracy = os.path.join(base_path, "accuracy")
     if os.path.isdir(direct_accuracy):
         candidates = glob.glob(os.path.join(direct_accuracy, f"*{prompt}*.tsv"))
@@ -35,7 +21,7 @@ def find_latest_accuracy_file(base_path, prompt):
         else:
             raise FileNotFoundError(f"no TSV file with prompt '{prompt}' found in {direct_accuracy}")
 
-    # 2. Else, find latest dated subfolder and look there
+    # Else, find latest dated subfolder and look there
     date_folders = [d for d in glob.glob(os.path.join(base_path, "*/")) if os.path.isdir(d)]
     if not date_folders:
         raise FileNotFoundError(f"No subfolders found in {base_path}, and no accuracy/ folder present.")
@@ -162,11 +148,11 @@ def compare_for_annotation(input_path1,
     kb_meta.pop('prompt', None)
     output_filename = f"{prompt_prefix}|{kwargs_to_filename(extension='tsv', **kb_meta)}"
 
-    print(f"✅ Saved output in: {out_dir}")
+    print(f"Saved output in: {out_dir}")
     fieldnames = ["dataset", "model", "case", "id", "question", "choices", "ground_truth", f"output_{prompt1}", f"output_{prompt2}", "ckb_statements", f"answer_{prompt1}", f"answer_{prompt2}"]
     append_to_local_file(output_data, os.path.join(out_dir, output_filename), fieldnames=fieldnames)
 
-    print(f"✅ Compared: {os.path.basename(input_path1)} vs {os.path.basename(input_path2)}")
+    print(f"Compared: {os.path.basename(input_path1)} vs {os.path.basename(input_path2)}")
 
 def main():
     parser = argparse.ArgumentParser()
@@ -183,7 +169,6 @@ def main():
 
     args.model = MODEL_TAG_TO_NAME.get(args.model, args.model)
     args.model = extract_base_model_name(args.model)
-
     root = os.path.join("outputs", "inference", args.dataset, args.model)
     path1 = find_latest_accuracy_file(os.path.join(root, args.exp1), args.prompt1)
     path2 = find_latest_accuracy_file(os.path.join(root, args.exp2), args.prompt2)

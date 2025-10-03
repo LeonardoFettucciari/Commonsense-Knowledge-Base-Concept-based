@@ -48,27 +48,6 @@ def kwargs_to_path(dir: str, extension: str = 'tsv', **kwargs) -> str:
 
     return os.path.join(dir, output_name)
 
-
-def prepare_prompt_output_path_refine(model_output_path, extension, **kwargs):
-    """
-    Constructs an output file path by appending key-value pairs and an extension.
-
-    Args:
-        model_output_path (str): The base directory for the output file.
-        extension (str): The file extension (e.g., 'txt', 'json').
-        **kwargs: Key-value pairs to include in the filename.
-
-    Returns:
-        str: The full output file path.
-    """
-    if not kwargs:
-        raise ValueError("At least one key-value pair must be provided in kwargs.")
-        
-    output_name = "|".join(f"{key}={value}" for key, value in kwargs.items())
-    output_name = f"{output_name}.{extension}"
-
-    return os.path.join(model_output_path, output_name)
-
 def extract_value_from_key_in_file_name(filename, key):
     filename, _ = os.path.splitext(filename)
     # Split the filename by the '|' separator to get individual key=value parts.
@@ -84,15 +63,6 @@ def extract_value_from_key_in_file_name(filename, key):
     return None
 
 def extract_key_value_pairs(filename):
-    """
-    Extracts all key-value pairs from a given filename string.
-    
-    Args:
-        filename (str): The filename containing key-value pairs separated by '|'.
-    
-    Returns:
-        dict: A dictionary containing extracted key-value pairs.
-    """
     key_value_dict = {}
     
     filename, _ = os.path.splitext(filename)
@@ -107,15 +77,6 @@ def extract_key_value_pairs(filename):
     return key_value_dict
 
 def extract_key_value_pairs_from_filename(filename):
-    """
-    Extracts all key-value pairs from a given filename string.
-    
-    Args:
-        filename (str): The filename containing key-value pairs separated by '|'.
-    
-    Returns:
-        dict: A dictionary containing extracted key-value pairs.
-    """
     key_value_dict = {}
     
     # Split the filename by '|' to get individual key=value parts.

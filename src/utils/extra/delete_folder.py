@@ -2,9 +2,6 @@ import os
 import shutil
 
 def delete_folders_by_name(parent_folder, target_folder_name):
-    """
-    Recursively delete all folders named `target_folder_name` under `parent_folder`.
-    """
     for dirpath, dirnames, filenames in os.walk(parent_folder, topdown=False):
         for dirname in dirnames:
             if dirname == target_folder_name:
@@ -16,7 +13,7 @@ def delete_folders_by_name(parent_folder, target_folder_name):
                     print(f"Failed to delete {folder_to_delete}: {e}")
 
 if __name__ == "__main__":
-    parent = "outputs/inference"  # <-- Replace with your folder path
-    folder_name_to_delete = "tr_fscotk5_it2_newkb_contextual_counter"   # <-- Replace with the folder name you want to delete
+    parent = "outputs/inference" 
+    folder_name_to_delete = ""
 
     delete_folders_by_name(parent, folder_name_to_delete)

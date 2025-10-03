@@ -70,10 +70,6 @@ def save_local_file(data, file_path):
         raise ValueError(f"Unsupported file extension: {file_path}")
 
 def append_to_local_file(data, file_path, fieldnames=None):
-    """
-    Appends `data` to an existing file if it exists, or creates a new one if it doesn't.
-    Supported formats: .jsonl, .csv, .tsv
-    """
     if not data:
         return
     
@@ -143,10 +139,6 @@ def save_output_to_file(relative_path,
             tsv_writer.writerow(row_list)
 
 def load_ckb(ckb_path: str, retrieval_scope: str):
-    """
-    Load the knowledge base from `ckb_path`.
-    Depending on retrieval_scope, we might load a dict or a list, etc.
-    """
     if retrieval_scope == "cner+retriever":
         logging.info("Loading CKB as a dictionary for synset-based retrieval.")
         ckb_dict = load_kb_as_dict(ckb_path)
@@ -215,17 +207,6 @@ def prepare_output_retriever_training(sample, prompt, answer, top_k_index):
     }
     return output
 
-def prepare_output_refine(sample, prompt, original_answer, refine_answer):
-    return {
-        "id": sample["id"],
-        "question": sample["question"],
-        "choices": "\n".join([f"{label}. {choice}" for label, choice in zip(sample['choices']['label'], sample['choices']['text'])]),
-        "ground_truth": sample['ground_truth'],
-        "ckb_statements": "\n".join(sample['ckb_statements'][:prompt.top_k]),
-        "model_output": original_answer,
-        "model_output_refine": refine_answer,
-    }
-
 def csv_to_dict(path):
     with open(path, mode="r", newline="") as file:
         csv_reader = csv.DictReader(file)  
@@ -260,7 +241,6 @@ def write_accuracy_summary(input_dir):
 
 
 def parse_filename_keys(filename):
-    """Parses a filename like key=val|key2=val2.ext into an OrderedDict, removing any extension"""
     base, _ = os.path.splitext(filename)  # removes the extension
     parts = base.split("|")
     return dict(part.split("=", 1) for part in parts if "=" in part)
@@ -322,14 +302,12 @@ def all_jsonl_to_tsv(input_dir):
             jsonl_to_tsv(file_path) 
 
 def save_jsonl(data, file_path):
-    """Save a list of dictionaries into a JSONL file."""
     with open(file_path, 'w', encoding='utf-8') as f:
         for entry in data:
             f.write(json.dumps(entry, ensure_ascii=False) + '\n')
 
 
 def hash_file(filepath):
-    """Generate SHA256 hash of a file's content."""
     hasher = hashlib.sha256()
     with open(filepath, 'rb') as f:
         while chunk := f.read(8192):

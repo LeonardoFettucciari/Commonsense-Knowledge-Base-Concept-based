@@ -6,19 +6,15 @@ import json
 import torch
 from src.utils.io_utils import load_json
 from typing import List, Dict, Any
-
-
+import time
+import torch
+from transformers import AutoModelForCausalLM, AutoTokenizer
+from huggingface_hub.utils import HfHubHTTPError, RepositoryNotFoundError
 
 
 def get_model_settings(config_path: str) -> Dict[str, Any]:
     with open(config_path, 'r') as f:
         return json.load(f)
-
-
-import time
-import torch
-from transformers import AutoModelForCausalLM, AutoTokenizer
-from huggingface_hub.utils import HfHubHTTPError, RepositoryNotFoundError
 
 def load_model_and_tokenizer(
     model_name: str,
@@ -52,8 +48,6 @@ def load_model_and_tokenizer(
             print(f"Retrying in {retry_wait} seconds...")
             time.sleep(retry_wait)
 
-
-
 def get_ner_pipeline(model_name: str):
     tokenizer = AutoTokenizer.from_pretrained(model_name, model_max_length=512)
     model = AutoModelForTokenClassification.from_pretrained(model_name)
@@ -63,7 +57,6 @@ def get_ner_pipeline(model_name: str):
         tokenizer=tokenizer,
         aggregation_strategy="simple",
     )
-
 
 def load_gemini_model(
     model_name: str,
@@ -77,7 +70,6 @@ def load_gemini_model(
         generation_config=generation_config,
         system_instruction=system_instruction,
     )
-
 
 def clean_statement(model_output: str) -> List[str]:
     parts = re.split(r'^\d+\.\s+', model_output, flags=re.MULTILINE)
@@ -100,7 +92,6 @@ def get_statement(
                 "statements": cleaned,
             })
     return all_outputs
-
 
 def get_statements(llm, synsets_all_samples: Any, definitions_all_samples: Any) -> Any:
     all_batches = []
@@ -175,7 +166,7 @@ def batched_generate_text(
     if device is None:
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # 1) Batch-tokenize with chat template (may return dict or Tensor)
+    # Batch-tokenize with chat template (may return dict or Tensor)
     batch = tokenizer.apply_chat_template(
         [p.messages for p in prompts],
         return_tensors="pt",
@@ -191,7 +182,7 @@ def batched_generate_text(
         attention_mask = (input_ids != tokenizer.pad_token_id).long().to(device)
 
 
-    # 4) Generate in one go
+    # Generate
     with torch.no_grad():
         outputs = model.generate(
             input_ids=input_ids,
@@ -200,12 +191,12 @@ def batched_generate_text(
             generation_config=gen_config,
         )
 
-    # 5) Extract sequences
+    # Extract sequences
     sequences = outputs.sequences if gen_config.return_dict_in_generate else outputs
 
     
 
-    # 6) Slice and decode
+    # Slice and decode
     decoded_texts: List[str] = []
     for i, seq in enumerate(sequences):
         prompt_len = input_ids.shape[1]  # total length of the input prompt

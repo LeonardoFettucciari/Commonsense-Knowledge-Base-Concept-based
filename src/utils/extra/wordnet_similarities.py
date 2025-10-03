@@ -8,12 +8,6 @@ nltk.download('wordnet_ic')
 brown_ic = wordnet_ic.ic('ic-brown.dat')
 
 def semantically_similar_synsets_from_lemma(lemma_str, threshold=0.0):
-    """
-    Given a lemma name, compares the first synset against all synsets of that lemma
-    using multiple WordNet similarity functions.
-
-    Returns a list of tuples: (cand_synset, scores_dict)
-    """
     synsets = wn.synsets(lemma_str)
     if not synsets:
         return []
@@ -69,6 +63,6 @@ if __name__ == "__main__":
         info = semantically_similar_synsets_from_lemma(lemma)
 
         for syn, scores in info:
-            print(f"\n🔹 {syn.name()} – {syn.definition()}")
+            print(f"\n{syn.name()} – {syn.definition()}")
             for name, score in scores.items():
-                print(f"  {name}_similarity: {score}")
+                print(f"{name}_similarity: {score}")

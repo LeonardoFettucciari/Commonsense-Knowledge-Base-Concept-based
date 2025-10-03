@@ -32,7 +32,7 @@ def main():
             total_positives += n_pos
             total_negatives += n_neg
 
-            print(f"{item.get('id', f'line_{lineno}')}  →  positives: {n_pos}, negatives: {n_neg}")
+            print(f"{item.get('id', f'line_{lineno}')} ,  positives: {n_pos}, negatives: {n_neg}")
 
     print("\n=== Totals ===")
     print(f"Total positives: {total_positives}")

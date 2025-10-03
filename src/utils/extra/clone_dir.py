@@ -1,11 +1,6 @@
 import os
-import shutil
 
 def clone_empty_folder_structure(src_dir, dst_dir):
-    """
-    Clone the folder structure from src_dir to dst_dir,
-    creating empty files with the same names and extensions.
-    """
     if not os.path.exists(src_dir):
         raise FileNotFoundError(f"Source directory not found: {src_dir}")
     
@@ -27,7 +22,6 @@ def clone_empty_folder_structure(src_dir, dst_dir):
 
 # Example usage:
 if __name__ == "__main__":
-    source = "outputs"       # Change this to your actual folder
-    destination = "download/outputs"  # Where to clone the empty structure
-
+    source = "outputs"      
+    destination = "download/outputs"
     clone_empty_folder_structure(source, destination)

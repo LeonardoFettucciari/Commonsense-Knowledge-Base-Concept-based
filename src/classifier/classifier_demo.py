@@ -1,29 +1,20 @@
-from sentence_transformers import CrossEncoder
-import torch.nn as nn
 import torch
-import os
 from tqdm import tqdm
-import torch.nn.functional as F
 from src.utils.model_utils import get_ner_pipeline
-from src.utils.data_utils import extract_synsets, synsets_from_batch
+from src.utils.data_utils import synsets_from_batch
 from transformers import DebertaV2Tokenizer, DebertaV2ForSequenceClassification
 from nltk.corpus import wordnet as wn
 from src.classifier.create_trainingdata_classifier import build_ctx_noun
 from src.utils.io_utils import load_local_file
-from datasets import Dataset
 
-
-# Load the trained DeBERTa model
-model_path = "models/deberta-v3-classifier_wup/final"  # adjust if you use a checkpoint dir
+model_path = "models/deberta-v3-classifier_wup/final" 
 tokenizer = DebertaV2Tokenizer.from_pretrained("microsoft/deberta-v3-base")
 model = DebertaV2ForSequenceClassification.from_pretrained(model_path)
 model.eval()
 model.to("cuda" if torch.cuda.is_available() else "cpu")
-
 ner_pipeline = get_ner_pipeline("Babelscape/cner-base")
 
 # Load oracle sentences
-
 sentences = []
 for dataset in ["csqa", "obqa", "qasc"]:
     data = load_local_file(f"outputs/batches/oracle/{dataset}.jsonl")
@@ -44,17 +35,16 @@ synsets_per_sample = list(tqdm(
 # Inference loop
 scores = []
 device = model.device
-
 for sentence, synsets in tqdm(zip(sentences, synsets_per_sample),
                               total=len(sentences),
                               desc="Processing sentences"):
 
-    synset_ctx = [build_ctx_noun(syn.name()) for syn in synsets]  # exactly what was used in training
+    synset_ctx = [build_ctx_noun(syn.name()) for syn in synsets]
     sentence_batch = [sentence] * len(synsets)
 
     encodings = tokenizer(
-        synset_ctx,                  # text_a  (context)
-        sentence_batch,              # text_b  (sentence)
+        synset_ctx,                  
+        sentence_batch,              
         truncation=True,
         padding=True,
         max_length=256,
@@ -63,7 +53,6 @@ for sentence, synsets in tqdm(zip(sentences, synsets_per_sample),
 
     with torch.no_grad():
         logits = model(**encodings).logits
-        # use softmax for a 2-label HF model
         probs = torch.softmax(logits, dim=-1)[:, 1].cpu().tolist()
 
     scores.append((sentence,

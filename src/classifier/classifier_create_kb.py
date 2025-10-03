@@ -1,11 +1,9 @@
-from sentence_transformers import CrossEncoder
 import torch
 import os
 import json
 from tqdm import tqdm
-import torch.nn.functional as F
 from src.utils.model_utils import get_ner_pipeline
-from src.utils.data_utils import extract_synsets, synsets_from_batch
+from src.utils.data_utils import synsets_from_batch
 from transformers import DebertaV2Tokenizer, DebertaV2ForSequenceClassification
 from nltk.corpus import wordnet as wn
 from src.classifier.create_trainingdata_classifier import build_ctx_noun
@@ -40,13 +38,13 @@ for input_path in tqdm(jsonl_files, desc="Processing JSONL files"):
     input_filename = os.path.splitext(os.path.basename(input_path))[0]
     output_path = f"outputs/batches/contextual_ckb/results/{input_filename}.jsonl"
 
-    # ✅ Skip if output already exists
+    # Skip if output already exists
     if os.path.exists(output_path):
-        print(f"⚠️ Output already exists: {output_path} — skipping.")
+        print(f"Output already exists: {output_path}, skipping...")
         continue
 
-    print(f"\n🔹 Processing file: {input_path}")
-    print(f"   Output will be saved to: {output_path}")
+    print(f"\nProcessing file: {input_path}")
+    print(f"Output will be saved to: {output_path}")
 
     # Load ckb_statements from this file
     data = load_local_file(input_path)
@@ -55,13 +53,13 @@ for input_path in tqdm(jsonl_files, desc="Processing JSONL files"):
         sentences.extend(item["ckb_statements"])
 
     if len(sentences) == 0:
-        print(f"⚠️ No sentences found in {input_path}, skipping.")
+        print(f"No sentences found in {input_path}, skipping...")
         continue
 
     # Limit samples for testing
     if MAX_TEST_SAMPLES_PER_FILE is not None:
         sentences = sentences[:MAX_TEST_SAMPLES_PER_FILE]
-        print(f"⚙️ Limiting to {len(sentences)} samples for testing.")
+        print(f"Limiting to {len(sentences)} samples for testing.")
 
     # Synset extraction
     synsets_per_sample = list(
@@ -70,8 +68,6 @@ for input_path in tqdm(jsonl_files, desc="Processing JSONL files"):
 
     # Collect statements for best synset
     synset_to_statements = defaultdict(list)
-
-    # Process each batch immediately (safe for memory)
     for i in tqdm(range(0, len(sentences), BATCH_SIZE), desc="Scoring batches"):
         batch_sentences = sentences[i:i + BATCH_SIZE]
         batch_synsets = synsets_per_sample[i:i + BATCH_SIZE]
@@ -94,7 +90,7 @@ for input_path in tqdm(jsonl_files, desc="Processing JSONL files"):
         if not batch_sentence_batch:
             continue
 
-        # Run model on this batch
+        # Run model on batch
         encodings = tokenizer(
             batch_synset_ctx,
             batch_sentence_batch,
@@ -119,7 +115,7 @@ for input_path in tqdm(jsonl_files, desc="Processing JSONL files"):
 
             idx += n_syns
 
-        # Free GPU cache after batch (optional but safe)
+        # Cleanup
         del encodings
         del logits
         torch.cuda.empty_cache()
@@ -136,9 +132,9 @@ for input_path in tqdm(jsonl_files, desc="Processing JSONL files"):
             }
             f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
-    print(f"✅ Done. Output saved to: {output_path}")
+    print(f"Done. Output saved to: {output_path}")
 
-    # Final full GPU cache cleanup between files
+    # Final full GPU cache cleanup
     torch.cuda.empty_cache()
 
-print("🎉 All files processed.")
+print("All files processed.")
