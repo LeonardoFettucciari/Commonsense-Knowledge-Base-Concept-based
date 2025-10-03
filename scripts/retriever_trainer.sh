@@ -1,17 +1,14 @@
 #!/usr/bin/env bash
-# ------------------------------------------------------------
-# retriever_trainer.sh – convenience wrapper for the Python trainer
-# ------------------------------------------------------------
 set -Eeuo pipefail
 IFS=$'\n\t'
 
 # defaults
 RETRIEVER_MODEL_TO_FINETUNE="intfloat/e5-base-v2"
-RUN_NAME="iteration_2"
+RUN_NAME="iteration_3"
 TRAINSET_BASE_DIR="outputs/retriever_trainset"
 OUTPUT_DIR="models/retriever_trained_${RUN_NAME}"
 
-die() { printf "❌  %s\n" "$*" >&2; exit 1; }
+die() { printf "%s\n" "$*" >&2; exit 1; }
 
 PARSED=$(getopt -o h --long help,retriever-model-to-finetune:,run-name:,trainset-base-dir:,output-dir: -- "$@") || die
 eval set -- "$PARSED"

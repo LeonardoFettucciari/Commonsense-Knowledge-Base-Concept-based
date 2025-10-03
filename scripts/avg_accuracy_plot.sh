@@ -1,25 +1,20 @@
 #!/usr/bin/env bash
-# -----------------------------------------
-# run_accuracy_plot.sh – per-dataset grouped accuracy plots
-# -----------------------------------------
 set -Eeuo pipefail
 IFS=$'\n\t'
 
-# ── defaults (edit as desired) ──────────────────────────────────────────────
 OUTPUT_NAME="RACo"
 DATASET_LIST="csqa,obqa,qasc"
 RUN_NAMES="\
 zs,\
 zscot,\
-untrained_retriever_zscotk5_retriever_filter,\
-untrained_retriever_zscotk5_RACo_filter"
-GROUPING="2,2"
-COLORS="pink:1,pink:2,blue:1,green:1"
-COLUMN_NAMES="zs,zscot,zscot\\nOur KB,zscot\\nRACo KB"
+"
+GROUPING="1,1"
+COLORS="pink:1,pink:2"
+COLUMN_NAMES="zs,zscot"
 
 PYTHON_SCRIPT="src/utils/extra/avg_accuracy_plot.py"
 
-die() { printf "❌  %s\n" "$*\n" >&2; exit 1; }
+die() { printf "%s\n" "$*\n" >&2; exit 1; }
 
 # ── long-flag parsing ───────────────────────────────────────────────────────
 PARSED=$(getopt -o h --long help,dataset-list:,run-names:,grouping:,colors:,column-names:,output-name: -- "$@") || exit 1
@@ -52,8 +47,8 @@ EOF
   esac
 done
 
-echo "📊  Datasets : $DATASET_LIST"
-echo "📊  Run names: $RUN_NAMES"
+echo "Datasets : $DATASET_LIST"
+echo "Run names: $RUN_NAMES"
 python3 "$PYTHON_SCRIPT" \
   --datasets   "$DATASET_LIST" \
   --run_names  "$RUN_NAMES" \
@@ -61,4 +56,4 @@ python3 "$PYTHON_SCRIPT" \
   --colors     "$COLORS" \
   --column_names "$COLUMN_NAMES" \
   --output_name "$OUTPUT_NAME"
-echo "✅  Plotting complete."
+echo "Plotting complete."

@@ -6,11 +6,11 @@ PYTHON_SCRIPT="src/utils/extra/compare.py"
 # Manually specify configurations below
 datasets=("obqa" "csqa" "qasc")
 models=("llama8B" "llama3B" "qwen1.5B" "qwen7B")
-experiments1=("untrained_retriever_zscotk5_retriever")
-prompts1=("zscot")
+experiments1=("zs")
+prompts1=("zs")
 
-experiments2=("untrained_retriever_zscotk5_RACo")
-prompts2=("zscotk")
+experiments2=("zscot")
+prompts2=("zscot")
 
 # Loop through combinations
 for dataset in "${datasets[@]}"; do

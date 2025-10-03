@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# ------------------------------------------------------------------
-# extract_positives_negatives.sh
-# ------------------------------------------------------------------
 set -Eeuo pipefail
 IFS=$'\n\t'
 
@@ -45,7 +42,7 @@ for MODEL in "${MODELS[@]}"; do
     INPUT_DIR="$BASE_INPUT_DIR/$DATASET/$MODEL/$RUN_NAME"
     OUTPUT_RUN_NAME="${RUN_NAME}_positives_negatives"
 
-    echo "→ dataset=$DATASET | model=$MODEL"
+    echo "dataset=$DATASET | model=$MODEL"
 
     python src/retriever/extract_positives_negatives.py \
       --input_dir      "$INPUT_DIR" \

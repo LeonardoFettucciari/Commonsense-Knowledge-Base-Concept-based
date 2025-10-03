@@ -1,7 +1,4 @@
 #!/usr/bin/env bash
-# -----------------------------------------
-# merge_accuracy.sh – batch accuracy merger
-# -----------------------------------------
 set -Eeuo pipefail
 IFS=$'\n\t'
 
@@ -11,11 +8,11 @@ OUTPUT_DIR="outputs/averages"
 DATASET_LIST="obqa,qasc,csqa"
 MODELS="Llama-3.1-8B-Instruct,Llama-3.2-3B-Instruct,Qwen2.5-1.5B-Instruct,Qwen2.5-7B-Instruct"
 RUN_NAMES="\
-untrained_retriever_zscotk5_retriever_filter,
-untrained_retriever_zscotk5_RACo_filter"
+zs,
+zscot"
 # ────────────────────────────────────────────────────────────────────────────
 
-die() { printf "❌  %s\n" "$*" >&2; exit 1; }
+die() { printf "%s\n" "$*" >&2; exit 1; }
 
 # GNU getopt for long‑flag parsing
 PARSED=$(getopt -o h \
@@ -48,15 +45,13 @@ EOF
   esac
 done
 
-# ── helpers ────────────────────────────────────────────────────────────────
 split_csv() { IFS=',' read -r -a "$2" <<< "$1"; }
 
 split_csv "$DATASET_LIST" DATASETS
 split_csv "$MODELS" MODELS
 split_csv "$RUN_NAMES" RUNS
 
-# ── main call ──────────────────────────────────────────────────────────────
-echo "📋 Merging accuracy files with config:"
+echo "Merging accuracy files with config:"
 echo "  Source root:   $SOURCE_ROOT"
 echo "  Output dir:    $OUTPUT_DIR"
 echo "  Datasets:      ${DATASETS[*]}"

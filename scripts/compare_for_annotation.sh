@@ -9,7 +9,7 @@ models=("llama8B" "llama3B" "qwen1.5B" "qwen7B")
 experiments1=("fscot")
 prompts1=("fscot")
 
-experiments2=("trained_retriever_mmr_fewshot")
+experiments2=("tr_fscotk5_it2")
 prompts2=("fscotk5")
 
 # Loop through combinations

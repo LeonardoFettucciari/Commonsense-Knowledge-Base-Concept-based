@@ -1,24 +1,18 @@
 #!/usr/bin/env bash
-# -----------------------------------------
-# run_inference.sh – batch‐aware inference driver
-# -----------------------------------------
 set -Eeuo pipefail
 IFS=$'\n\t'
 
 
-# ── defaults ────────────────────────────────────────────────────────────────
 OUTPUT_DIR="outputs/inference"
 PROMPT_TYPES="zscotk"
 DATASET_LIST="obqa,csqa,qasc"
 MODEL_NAMES="llama8B,llama3B,qwen1.5B,qwen7B"
-TOP_K_VALUES="10"
+TOP_K_VALUES="5"
 RUN_NAME="run_$(date +%Y%m%d_%H%M%S)"
 BATCH_SIZE=4
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
 
-# ────────────────────────────────────────────────────────────────────────────
-
-die() { printf "❌  %s\n" "$*" >&2; exit 1; }
+die() { printf "%s\n" "$*" >&2; exit 1; }
 
 # GNU getopt for long-flag parsing
 PARSED=$(getopt -o h \
@@ -57,15 +51,11 @@ EOF
   esac
 done
 
-# ── helpers ────────────────────────────────────────────────────────────────
 split_csv() { IFS=',' read -r -a "$2" <<< "$1"; }
-
 split_csv "$DATASET_LIST"            DATASETS
 split_csv "$MODEL_NAMES"             MODELS
-
 mkdir -p "$OUTPUT_DIR"
 
-# ── main loop ──────────────────────────────────────────────────────────────
 for DATASET in "${DATASETS[@]}"; do
   for MODEL in "${MODELS[@]}"; do
     echo "▶ run-name=$RUN_NAME dataset=$DATASET  model=$MODEL prompts=$PROMPT_TYPES top-k=$TOP_K_VALUES  batch=$BATCH_SIZE"

@@ -1,13 +1,9 @@
 #!/usr/bin/env bash
-# run_retriever_pipeline.sh
 # Usage: bash run_retriever_pipeline.sh --iteration <iteration_number> --rerank-type <type>
-# Example: bash run_retriever_pipeline.sh --iteration 2 --rerank-type mmr
 
 set -euo pipefail
 
-########################################
 # 1. Parse & validate arguments
-########################################
 ITER=""
 RERANK_TYPE=""
 
@@ -22,7 +18,7 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
     *)
-      echo "❌ Unknown option: $1"
+      echo "Unknown option: $1"
       echo "Usage: $0 --iteration <number> --rerank-type <type>"
       exit 1
       ;;
@@ -31,20 +27,18 @@ done
 
 # Check required arguments
 if [[ -z "$ITER" || -z "$RERANK_TYPE" ]]; then
-  echo "❌ Missing required arguments."
+  echo "Missing required arguments."
   echo "Usage: $0 --iteration <number> --rerank-type <type>"
   exit 1
 fi
 
-# Ensure iteration is a positive integer ≥ 1
+# Ensure iteration is a positive integer >= 1
 if ! [[ "$ITER" =~ ^[0-9]+$ ]] || [[ "$ITER" -lt 1 ]]; then
-  echo "❌ Error: --iteration must be an integer ≥ 1"
+  echo "Error: --iteration must be an integer >= 1"
   exit 1
 fi
 
-########################################
 # 2. Derived paths & names
-########################################
 PREV_ITER=$((ITER - 1))
 if [[ -n "$RERANK_TYPE" ]]; then
   RUN_NAME="${RERANK_TYPE}/iteration_${ITER}"
@@ -60,9 +54,7 @@ else
   PREV_MODEL="models/retriever_trained_iteration_${RERANK_TYPE}${PREV_ITER}/final"
 fi
 
-########################################
 # 3. Pipeline
-########################################
 echo "=== [1/4] Augmenting incorrect predictions with knowledge (iteration $ITER) ==="
 bash scripts/augment_incorrect_with_knowledge.sh \
   --retriever-model "$PREV_MODEL" \
@@ -85,4 +77,4 @@ bash scripts/retriever_trainer.sh \
   --trainset-base-dir outputs/retriever_trainset \
   --output-dir "$OUTPUT_DIR"
 
-echo "✅  Pipeline finished for $RUN_NAME"
+echo "Pipeline finished for $RUN_NAME"

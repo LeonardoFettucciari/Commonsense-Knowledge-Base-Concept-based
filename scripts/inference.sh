@@ -1,12 +1,8 @@
 #!/usr/bin/env bash
-# -----------------------------------------
-# run_inference.sh – batch‐aware inference driver
-# -----------------------------------------
 set -Eeuo pipefail
 IFS=$'\n\t'
 
 
-# ── defaults ────────────────────────────────────────────────────────────────
 OUTPUT_DIR="outputs/inference"
 PROMPT_TYPES="zscotk"
 CKB_PATH="data/ckb/cleaned/merged_filtered.jsonl"
@@ -14,21 +10,18 @@ DATASET_LIST="obqa,csqa,qasc"
 MODEL_NAMES="llama8B,llama3B,qwen1.5B,qwen7B"
 RETRIEVAL_STRATEGY_LIST="cner+retriever"
 TOP_K_VALUES="5"
-RETRIEVER_MODEL="models/retriever_trained_itereation_filter1/final"
-LAMBDA=0.8
+RETRIEVER_MODEL="intfloat/e5-base-v2"
 DIVERSITY_THRESHOLD=0.85
 RERANK_TYPE=""
 RUN_NAME="run_$(date +%Y%m%d_%H%M%S)"
 BATCH_SIZE=4
 TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S)
 
-# ────────────────────────────────────────────────────────────────────────────
-
-die() { printf "❌  %s\n" "$*" >&2; exit 1; }
+die() { printf "%s\n" "$*" >&2; exit 1; }
 
 # GNU getopt for long-flag parsing
 PARSED=$(getopt -o h \
-  --long help,rerank-type:,lambda:,prompt-types:,ckb-path:,dataset-list:,model-names:,\
+  --long help,rerank-type:,prompt-types:,ckb-path:,dataset-list:,model-names:,\
 retrieval-strategy-list:,top-k-values:,retriever-model:,output-dir:,diversity-threshold:,\
 run-name:,batch-size: \
   -- "$@") || exit 1
@@ -37,7 +30,6 @@ eval set -- "$PARSED"
 while true; do
   case "$1" in
     --rerank-type)            RERANK_TYPE=$2; shift 2 ;;
-    --lambda)                 LAMBDA=$2; shift 2 ;;
     --prompt-types)           PROMPT_TYPES=$2; shift 2 ;;
     --ckb-path)               CKB_PATH=$2; shift 2 ;;
     --dataset-list)           DATASET_LIST=$2; shift 2 ;;
@@ -57,7 +49,6 @@ Required:
   --rerank-type <TYPE>            rerank strategy (e.g. mmr, none…)
 
 Optional (defaults in brackets):
-  --lambda <FLOAT>                balance factor             [$LAMBDA]
   --prompt-types <LIST>           prompt templates           [$PROMPT_TYPES]
   --ckb-path <PATH>               cleaned CKB jsonl           [$CKB_PATH]
   --dataset-list <LIST>           datasets comma-sep         [$DATASET_LIST]
@@ -77,20 +68,17 @@ EOF
   esac
 done
 
-# ── helpers ────────────────────────────────────────────────────────────────
 split_csv() { IFS=',' read -r -a "$2" <<< "$1"; }
-
 split_csv "$DATASET_LIST"            DATASETS
 split_csv "$MODEL_NAMES"             MODELS
 split_csv "$RETRIEVAL_STRATEGY_LIST" RETRIEVAL_STRATEGIES
 
 mkdir -p "$OUTPUT_DIR"
 
-# ── main loop ──────────────────────────────────────────────────────────────
 for DATASET in "${DATASETS[@]}"; do
   for MODEL in "${MODELS[@]}"; do
     for RETRIEVAL in "${RETRIEVAL_STRATEGIES[@]}"; do
-      echo "▶ dataset=$DATASET  model=$MODEL  rerank_type=$RERANK_TYPE  λ=$LAMBDA  top-k=$TOP_K_VALUES  batch=$BATCH_SIZE"
+      echo "▶ dataset=$DATASET  model=$MODEL  rerank_type=$RERANK_TYPE  top-k=$TOP_K_VALUES  batch=$BATCH_SIZE"
 
       python src/inference/inference.py \
         --output_dir          "$OUTPUT_DIR" \
@@ -101,7 +89,6 @@ for DATASET in "${DATASETS[@]}"; do
         --prompt_types        "$PROMPT_TYPES" \
         --top_k_values        "$TOP_K_VALUES" \
         --rerank_type         "$RERANK_TYPE" \
-        --lambda_             "$LAMBDA" \
         --retriever_model     "$RETRIEVER_MODEL" \
         --diversity_threshold "$DIVERSITY_THRESHOLD" \
         --run_name            "$RUN_NAME" \

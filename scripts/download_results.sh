@@ -10,11 +10,11 @@ SOURCE_ROOT="outputs/inference"
 OUTPUT_ROOT="outputs/upload2gdrive/inference"
 DATASET_LIST="obqa,qasc,csqa"
 MODELS="Llama-3.1-8B-Instruct,Llama-3.2-3B-Instruct,Qwen2.5-1.5B-Instruct,Qwen2.5-7B-Instruct"
-RUN_NAMES="tr_fscotk5_it2,fscot,fs"
+RUN_NAMES="zs,zscot"
 NO_ACCURACY=false
 # ────────────────────────────────────────────────────────────────────────────
 
-die() { printf "❌  %s\n" "$*" >&2; exit 1; }
+die() { printf "%s\n" "$*" >&2; exit 1; }
 
 # GNU getopt for long‑flag parsing
 PARSED=$(getopt -o h \
@@ -57,7 +57,7 @@ split_csv "$MODELS" MODELS
 split_csv "$RUN_NAMES" RUNS
 
 # ── main call ──────────────────────────────────────────────────────────────
-echo "📋 Downloading TSV files with config:"
+echo "Downloading TSV files with config:"
 echo "  Source root:   $SOURCE_ROOT"
 echo "  Output root:   $OUTPUT_ROOT"
 echo "  Datasets:      ${DATASETS[*]}"
