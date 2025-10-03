@@ -5,6 +5,14 @@
 <div align="center">
 
 # Retrieval-Augmented Generation for Commonsense Reasoning: An Empirical Investigation of Challenges and Limitations
+[![PyTorch](https://img.shields.io/badge/Framework-PyTorch-red.svg?logo=pytorch)](https://pytorch.org/)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg?logo=python)](https://www.python.org/)
+[![Hugging Face](https://img.shields.io/badge/Library-HuggingFace-yellow.svg?logo=huggingface)](https://huggingface.co/)
+[![ChatGPT](https://img.shields.io/badge/LLM-ChatGPT-1abc9c.svg?logo=openai)](https://chat.openai.com/)
+[![Google Gemini](https://img.shields.io/badge/LLM-Google%20Gemini-4285F4.svg?logo=googlegemini)](https://ai.google/gemini/)
+[![RAG](https://img.shields.io/badge/Method-RAG-orange.svg)](https://arxiv.org/abs/2005.11401)
+[![Commonsense Reasoning](https://img.shields.io/badge/Task-Commonsense%20Reasoning-lightgrey.svg)](https://en.wikipedia.org/wiki/Commonsense_reasoning)
+[![Sapienza](https://img.shields.io/badge/University-Sapienza-b31b1b.svg)](https://sapienzanlp.uniroma1.it/)
 
 This repository provides the code and resources for investigating how retrieval-augmented generation (RAG) systems handle commonsense reasoning tasks. We focus on three key research questions:
 How do design choices in commonsense knowledge base (KB) construction affect downstream performance?
