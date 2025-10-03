@@ -1,8 +1,5 @@
 <div align="center">
-  <img src="assets/sapienzanlp.png" width="150">
-</div>
-
-<div align="center">
+  <img src="assets/sapienzanlp.png" width="125">
 
 # Retrieval-Augmented Generation for Commonsense Reasoning: An Empirical Investigation of Challenges and Limitations
 [![PyTorch](https://img.shields.io/badge/Framework-PyTorch-red.svg?logo=pytorch)](https://pytorch.org/)
@@ -21,6 +18,7 @@ To what extent can large language models (LLMs) effectively leverage retrieved k
 By systematically analyzing each component, we highlight both the potential and the current shortcomings of RAG for commonsense reasoning.
 
 The following is the repository behind the MSc thesis of Leonardo Fettucciari having Prof. Roberto Navigli as advisor and Dr. Francesco Maria Molfese as co-advisor. 
+</div>
 
 ---
 
