@@ -46,7 +46,7 @@ while true; do
 Batch inference runner
 ----------------------
 Required:
-  --rerank-type <TYPE>            rerank strategy (e.g. mmr, none…)
+  --rerank-type <TYPE>            rerank strategy (e.g. filter, none…)
 
 Optional (defaults in brackets):
   --prompt-types <LIST>           prompt templates           [$PROMPT_TYPES]

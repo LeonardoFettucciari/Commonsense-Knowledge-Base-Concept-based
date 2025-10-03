@@ -9,7 +9,6 @@ count_relevant_factual_neutral = 0
 valid_sample_count = 0
 case_distribution_neutral = Counter({"✅✅": 0, "❌✅": 0, "✅❌": 0, "❌❌": 0})
 
-# --------------------------------------------
 with open(csv_path, newline='', encoding='utf-8') as csvfile:
     reader = csv.DictReader(csvfile)
 

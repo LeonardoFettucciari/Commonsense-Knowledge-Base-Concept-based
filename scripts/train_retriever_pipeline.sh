@@ -19,16 +19,16 @@ while [[ $# -gt 0 ]]; do
       ;;
     *)
       echo "Unknown option: $1"
-      echo "Usage: $0 --iteration <number> --rerank-type <type>"
+      echo "Usage: $0 --iteration <number> [--rerank-type <type>]"
       exit 1
       ;;
   esac
 done
 
 # Check required arguments
-if [[ -z "$ITER" || -z "$RERANK_TYPE" ]]; then
+if [[ -z "$ITER" ]]; then
   echo "Missing required arguments."
-  echo "Usage: $0 --iteration <number> --rerank-type <type>"
+  echo "Usage: $0 --iteration <number> [--rerank-type <type>]"
   exit 1
 fi
 

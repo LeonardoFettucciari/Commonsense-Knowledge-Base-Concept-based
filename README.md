@@ -1,14 +1,9 @@
-# Commonsense QA Concept Extraction and Statement Generation
+# Commonsense Knowledge-Base Project
 
-This project processes the Commonsense QA dataset by extracting key concepts using Named Entity Recognition (NER) and generates commonsense statements using a Gemini language model.
+This repository contains resources and tools for building a **commonsense knowledge-base**, along with methods for **retriever fine-tuning** and **manual annotation**.  
+The goal is to improve the retrieval and reasoning capabilities of downstream NLP applications.
 
-## Features
-
-- Loads and preprocesses Commonsense QA validation data
-- Uses an NER pipeline to extract concept words
-- Retrieves WordNet definitions for concepts
-- Generates commonsense statements using a Gemini language model
-- Saves outputs in a structured TSV file
+---
 
 ## Installation
 
@@ -27,47 +22,42 @@ import nltk
 nltk.download('wordnet')
 ```
 
-## Usage
+## Creating a Commonsense Knowledge-Base
+- Collect raw textual resources (e.g., Wikipedia, scientific articles, QA datasets).
+- Normalize and preprocess text (tokenization, cleaning, deduplication).
+- Extract candidate commonsense triples or statements using automated methods (e.g., dependency parsing, information extraction).
+- Store in a structured format (JSON, CSV, or a graph database) for easy querying.
 
-1. **Load and preprocess data**: The script loads 100 shuffled validation samples from the Commonsense QA dataset.
-2. **Run NER**: It extracts relevant concepts using `Babelscape/cner-base`.
-3. **Retrieve WordNet Definitions**: Extracted concepts are matched with their WordNet definitions.
-4. **Generate Commonsense Statements**: A Gemini language model generates 10 statements per concept.
-5. **Save Output**: Results are stored in `outputs/gemini-pro.tsv`.
+**Example pipeline:**
+1. Data collection → 2. Text preprocessing → 3. Knowledge extraction → 4. Storage & indexing
 
-Run the script:
+---
 
-```bash
-python script.py
-```
+## Retriever Fine-tuning
+- Use the knowledge-base to fine-tune a retriever model (e.g., DPR, ColBERT).
+- Optimize retrieval quality on commonsense-focused benchmarks.
+- Evaluate using metrics such as Recall@k, MRR, and nDCG.
 
-## Configuration
+**Steps:**
+1. Prepare positive (relevant) and negative (irrelevant) pairs.
+2. Fine-tune with contrastive learning or other retrieval objectives.
+3. Evaluate and iterate.
 
-### Model Configuration
+---
 
-Modify the Gemini model settings in the script:
+## Manual Annotation
+- For high-quality supervision, human annotators review and label candidate knowledge.
+- Focus on:
+  - Filtering out noisy or non-commonsense statements.
+  - Validating entity relations.
+  - Creating gold-standard evaluation datasets.
 
-```python
-api_key = "your_api_key_here"  
-model_name = "gemini-pro"  
-generation_config = {"temperature": 0.0, "max_output_tokens": 8192}
-```
+**Tips for annotation:**
+- Provide clear labeling guidelines to annotators.
+- Use annotation tools (e.g., Prodigy, Label Studio).
+- Periodically measure inter-annotator agreement (IAA) to ensure consistency.
 
-Replace `your_api_key_here` with your actual API key.
+---
 
-## Output Format
-
-The results are saved in a TSV file with the following columns:
-
-- `id`: Question ID
-- `question`: The question text
-- `choices`: The available answer choices
-- `gold_truth`: The correct answer
-- `statements`: Generated commonsense statements
-
-## Acknowledgments
-
-- [Commonsense QA Dataset](https://huggingface.co/datasets/tau/commonsense_qa)
-- [Babelscape NER Model](https://huggingface.co/Babelscape/cner-base)
-- [Google Gemini API](https://ai.google.dev/)
+## Getting Started
 
