@@ -1,11 +1,16 @@
-# Commonsense Knowledge-Base Project
+# Retrieval-Augmented Generation for Commonsense Reasoning: An Empirical Investigation of Challenges and Limitations
 
-This repository contains resources and tools for building a **commonsense knowledge-base**, along with methods for **retriever fine-tuning** and **manual annotation**.  
-The goal is to improve the retrieval and reasoning capabilities of downstream NLP applications.
+This repository provides the code and resources for investigating how retrieval-augmented generation (RAG) systems handle commonsense reasoning tasks. We focus on three key research questions:
+How do design choices in commonsense knowledge base (KB) construction affect downstream performance?
+What are the strengths and limitations of different retrieval strategies for commonsense knowledge?
+To what extent can large language models (LLMs) effectively leverage retrieved knowledge?
+By systematically analyzing each component, we highlight both the potential and the current shortcomings of RAG for commonsense reasoning.
+
+The following is the repository behind the MSc thesis of Leonardo Fettucciari having Prof. Roberto Navigli as advisor and Dr. Francesco Maria Molfese as co-advisor. 
 
 ---
 
-## Installation
+## 0. Installation
 
 ### Prerequisites
 
@@ -15,49 +20,172 @@ Ensure you have the following dependencies installed:
 pip install -e .
 ```
 
-Additionally, download NLTK WordNet data:
+## 1. Assessing the Impact of Commonsense Knowledge Base Design Choices
+### 1.1 If you have a KB file:
+Place your `kb.jsonl` file in `data/ckb/cleaned` and skip to section 1.3.
 
-```python
-import nltk
-nltk.download('wordnet')
+### 1.2 Generate a KB from scratch:
+To generate our Knowledge Base we use proprietary LLMs to produce commonsense statements for each noun synset/concept present in WordNet.
+
+Inserting `gemini-1.5-flash` and `gemini-2.0-flash` in `gemini_config.json`, we run for each:
+```bash
+bash scripts/gemini_ckb_creation.sh <API_KEY>
+```
+We merge all raw corpora using:
+```bash
+bash scripts/ckb_merge.sh --source1 <file1.jsonl> --source2 <file2.jsonl> 
+```
+Apply cleanup and deduplication on merged file using:
+```bash
+bash scripts/ckb_cleanup.sh <input_path>
+```
+### 1.3 To collect RACo's KB
+1. Download all files from [this link](https://drive.google.com/drive/folders/1oj2POBBy8kyBFNU5nHb05wu2DlcOfGnV), **except the CBD component**
+2. Run `merge-corpus.py`
+3. Rename file to `raco.jsonl`
+4. Place file in `data/ckb/cleaned`
+
+### 1.4 Evaluation
+We first collect our baselines, using:
+```bash
+bash scripts/inference.sh --prompt-types zs,zscot --run-name baselines
+
+bash scripts/compute_accuracy.sh --run-name baselines
+```
+To generate results with RACo's Knowledge Base, run:
+```bash
+bash scripts/inference.sh --prompt-types zscotk --retrieval-strategy-list retriever --ckb-path data/ckb/cleaned/raco.jsonl --run-name raco
+
+bash scripts/compute_accuracy.sh --run-name raco
+```
+To generate results with our Knowledge Base, run:
+```bash
+bash scripts/inference.sh --prompt-types zscotk --retrieval-strategy-list retriever --ckb-path data/ckb/cleaned/kb.jsonl --run-name kb
+
+bash scripts/compute_accuracy.sh --run-name kb
+```
+---
+## 2. Investigating Retrieval Limitations for Commonsense
+### 2.1 Retrieval Strategies
+We start by comparing the standard and CNER retrieval strategies.
+We have already collected results for the standard retrieval strategy at the previous section.
+
+To collect results using the CNER retrieval strategy, run:
+```bash
+bash scripts/inference.sh --prompt-types zscotk --retrieval-strategy-list cner+retriever --ckb-path data/ckb/cleaned/kb.jsonl --run-name kb_cner
+
+bash scripts/compute_accuracy.sh --run-name kb_cner
 ```
 
-## Creating a Commonsense Knowledge-Base
-- Collect raw textual resources (e.g., Wikipedia, scientific articles, QA datasets).
-- Normalize and preprocess text (tokenization, cleaning, deduplication).
-- Extract candidate commonsense triples or statements using automated methods (e.g., dependency parsing, information extraction).
-- Store in a structured format (JSON, CSV, or a graph database) for easy querying.
+### 2.2 Deduplication
+We explore deduplicating semantically similar statements in the top-k pool retrieved.
 
-**Example pipeline:**
-1. Data collection → 2. Text preprocessing → 3. Knowledge extraction → 4. Storage & indexing
+To do so we add the --rerank-type flag and collect results as:
+```bash
+bash scripts/inference.sh --prompt-types zscotk --retrieval-strategy-list cner+retriever --ckb-path data/ckb/cleaned/kb.jsonl --rerank-type filter --run-name kb_cner_filter
 
+bash scripts/compute_accuracy.sh --run-name kb_cner_filter
+```
+
+### 2.3 Retriever Fine-Tuning
+We iteratively fine-tune our base retriever model through the following script, setting the iteration number to 1, 2 and finally 3:
+```bash
+bash run_retriever_pipeline.sh --iteration <iteration_number>
+```
+We then use the following script to evaluate each trained retriever model:
+
+```bash
+bash scripts/inference.sh --prompt-types zscotk --retriever-model models/retriever_trained_iteration_<iteration_number> --retrieval-strategy-list cner+retriever --ckb-path data/ckb/cleaned/kb.jsonl --rerank-type filter --run-name retriever<iteration_number>
+
+bash scripts/compute_accuracy.sh --run-name retriever<iteration_number>
+```
 ---
+## 3. How effectively do LLMs leverage retrieved knowledge?
+### 3.1 Manual Annotation
+We first generate the few-shot outputs with enhanced guidelines for higher explainability and an easier annotation process:
+```bash
+bash scripts/inference.sh --prompt-types fscot --run-name fscot
+bash scripts/inference.sh --prompt-types fscotk --run-name fscotk5 --retriever-model models/retriever_trained_iteration_2 --retrieval-strategy-list cner+retriever --ckb-path data/ckb/cleaned/kb.jsonl --rerank-type filter 
 
-## Retriever Fine-tuning
-- Use the knowledge-base to fine-tune a retriever model (e.g., DPR, ColBERT).
-- Optimize retrieval quality on commonsense-focused benchmarks.
-- Evaluate using metrics such as Recall@k, MRR, and nDCG.
+bash scripts/compute_accuracy.sh --run-name fscot
+bash scripts/compute_accuracy.sh --run-name fscotk5
+```
+Then we randomly sample entries to build our annotation corpus:
+```bash
+bash scripts/compare_for_annotation.sh --experiment1 fscot --prompt fscot --experiment2 fscotk5 --prompt fscotk5
+```
 
-**Steps:**
-1. Prepare positive (relevant) and negative (irrelevant) pairs.
-2. Fine-tune with contrastive learning or other retrieval objectives.
-3. Evaluate and iterate.
+### 3.2 Oracle-quality Knowledge
+We first generate near perfect knowledge using ChatGPT's API, along a valid API key.
+Set the following in `batch_api_config.yaml`:
+```bash
+obqa:            
+  path: allenai/openbookqa
+  subset: main
+  split: test
 
----
+qasc:            
+  path: allenai/qasc
+  subset: 
+  split: validation
 
-## Manual Annotation
-- For high-quality supervision, human annotators review and label candidate knowledge.
-- Focus on:
-  - Filtering out noisy or non-commonsense statements.
-  - Validating entity relations.
-  - Creating gold-standard evaluation datasets.
+csqa:            
+  path: tau/commonsense_qa
+  subset:
+  split: validation
+```
+Then to generate the knowledge, create batches, run and wait for completion:
+```bash
+python src/ckb_creation/create_batches.py --config_path settings/batch_api_config.yaml --dataset_path csqa --output_dir outputs/batches/oracle
+python src/ckb_creation/create_batches.py --config_path settings/batch_api_config.yaml --dataset_path obqa --output_dir outputs/batches/oracle
+python src/ckb_creation/create_batches.py --config_path settings/batch_api_config.yaml --dataset_path qasc --output_dir outputs/batches/oracle
+```
+```bash
+python src/ckb_creation/batch_polling.py --input_dir outputs/batches/oracle/ --output_dir outputs/batches/oracle/results --api_key <OPENAI_API_KEY>
+```
+Then we use the generated knowledge as retrieved oracle-quality information replacing an external Knowledge Base.
 
-**Tips for annotation:**
-- Provide clear labeling guidelines to annotators.
-- Use annotation tools (e.g., Prodigy, Label Studio).
-- Periodically measure inter-annotator agreement (IAA) to ensure consistency.
+**Note**: If you already have the oracle datasets, place them in `outputs/batches/oracle`.
+```bash
+bash scripts/inference_oracle.sh --run-name oracle
 
----
+bash scripts/compute_accuracy.sh --run-name oracle
+```
+### 3.3 Leveraging Contextually Generated Knowledge
+Similarly as before, we use gpt-4o-mini via API to generate knowledge statements, this time we use the training sets so not to generate oracle knowledge.
+Set the following in `batch_api_config.yaml`:
+```bash
+obqa:            
+  path: allenai/openbookqa
+  subset: main
+  split: train
 
-## Getting Started
+qasc:            
+  path: allenai/qasc
+  subset: 
+  split: train
 
+csqa:            
+  path: tau/commonsense_qa
+  subset:
+  split: train
+```
+Then to generate the knowledge, create batches, run and wait for completion:
+```bash
+python src/ckb_creation/create_batches.py --config_path settings/batch_api_config.yaml --dataset_path csqa --output_dir outputs/batches/contextual_ckb
+python src/ckb_creation/create_batches.py --config_path settings/batch_api_config.yaml --dataset_path obqa --output_dir outputs/batches/contextual_ckb
+python src/ckb_creation/create_batches.py --config_path settings/batch_api_config.yaml --dataset_path qasc --output_dir outputs/batches/contextual_ckb
+```
+```bash
+python src/ckb_creation/batch_polling.py --input_dir outputs/batches/contextual_ckb/ --output_dir outputs/batches/contextual_ckb/results --api_key <OPENAI_API_KEY>
+```
+If you have the `contextual_kb.jsonl`, merge it with the `kb.jsonl` using:
+```bash
+bash scripts/ckb_merge.sh --source1 data/ckb/cleaned/kb.jsonl --source2 data/ckb/cleaned/contextual_kb.jsonl
+```
+Finally, to use the generated knowledge and evaluate the results, run:
+```bash
+bash scripts/inference.sh --run-name contextual --retriever-model models/retriever_trained_iteration_2 --retrieval-strategy-list cner+retriever --ckb-path data/ckb/cleaned/kb.jsonl --rerank-type filter
+
+bash scripts/compute_accuracy.sh --run-name contextual
+```
