@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="https://github.com/LeonardoFettucciari/Commonsense-Knowledge-Base-Concept-based/blob/master/assets/sapienzanlp.png" width="200">
+  <img src="assets/sapienzanlp.png" width="150">
 </div>
 
 <div align="center">
