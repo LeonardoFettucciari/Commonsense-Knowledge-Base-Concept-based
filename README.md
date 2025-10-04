@@ -29,6 +29,10 @@ The following is the repository behind the MSc thesis of Leonardo Fettucciari ha
 Ensure you have the following dependencies installed:
 
 ```bash
+git clone https://github.com/LeonardoFettucciari/Commonsense-Knowledge-Base-Concept-based.git
+cd Commonsense-Knowledge-Base-Concept-based
+conda create -n commonense-kb python==3.10.12
+conda activate commonense-kbv
 pip install -e .
 ```
 
