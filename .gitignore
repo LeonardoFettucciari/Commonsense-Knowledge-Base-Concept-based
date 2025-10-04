@@ -1,17 +1,35 @@
 __pycache__
 .vscode
 CKB.egg-info
+
 outputs/**/*
 !outputs/.gitkeep
 !outputs/**/
+
 models/**/*
 !models/.gitkeep
 !models/**/.gitkeep
+
 data/**/*
 !data/.gitkeep
 !data/**/
+
+# Re-allow csqa, obqa, qasc directories so we can unignore files inside them
+!data/csqa/
+!data/obqa/
+!data/qasc/
+
+# Unignore just these specific CSVs
+!/data/csqa/data=csqa|fscotk_examples.csv
+!/data/csqa/data=csqa|fewshot_examples.csv
+!/data/obqa/data=obqa|fscotk_examples.csv
+!/data/obqa/data=obqa|fewshot_examples.csv
+!/data/qasc/data=qasc|fscotk_examples.csv
+!/data/qasc/data=qasc|fewshot_examples.csv
+
 cache
 settings/client_secret_447940440966-4k538cb6d68qtrgukofc7lg486ia14em.apps.googleusercontent.com.json
 settings/gen-lang-client-0439062772-a6373d0d2e85.json
+
 logs/
 log/
