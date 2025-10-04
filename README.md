@@ -1,10 +1,15 @@
 <div align="center">
-  <img src="https://github.com/LeonardoFettucciari/Commonsense-Knowledge-Base-Concept-based/blob/master/assets/sapienzanlp.png" width="200">
-</div>
-
-<div align="center">
+  <img src="assets/sapienzanlp.png" width="125">
 
 # Retrieval-Augmented Generation for Commonsense Reasoning: An Empirical Investigation of Challenges and Limitations
+[![PyTorch](https://img.shields.io/badge/Framework-PyTorch-red.svg?logo=pytorch)](https://pytorch.org/)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg?logo=python)](https://www.python.org/)
+[![Hugging Face](https://img.shields.io/badge/Library-HuggingFace-yellow.svg?logo=huggingface)](https://huggingface.co/)
+[![ChatGPT](https://img.shields.io/badge/LLM-ChatGPT-1abc9c.svg?logo=openai)](https://chat.openai.com/)
+[![Google Gemini](https://img.shields.io/badge/LLM-Google%20Gemini-4285F4.svg?logo=googlegemini)](https://ai.google/gemini/)
+[![RAG](https://img.shields.io/badge/Method-RAG-orange.svg)](https://arxiv.org/abs/2005.11401)
+[![Commonsense Reasoning](https://img.shields.io/badge/Task-Commonsense%20Reasoning-lightgrey.svg)](https://en.wikipedia.org/wiki/Commonsense_reasoning)
+[![Sapienza](https://img.shields.io/badge/University-Sapienza-b31b1b.svg)](https://sapienzanlp.uniroma1.it/)
 
 This repository provides the code and resources for investigating how retrieval-augmented generation (RAG) systems handle commonsense reasoning tasks. We focus on three key research questions:
 How do design choices in commonsense knowledge base (KB) construction affect downstream performance?
@@ -13,6 +18,7 @@ To what extent can large language models (LLMs) effectively leverage retrieved k
 By systematically analyzing each component, we highlight both the potential and the current shortcomings of RAG for commonsense reasoning.
 
 The following is the repository behind the MSc thesis of Leonardo Fettucciari having Prof. Roberto Navigli as advisor and Dr. Francesco Maria Molfese as co-advisor. 
+</div>
 
 ---
 
@@ -23,6 +29,10 @@ The following is the repository behind the MSc thesis of Leonardo Fettucciari ha
 Ensure you have the following dependencies installed:
 
 ```bash
+git clone https://github.com/LeonardoFettucciari/Commonsense-Knowledge-Base-Concept-based.git
+cd Commonsense-Knowledge-Base-Concept-based
+conda create -n commonense-kb python==3.10.12
+conda activate commonense-kbv
 pip install -e .
 ```
 
