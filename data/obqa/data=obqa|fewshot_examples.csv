@@ -1,0 +1,76 @@
+id,question_stem,choices,answerKey,cot
+7-115,A side effect of having a Husky as a pet is that when she sheds,"{ ""text"": [ ""the dog enjoys being washed out"", ""washing all the fur is easy"", ""it takes hours to vacuum all of the fur"", ""the fur is still attached to the skin"" ], ""label"": [ ""A"", ""B"", ""C"", ""D"" ] }",C,"Understanding the Question:
+The question states that a Husky, as a pet, sheds. The key phrase is ""side effect,"" which suggests an outcome or consequence of shedding. Huskies are known for their thick double coats and heavy shedding, especially during seasonal changes.
+
+Evaluating the Choices:
+(A) ""the dog enjoys being washed out""
+This does not directly relate to shedding. While some dogs may enjoy baths, it is not a guaranteed side effect of shedding.
+(B) ""washing all the fur is easy""
+This contradicts reality. Huskies shed a lot, and cleaning up all the fur is typically difficult, not easy.
+(C) ""it takes hours to vacuum all of the fur""
+This is a realistic consequence. Huskies shed large amounts of fur, often requiring frequent and time-consuming cleaning.
+(D) ""the fur is still attached to the skin""
+This contradicts shedding itself. If the fur is still attached, it has not yet been shed.
+
+Selecting the Best Answer:
+The most logical choice is (C) ""it takes hours to vacuum all of the fur"" because excessive shedding leads to a large amount of loose fur in the home, which requires a lot of effort to clean."
+10-262,A bicycle may be used for,"{ ""text"": [ ""rain"", ""cats"", ""coffee grinding"", ""elephants"" ], ""label"": [ ""A"", ""B"", ""C"", ""D"" ] }",C,"Understanding the Question:
+The question asks what a bicycle may be used for. Bicycles are typically used for transportation, exercise, or mechanical applications involving rotational energy.
+
+Evaluating the Choices:
+(A) ""rain""
+Rain is a weather condition. A bicycle is not ""used for"" rain.
+(B) ""cats""
+Cats are animals, and while they might ride in a bicycle basket, a bicycle itself is not specifically used for cats.
+(C) ""coffee grinding""
+This could be possible in a specialized setting where a bicycle's pedal motion powers a mechanical grinder.
+(D) ""elephants""
+Bicycles are not designed for elephants in any practical way.
+
+Selecting the Best Answer:
+The most logical answer is (C) ""coffee grinding"" because bicycles can be adapted to power mechanical devices, such as coffee grinders, by converting pedaling motion into mechanical energy."
+12-687,Freezing point is best represented by,"{ ""text"": [ ""ice sculpture"", ""glass of water"", ""flowing rivers"", ""water falls"" ], ""label"": [ ""A"", ""B"", ""C"", ""D"" ] }",A,"Understanding the Question:
+The question asks which option best represents the freezing point. The freezing point is the temperature at which a liquid turns into a solid. For water, this is 0°C (32°F).
+
+Evaluating the Choices:
+(A) ""ice sculpture""
+An ice sculpture is made of frozen water, which implies that the water has already passed the freezing point and is solid.
+(B) ""glass of water""
+A glass of water represents a liquid form of water, which is above the freezing point unless it is specifically frozen.
+(C) ""flowing rivers""
+Flowing rivers indicate liquid water that is above the freezing point and is still moving.
+(D) ""water falls""
+Waterfalls also involve liquid water, typically flowing in liquid form, not frozen.
+
+Selecting the Best Answer:
+The best representation of freezing point is (A) ""ice sculpture"", as it directly shows water in its frozen form, which occurs when it reaches the freezing point."
+8-81,"A man is searching for his dog in the woods and brings a flashlight. The flashlight has two large batteries in it, which","{ ""text"": [ ""provide light due to wiring"", ""provide light through plastic"", ""use light to heat the flashlight"", ""provide light due to moisture"" ], ""label"": [ ""A"", ""B"", ""C"", ""D"" ] }",A,"Understanding the Question:
+The question describes a scenario where a flashlight is used in the woods with two large batteries. The key focus is on how the batteries function to provide light.
+
+Evaluating the Choices:
+(A) ""provide light due to wiring""
+This is a reasonable answer because batteries supply electrical energy through wiring, which powers the flashlight’s bulb or LED.
+(B) ""provide light through plastic""
+Plastic is commonly used for the casing or lens of the flashlight, but it does not generate light.
+(C) ""use light to heat the flashlight""
+Flashlights do produce some heat, but their primary function is to provide light, not heat.
+(D) ""provide light due to moisture""
+Moisture has no role in generating light in a battery-powered flashlight.
+
+Selecting the Best Answer:
+The most accurate choice is (A) ""provide light due to wiring"", as the batteries supply power through wiring, allowing the flashlight to function."
+14-1100,sugar dissolves in what when they are combined?,"{ ""text"": [ ""dirt"", ""ocean liquid"", ""honey"", ""air"" ], ""label"": [ ""A"", ""B"", ""C"", ""D"" ] }",B,"Understanding the Question:
+The question asks in what substance sugar dissolves when combined with it. Sugar is a soluble substance that dissolves in liquids but not in solid or gaseous states under normal conditions.
+
+Evaluating the Choices:
+(A) ""dirt""
+Sugar does not dissolve in dirt because dirt is a solid and does not provide a medium for dissolution.
+(B) ""ocean liquid""
+Ocean liquid (seawater) is primarily water with dissolved salts. Since sugar dissolves in water, it will also dissolve in ocean water.
+(C) ""honey""
+Honey is a thick, viscous liquid that does not readily dissolve sugar but rather mixes with it.
+(D) ""air""
+Sugar does not dissolve in air because air is a gas, and dissolution requires a liquid medium.
+
+Selecting the Best Answer:
+The most logical choice is (B) ""ocean liquid"", as sugar dissolves in water, and ocean water is primarily water with added salts."

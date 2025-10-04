@@ -1,0 +1,244 @@
+id,question_stem,choices,answerKey,cot,ckb_statements
+11-574,A person wants to know how fast winds will be going this week. They buy a device made of metal and,"{ ""text"": [ ""place it outside next to the chimney"", ""place it in the basement of their house"", ""place it on the ground outdoors"", ""leave it in the car overnight"" ], ""label"": [ ""A"", ""B"", ""C"", ""D"" ] }",A,"We are given a scenario where a person wants to know how fast the wind will be during the week. They purchase a device made of metal (likely a wind-measuring instrument such as a weathervane or anemometer). The goal is to determine the best placement among the options that would allow the device to accurately measure wind speed.
+
+Let’s analyze each knowledge statement for its relevance:
+
+---
+
+1. **""Wind can affect the efficiency and safety of a brazier.""**
+
+   * **Not considered.**
+   * This is unrelated to measuring wind or the placement of a wind-measuring device. It pertains to how wind influences a fire-based device.
+
+2. **""Preparation for a windstorm includes securing loose objects outside.""**
+
+   * **Not considered.**
+   * While it suggests that wind can move objects, it doesn’t inform us about optimal device placement for wind measurement.
+
+3. **""The effectiveness of a weathervane depends on its exposure to unobstructed wind.""**
+
+   * **Considered.**
+   * **Relevant.** This is directly applicable. It tells us that for a wind-measuring device (like a weathervane), the placement should ensure maximum exposure to wind—no obstructions.
+
+4. **""A gust of wind can unexpectedly move or even knock over lightweight objects.""**
+
+   * **Not considered.**
+   * This highlights that wind can be forceful, but doesn’t directly aid in choosing the best placement.
+
+5. **""Wind can create unwanted noise when using a microphone outdoors.""**
+
+   * **Not considered.**
+   * This is about audio interference and is not related to wind measurement.
+
+---
+
+**Evaluating the Choices:**
+
+* **A. Place it outside next to the chimney**
+
+  * Device is outdoors, so wind may be present. By placing the device next to a chimney, the device will be at a high position with little if no obstructions around. Next to a chimney here means the device is high above the ground, it does not mean that the chimney is obstructing the wind for the device.
+
+* **B. Place it in the basement of their house**
+
+  * Basements are completely shielded from outdoor wind. This would make it impossible to measure wind speed.
+
+* **C. Place it on the ground outdoors**
+
+  * While better than indoors, placing it directly on the ground may subject it to wind obstructions from buildings, fences, vegetation, etc.
+
+* **D. Leave it in the car overnight**
+
+  * Cars are enclosed. This would block wind entirely.
+
+**Best choice given the relevant knowledge (statement 3):**
+To effectively measure wind, the device should be placed somewhere with **unobstructed exposure** to wind. Among the options, placing it outside next to a chimney (**A**) is the most reasonable one. This is so because it not only is outside, so wind may be present, but it is also in a high position where wind is less shielded by obstacles around.
+---
+
+**Answer: A. place it outside next to the chimney**
+","Wind can affect the efficiency and safety of a brazier.
+Preparation for a windstorm includes securing loose objects outside.
+The effectiveness of a weathervane depends on its exposure to unobstructed wind.
+A gust of wind can unexpectedly move or even knock over lightweight objects.
+Wind can create unwanted noise when using a microphone outdoors."
+13-697,Which of the following is an example of decomposition?,"{ ""text"": [ ""a dog eating dog food"", ""something growing on a dead tree trunk"", ""a lion eating a gazelle"", ""a parrot eating bird seed"" ], ""label"": [ ""A"", ""B"", ""C"", ""D"" ] }",B,"We are asked to identify which choice is an example of decomposition — a natural process where dead organic matter is broken down into simpler substances, typically by fungi, bacteria, or other decomposers.
+
+Let’s analyze each knowledge statement for its relevance:
+
+""Decomposition is a common process in nature, such as when organic matter breaks down in soil.""
+Considered.
+Relevant. This helps define decomposition as the breakdown of organic matter, giving us a baseline to compare the choices.
+""Decomposition is an important part of the food chain.""
+Not considered.
+Too general. Does not provide useful information about decomposition.
+""Oniscus play a role in decomposition.""
+Considered.
+Supportive. Oniscus (woodlice) are decomposers, implying that decomposition involves organisms that break down dead material, not eat living prey or food directly.
+""The presence of cadaverine indicates decomposition of animal matter.""
+Considered.
+Relevant. Supports the idea that decomposition is linked to the breakdown of dead organisms, reinforcing that the key indicator is the material being already dead and undergoing breakdown.
+""Saprolegnia plays a role in the decomposition process, breaking down dead plant and animal material.""
+Considered.
+Highly relevant. Specifically identifies that decomposition involves breaking down dead material, both plant and animal.
+Evaluating the Choices:
+
+A. A dog eating dog food
+This is consumption of prepared, living-sourced food by a living animal. Not decomposition.
+
+B. Something growing on a dead tree trunk
+This likely refers to fungi or moss, both of which can participate in the decomposition of dead plant matter. Matches the definition and examples from statements 1 and 5.
+
+C. A lion eating a gazelle
+This is predation, not decomposition. The gazelle is alive at the time of consumption.
+
+D. A parrot eating bird seed
+This is normal feeding, not the breakdown of dead organic material.
+
+Best choice given the relevant knowledge:
+From the definitions and roles provided in the knowledge statements, decomposition is about breaking down dead matter, not regular feeding or predation. The only option where dead material is being broken down, and consistent with knowledge about decomposers, is:
+
+Answer: B. something growing on a dead tree trunk","Decomposition is a common process in nature, such as when organic matter breaks down in soil.
+Decomposition is an important part of the food chain.
+Oniscus play a role in decomposition.
+The presence of cadaverine indicates decomposition of animal matter.
+Saprolegnia plays a role in the decomposition process, breaking down dead plant and animal material."
+13-722,What can reproduce,"{ ""text"": [ ""Spoon"", ""Keyboard"", ""Deceased cat"", ""Living dog"" ], ""label"": [ ""A"", ""B"", ""C"", ""D"" ] }",D,"We are asked to identify which choice is capable of reproduction — the biological process by which living organisms produce offspring.
+
+Let’s analyze each knowledge statement for its relevance:
+
+""Adorability can be found in babies, animals, and even inanimate objects.""
+Not considered.
+Too general and unrelated to reproduction. Focuses on emotional appeal, not biological function.
+
+""Wooden spoons can be carved or decorated for a personalized touch.""
+Not considered.
+Describes customization of an inanimate object, not reproduction.
+
+""Living things can reproduce.""
+Considered.
+Highly relevant. Clearly defines that reproduction is a property of living organisms.
+
+""Animate objects can often reproduce.""
+Considered.
+Weakly relevant. Ambiguous phrasing, but likely aligns with “living” entities. Since “animate” is sometimes used poetically, the statement is only mildly helpful compared to the one above.
+
+""A runcible spoon is an example of a whimsical invention.""
+Not considered.
+Whimsical and creative, but entirely unrelated to biological reproduction.
+
+Evaluating the Choices:
+
+A. Spoon
+Inanimate object. Cannot reproduce.
+Eliminated.
+B. Keyboard
+Inanimate object. Cannot reproduce.
+Eliminated.
+C. Deceased cat
+Once living, but now dead. Reproduction is only possible for living organisms.
+Eliminated.
+D. Living dog
+A living animal. Falls squarely within the definition of something that can reproduce, as per statement “Living things can reproduce.”
+Accepted.
+Best choice given the relevant knowledge:
+Only living organisms can reproduce. The only option that is both animate and currently alive is:
+
+Answer: D. Living dog","Adorability can be found in babies, animals, and even inanimate objects.
+Wooden spoons can be carved or decorated for a personalized touch.
+Living things can reproduce.
+Animate objects can often reproduce.
+A runcible spoon is an example of a whimsical invention."
+1336,"What would be an example of a force acting on an object in the opposite direction that the object is moving, which would cause the object's speed to decrease in a forward motion?","{ ""text"": [ ""seven bees are flying north while a car is driving west"", ""a car is driving west with a person pushing it west"", ""a car is driving east but the sun is rising in the east"", ""a car is driving north with strong winds blowing south"" ], ""label"": [ ""A"", ""B"", ""C"", ""D"" ] }",D,"We are asked to identify which choice describes a force acting on an object in the opposite direction of its motion, causing the object’s speed to decrease — that is, a decelerating force opposing the object’s movement.
+
+Let’s analyze each knowledge statement for its relevance:
+
+""A force can cause an object to accelerate, decelerate, or change direction.""
+Not considered.
+This defines what a force can do to an object, which is already specified in the question so nothing useful is stated.
+
+""In physics, opposing forces can affect the motion of an object, such as friction opposing movement.""
+Not considered.
+Gives an example of opposing force, but this is not useful for ruling out the provided choices as they contain scenarios not force names.
+
+""A force can be applied in different directions, affecting the movement of an object accordingly.""
+Considered.
+Relevant. Highlights the importance of the direction of the force in determining its effect on the object.
+
+""The Coriolis force affects the direction, but not the speed, of moving objects.""
+Not considered.
+Specific to rotational reference frames; not useful for determining deceleration or opposing forces in this context.
+
+""A force can change the direction of a moving object.""
+Not considered.
+Weakly relevant. Although it highlights that forces can alter direction, this question focuses on a change in speed, not redirection.
+
+Evaluating the Choices:
+
+A. Seven bees are flying north while a car is driving west
+No interaction between the bees and the car. No force is exerted between them.
+Eliminated.
+B. A car is driving west with a person pushing it west
+The push is in the same direction as the car’s motion. This would likely increase speed (acceleration), not decrease it.
+Eliminated.
+C. A car is driving east but the sun is rising in the east
+The sun rising is irrelevant as it is not a physical force acting on the car.
+Eliminated.
+D. A car is driving north with strong winds blowing south
+The wind applies a force opposite to the car’s direction of motion. According to the considered statements, this opposing force would cause the car to decelerate.
+Accepted.
+Best choice given the relevant knowledge:
+The only scenario where a force acts opposite to the direction of motion and causes a decrease in speed is:
+
+Answer: D. a car is driving north with strong winds blowing south
+","A force can cause an object to accelerate, decelerate, or change direction.
+In physics, opposing forces can affect the motion of an object, such as friction opposing movement.
+A force can be applied in different directions, affecting the movement of an object accordingly.
+The Coriolis force affects the direction, but not the speed, of moving objects.
+A force can change the direction of a moving object."
+10-429,What goes to a place that has a negative impact on the environment?,"{ ""text"": [ ""garbage trucks"", ""trains"", ""mail trucks"", ""motorcycles"" ], ""label"": [ ""A"", ""B"", ""C"", ""D"" ] }",A,"We are asked to identify what goes to a place that has a negative impact on the environment. This requires identifying both:
+
+Something that goes somewhere (a type of vehicle or system), and
+The destination must be a place known to harm the environment.
+Let’s analyze each knowledge statement for its relevance:
+
+""Transportation can have environmental impacts, such as air and noise pollution.""
+Not considered.
+Not Relevant. Describes general environmental effects of vehicles, but does not focus on their destinations.
+
+""The place where something is discarded can impact the environment.""
+Considered.
+Highly relevant. Establishes that where something is taken (e.g., waste sites) can be harmful. Key to matching vehicles that deliver to such places.
+
+""Pollution negatively affects the environment.""
+Not considered.
+Not relevant. Supports the notion that vehicle's pollution is harmful, but does not state anything about harmful places.
+
+""Landfills are common places where waste is dumped, but they can have negative impacts on the environment.""
+Considered.
+Highly relevant. Directly states that landfills (a type of destination) negatively impact the environment. We must identify which option goes to such a place.
+
+""Vehicles can cause pollution.""
+Not considered.
+Adds support to environmental impact by type of vehicle, but doesn’t address destination directly.
+
+Evaluating the Choices:
+
+A. Garbage trucks
+Garbage trucks go to landfills, which are directly mentioned in the knowledge as having a negative environmental impact. This matches both vehicle and harmful destination.
+Accepted.
+B. Trains
+Trains are a general form of transport. They may emit pollution, but they do not specifically go to a harmful place.
+Eliminated.
+C. Mail trucks
+Mail trucks go to homes or mail facilities — not inherently harmful destinations.
+Eliminated.
+D. Motorcycles
+Motorcycles, like cars, emit pollution. But again, nothing indicates they go to an environmentally harmful location.
+Eliminated.
+Best choice given the relevant knowledge:
+The only option that describes something which goes to a place (landfill) that is explicitly known to harm the environment is:
+
+Answer: A. garbage trucks","Transportation can have environmental impacts, such as air and noise pollution.
+The place where something is discarded can impact the environment.
+Pollution negatively affects the environment.
+Landfills are common places where waste is dumped, but they can have negative impacts on the environment.
+Vehicles can cause pollution."

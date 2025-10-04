@@ -1,0 +1,289 @@
+id,question,choices,answerKey,cot,ckb_statements
+3GNCZX450IMDH48WTTFEYCFIDWPPAK,What is formed when rocks break down?,"{ ""text"": [ ""plants"", ""clouds"", ""sand"", ""coastlines"", ""detritus"", ""deltas"", ""water"", ""alluvial"" ], ""label"": [ ""A"", ""B"", ""C"", ""D"", ""E"", ""F"", ""G"", ""H"" ] }",E,"We are asked to identify what is formed when rocks break down. This refers to the result of weathering and erosion, processes that physically or chemically break down rocks into smaller particles.
+
+Let’s analyze each knowledge statement for its relevance:
+
+""Rocks can be formed through various geological processes like sedimentation or volcanic activity.""
+Not considered.
+Describes rock formation, not breakdown.
+
+""The process of erosion often contributes to the formation of sediment by breaking down rocks and soil.""
+Considered.
+Highly relevant. Directly connects erosion with the formation of sediment — small particles resulting from rock breakdown.
+
+""Detritus can accumulate over time to form sedimentary rock.""
+Considered.
+Relevant. Suggests that detritus is made of material resulting from rock breakdown.
+
+""Clasts are formed through the weathering and erosion of pre-existing rocks.""
+Considered.
+Relevant. Clasts are fragments — consistent with detritus as breakdown products.
+
+""In geology, the formation of sedimentary rocks happens when layers of sediment are compacted and cemented over time.""
+Considered.
+Sedimentary rocks are formed by sediment e.g. sand or detritus in our choices.
+
+Evaluating the Choices:
+
+A. Plants — Not formed from rock breakdown.
+
+B. Clouds — Related to water vapor, not rocks.
+
+C. Sand — A direct product of weathering and erosion of rocks. Supported by knowledge statements. Valid candidate.
+D. Coastlines — Formed by deposition/erosion, but not the product of breakdown itself.
+
+E. Detritus — Also a valid product of rock breakdown, supported by knowledge statements. It includes sand and other types of detritus, so it is a broader and more valid answer.
+
+F. Deltas — Formed from sediment, not themselves formed by rock breakdown.
+
+G. Water — Not formed by rocks.
+
+H. Alluvial — A descriptor of deposits, not a material.
+
+Best choice given the relevant knowledge:
+While both sand and detritus are valid, detritus includes sand and other detritus which are formed when rocks break down.
+Answer: E. detritus
+
+
+","Rocks can be formed through various geological processes like sedimentation or volcanic activity.
+The process of erosion often contributes to the formation of sediment by breaking down rocks and soil.
+Detritus can accumulate over time to form sedimentary rock.
+Clasts are formed through the weathering and erosion of pre-existing rocks.
+In geology, the formation of sedimentary rocks happens when layers of sediment are compacted and cemented over time."
+3P1L2B7AD1OCSNNZBKRPIQQ32UKOLZ,Which of the following is a characteristic encoded in DNA?,"{ ""text"": [ ""Gangrene"", ""negative"", ""positive"", ""Leptospirosis"", ""Eye color"", ""Hot summers"", ""resistance"", ""Morse code"" ], ""label"": [ ""A"", ""B"", ""C"", ""D"", ""E"", ""F"", ""G"", ""H"" ] }",E,"We are asked to identify which characteristic is encoded in DNA — that is, which option represents a heritable trait or biological characteristic determined by an organism’s genetic material.
+
+Let’s analyze each knowledge statement for its relevance:
+
+""Characters are encoded in DNA.""
+Considered.
+Highly relevant. Confirms that biological traits can be determined by DNA.
+
+""A codon consists of three nucleotides, which can be represented by letters A, T, C, G (for DNA) or A, U, C, G (for RNA).""
+Not considered.
+Gives structural detail about DNA encoding, not what is encoded in DNA.
+
+""Deoxythymidine is a building block of the genetic code.""
+Not considered.
+Useful for understanding DNA chemistry, but not for identifying specific encoded traits.
+
+""The genetic code is made up of sequences of nucleotides, which are the building blocks of DNA.""
+Not considered.
+Reinforces DNA is made of nucleotide sequences, not what is encoded in DNA.
+
+""Cytosine is often represented by the letter 'C' in genetic sequences, making it easy to identify in DNA and RNA strands.""
+Not considered.
+Helpful for understanding notation, but not for identifying characteristics.
+
+Evaluating the Choices:
+
+A. Gangrene
+A medical condition, typically caused by infection or lack of blood supply. Not encoded in DNA.
+
+B. Negative
+Vague and context-dependent. Not a specific trait encoded in genes.
+
+C. Positive
+Same as above — not a biological trait.
+
+D. Leptospirosis
+An infectious disease caused by bacteria, not a genetically encoded trait.
+
+E. Eye color
+A heritable physical trait directly determined by specific gene sequences. Matches definition of characteristic encoded in DNA.
+
+F. Hot summers
+Environmental condition, not a biological characteristic or trait.
+
+G. Resistance
+Vague. Could refer to genetic resistance (e.g., to disease), but without a specific context, it is too ambiguous compared to clearer options.
+
+H. Morse code
+A human-made communication system — unrelated to biology or genetics.
+
+Best choice given the relevant knowledge:
+Only eye color is a clear, specific, and heritable biological trait directly encoded in DNA.
+
+Answer: E. Eye color","Characters are encoded in DNA.
+A codon consists of three nucleotides, which can be represented by letters A, T, C, G (for DNA) or A, U, C, G (for RNA).
+Deoxythymidine is a building block of the genetic code.
+The genetic code is made up of sequences of nucleotides, which are the building blocks of DNA.
+Cytosine is often represented by the letter ""C"" in genetic sequences, making it easy to identify in DNA and RNA strands."
+3IGI0VL647J2GNQKNX74VIUS3QNON2,Most plants have what that that go down into the soil to soak up water and minerals?,"{ ""text"": [ ""chemicals"", ""alveoli"", ""sodium"", ""nails"", ""feet"", ""anchors"", ""toes"", ""an ion"" ], ""label"": [ ""A"", ""B"", ""C"", ""D"", ""E"", ""F"", ""G"", ""H"" ] }",F,"We are asked to identify what most plants have that go down into the soil to soak up water and minerals. This refers to the biological structure responsible for absorbing nutrients and water from the ground.
+
+Let’s analyze each knowledge statement for its relevance:
+
+""Plants have an uptake system for water and minerals from the soil.""
+Not considered.
+Adds no extra information compared to what the question states already. We know plants have such uptake system, we need to know what this is.
+
+""In nature, some bases can be found in minerals and can affect soil pH, impacting plant growth.""
+Not considered.
+About soil chemistry and its effect on plants, not about plant structures.
+
+""Batis plants may have specialized root systems for absorbing water and nutrients in saline soils.""
+Considered.
+Relevant. Mentions root systems specifically as structures that absorb water and nutrients.
+
+""Actinidiaceae plants have roots that absorb water from the soil.""
+Considered.
+Highly relevant. Clearly identifies roots as the part that soaks up water from soil.
+
+""Plants may have specialized root systems for accessing water in rocky soil.""
+Considered.
+Relevant. Again confirms roots are the organ responsible for soil absorption.
+
+Evaluating the Choices:
+
+A. Chemicals
+Not a structure — chemicals are substances, not parts of a plant.
+
+B. Alveoli
+Part of the respiratory system in animals, not present in plants.
+
+C. Sodium
+A mineral element, not a plant structure.
+
+D. Nails
+Human anatomical feature, irrelevant to plants.
+
+E. Feet
+Animals have feet — plants do not.
+
+F. Anchors
+Metaphorical at best — not a biological term for plant structures.
+
+G. Toes
+Again, anatomical and unrelated to plants.
+
+H. An ion
+Chemical species — not a plant structure.
+
+None of the given options are literally “roots”, which is the correct biological term based on the knowledge. However, among the options, the one that metaphorically and functionally aligns most closely is:
+
+F. Anchors
+While not scientifically accurate, ""anchors"" metaphorically reflect how roots stabilize and absorb — they go into the soil and hold the plant.
+But since the question asks for what most plants have that soak up water and minerals, and only roots do that, and none of the choices literally say 'roots', the closest valid answer, based on function and context, is:
+
+Answer: F. anchors","Plants have an uptake system for water and minerals from the soil.
+In nature, some bases can be found in minerals and can affect soil pH, impacting plant growth.
+Batis plants may have specialized root systems for absorbing water and nutrients in saline soils.
+Actinidiaceae plants have roots that absorb water from the soil.
+The plants may have specialized root systems for accessing water in rocky soil."
+30BXRYBRP4WIB0DBBL317SAIXTDWHG,A bulb requires electrical energy to produce part of what kind of spectrum?,"{ ""text"": [ ""an electron microscope"", ""magnetic"", ""autism spectrum"", ""electromagnetic"", ""rain or sun shine"", ""direct energy"", ""field"", ""hydrogen and oxygen"" ], ""label"": [ ""A"", ""B"", ""C"", ""D"", ""E"", ""F"", ""G"", ""H"" ] }",D,"We are asked to identify what kind of spectrum is produced by a bulb using electrical energy. This refers to the type of spectrum emitted by a light bulb when it converts electricity into light — a physical process governed by how energy produces electromagnetic radiation.
+
+Let’s analyze each knowledge statement for its relevance:
+
+""Electric lamps can produce different colors of light, depending on the type of bulb used.""
+Considered.
+Indicates that bulbs emit visible light, which is part of a electromagnetic spectrum.
+
+""Photoelectric emission requires light of a sufficiently high frequency, not just intensity.""
+Not considered.
+Focuses on light's effect on materials, not what spectrum a bulb emits.
+
+""Different elements emit light at specific points in the electromagnetic spectrum.""
+Considered.
+Highly relevant. Supports that bulbs (which may contain gases or heated elements) emit parts of the electromagnetic spectrum.
+
+""The principle of incandescence is utilized in traditional light bulbs, where electricity heats a tungsten filament to produce light.""
+Considered.
+Explains how electricity is converted into light — light is part of electromagnetic spectrum.
+
+""Different types of light sources (e.g., incandescent, fluorescent) produce different emission spectra.""
+Considered.
+Confirms that bulbs produce emission spectra, which fall within the electromagnetic spectrum.
+
+Evaluating the Choices:
+
+A. An electron microscope
+Not a spectrum. It's a device.
+
+B. Magnetic
+Not a spectrum in itself; does not describe light or radiation.
+
+C. Autism spectrum
+A neurological classification — unrelated to physics or light.
+
+D. Electromagnetic
+Correct. Light produced by bulbs is a part of the electromagnetic spectrum, which includes visible light, infrared, ultraviolet, etc.
+
+E. Rain or sun shine
+Not a type of spectrum. Also vague and non-technical.
+
+F. Direct energy
+Not a recognized spectrum. Too vague.
+
+G. Field
+Not a type of spectrum.
+
+H. Hydrogen and oxygen
+Chemical elements, not a spectrum.
+
+Best choice given the relevant knowledge:
+A light bulb, when powered by electricity, emits visible light, which is part of the electromagnetic spectrum.
+
+Answer: D. electromagnetic","Electric lamps can produce different colors of light, depending on the type of bulb used.
+Photoelectric emission requires light of a sufficiently high frequency, not just intensity.
+Different elements emit light at specific points in the electromagnetic spectrum.
+The principle of incandescence is utilized in traditional light bulbs, where electricity heats a tungsten filament to produce light.
+Different types of light sources (e.g., incandescent, fluorescent) produce different emission spectra."
+386PBUZZXFWYRCW2V7ZKAU9H0PGJLS,What do animals lack?,"{ ""text"": [ ""chromosomes"", ""warmth"", ""Energy"", ""polysaccharides"", ""Bodily water"", ""fur and fat"", ""microbes"", ""cellulose"" ], ""label"": [ ""A"", ""B"", ""C"", ""D"", ""E"", ""F"", ""G"", ""H"" ] }",H,"We are asked to identify what animals lack — that is, which of the given options is not found in animals or is absent in animal biology.
+
+Let’s analyze each knowledge statement for its relevance:
+
+""Animal cells lack cell walls, unlike plant cells.""
+Considered.
+Highly relevant. Establishes a key biological absence in animals — something they lack compared to other organisms. Helps frame how we interpret biological traits animals do not possess.
+
+""Skin can also be a source of warmth, as it helps to retain body heat in many animals.""
+Considered.
+Relevant for elimination. Suggests animals do not lack warmth, at least not as a general rule.
+
+""Saturated fats are a component of cell membranes in animals.""
+Considered.
+Supportive for elimination. Animals have fats, so they do not lack them.
+
+""Animal tissue requires nutrients to survive.""
+Not directly considered.
+Describes metabolic needs, not structural characteristics animals may lack.
+
+""Mammals are characterized by features such as fur or hair and the ability to produce milk for their young.""
+Considered.
+Supportive for elimination. Confirms animals (especially mammals) have fur and fat, not lack them.
+
+Evaluating the Choices:
+
+A. Chromosomes
+Animals have DNA organized in chromosomes.
+
+B. Warmth
+Many animals regulate body temperature or maintain warmth through fur, fat, or behavior.
+
+C. Energy
+All living organisms require and use energy.
+
+D. Polysaccharides
+Animals have some polysaccharides (e.g. glycogen).
+
+E. Bodily water
+Water makes up a large part of animal bodies.
+
+F. Fur and fat
+Many animals have these features; especially mammals.
+
+G. Microbes
+Animals host microbial communities in their gut, on skin, etc.
+
+H. Cellulose
+Cellulose is a structural polysaccharide found in plant cell walls. Animals lack the ability to produce or digest cellulose (though some can process it with help from gut microbes). This aligns with the knowledge that animal cells lack structures like cell walls, which contain cellulose.
+
+Best choice given the relevant knowledge:
+The only characteristic in the list that animals truly lack is:
+
+Answer: H. cellulose
+
+","Animal cells lack cell walls, unlike plant cells.
+Skin can also be a source of warmth, as it helps to retain body heat in many animals.
+Saturated fats are a component of cell membranes in animals.
+Animal tissue requires nutrients to survive.
+Mammals are characterized by features such as fur or hair and the ability to produce milk for their young."

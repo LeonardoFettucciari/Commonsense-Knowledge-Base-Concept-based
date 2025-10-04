@@ -1,0 +1,249 @@
+id,question,choices,answerKey,cot,ckb_statements
+2a258ed37974c9226cbb32cfbf88d4f0,Where would you find a bee gathering pollen?,"{ ""label"": [ ""A"", ""B"", ""C"", ""D"", ""E"" ], ""text"": [ ""united states"", ""sky"", ""court"", ""field of flowers"", ""orchard"" ] }",D,"We are asked to identify where a bee would be gathering pollen. This involves determining a location where pollen is accessible, particularly one associated with flowers, since bees gather pollen from flowering plants.
+
+Let’s analyze each knowledge statement for its relevance:
+
+""Bees collect pollen.""
+Not considered.
+Establishes the behavior of bees, but says nothing for a place where pollen is found.
+
+""Blossoming flowers often attract bees and other pollinators.""
+Considered.
+Highly relevant. Tells us that bees gather pollen specifically from blossoming flowers, helping us target locations where flowers are present.
+
+""Country borage may attract pollinators like bees.""
+Considered.
+Supportive. A specific example of a flower that attracts bees. Helps reinforce that flowering plants are associated with bee activity.
+
+""Germander speedwell is a source of pollen for bees.""
+Considered.
+Supportive. Another specific example confirming the pattern: bees visit flowers for pollen.
+
+""Insects, particularly bees, may be attracted to Antennaria flowers for pollen.""
+Considered.
+Supportive. Further confirms that bees are found near flowers when gathering pollen.
+
+Evaluating the Choices:
+
+A. United States
+A country — too broad. While bees live in the U.S., the question is about where they gather pollen, not where they exist.
+
+B. Sky
+Bees may fly in the sky, but they don’t gather pollen there. Pollen is collected from flowers on plants.
+
+C. Court
+Courts are human institutions (legal or sports), not environments where bees would gather pollen.
+
+D. Field of flowers
+Fields full of blossoming flowers are ideal places for bees to collect pollen. This aligns directly with the knowledge statements.
+
+E. Orchard
+Orchards contain flowering fruit trees. Since bees gather pollen from flowers, and orchards are full of them during bloom, this is also a valid place.
+
+Best choice given the relevant knowledge:
+Both D. field of flowers and E. orchard are supported by the knowledge. However, since the question asks ""where would you find a bee gathering pollen"" and field of flowers is a more direct and generic example, it best fits all the knowledge provided about bee behavior and flowers.
+
+Answer: D. field of flowers","Bees collect pollen.
+Blossoming flowers often attract bees and other pollinators.
+Country borage may attract pollinators like bees.
+Germander speedwell is a source of pollen for bees.
+Insects, particularly bees, may be attracted to Antennaria flowers for pollen."
+ebd5f719527c34fd3bda46faae8c5d2b,Where is tomato sauce delicious?,"{ ""label"": [ ""A"", ""B"", ""C"", ""D"", ""E"" ], ""text"": [ ""market"", ""refrigerator"", ""grown in vegetable garden"", ""pizza"", ""cake"" ] }",D,"We are asked to identify where tomato sauce is delicious. This means selecting a context or food pairing where tomato sauce is commonly used and enjoyed for its flavor.
+
+Let’s analyze each knowledge statement for its relevance:
+
+""Tomato sauce is a staple ingredient in many cuisines.""
+Not considered.
+Establishes that tomato sauce is widely used and generally liked, but doesn’t specify where it’s considered delicious.
+
+""Many store-bought tomato sauces come in various styles, such as marinara, arrabbiata, or roasted garlic.""
+Not considered.
+Too specific to product variety; doesn’t speak directly to contexts where sauce is delicious.
+
+""Tomato sauce can be used as a base for pizza.""
+Considered.
+Highly relevant. Directly links tomato sauce to pizza, suggesting it is a well-matched and tasty combination.
+
+""Tomato sauce is often simmered to develop its flavor.""
+Not considered.
+Describes preparation method, not context of consumption.
+
+""Homemade tomato sauce often tastes better than store-bought versions.""
+Not considered.
+Focuses on quality comparison, not on context where it’s delicious.
+
+Evaluating the Choices:
+
+A. Market
+Tomato sauce may be sold at a market, but it’s not eaten there, and the market isn’t where its taste is enjoyed.
+
+B. Refrigerator
+Storage location. Tomato sauce is not consumed in the refrigerator, and it’s not flavorful in that context.
+
+C. Grown in vegetable garden
+Tomatoes may be grown here, but tomato sauce is a prepared food, not something that exists in the garden.
+
+D. Pizza
+Tomato sauce is widely used as a base on pizza, and the combination is well-known and celebrated for its flavor. This is directly supported by the knowledge statement.
+
+E. Cake
+Cakes are typically sweet. Tomato sauce would clash with this flavor profile and is not typically considered delicious in this context.
+
+Best choice given the relevant knowledge:
+Only pizza is explicitly and directly supported as a context where tomato sauce is used and considered delicious.
+
+Answer: D. pizza","Tomato sauce is a staple ingredient in many cuisines.
+Many store-bought tomato sauces come in various styles, such as marinara, arrabbiata, or roasted garlic.
+Tomato sauce can be used as a base for pizza.
+Tomato sauce is often simmered to develop its flavor.
+Homemade tomato sauce often tastes better than store-bought versions."
+5f3154a0dca4292c619962f712dbd3d9,Where can I find a constitutional monarchy with a parliamentary democracy and federation?,"{ ""label"": [ ""A"", ""B"", ""C"", ""D"", ""E"" ], ""text"": [ ""church"", ""democracy"", ""canada"", ""country"", ""civilization"" ] }",C,"We are asked to identify where we can find a constitutional monarchy with a parliamentary democracy and federation — a specific form of government combining a monarch with democratic governance and federal structure.
+
+Let’s analyze each knowledge statement for its relevance:
+
+""Canada is a constitutional monarchy with a parliamentary system of government.""
+Considered.
+Highly relevant. Directly identifies Canada as a country that fits part of the description: constitutional monarchy + parliamentary democracy.
+
+""New Zealand's government is a parliamentary democracy with a constitutional monarchy.""
+Not considered.
+Supports the idea that parliamentary democracies can exist within constitutional monarchies, but New Zealand is not a federation.
+
+""Different countries have different forms of government, such as democracies, monarchies, and dictatorships.""
+Not considered.
+Too general; doesn’t help identify any specific country or combination of systems.
+
+""A parliamentary monarchy usually has a constitution that outlines the powers of the monarch and parliament.""
+Not considered.
+Describes structure, but doesn’t help select the correct answer from the choices.
+
+""The political system in Britain is a constitutional monarchy with a parliamentary system.""
+Not considered.
+The UK is not a federation, so it partially matches the description but not entirely.
+
+Evaluating the Choices:
+
+A. Church
+A religious institution, not a form of government or country.
+
+B. Democracy
+A form of government, not a specific place or country.
+
+C. Canada
+According to the knowledge, Canada is a constitutional monarchy, has a parliamentary democracy, and is a federation (Canada consists of provinces and territories with their own governments).
+
+D. Country
+Too vague. Many countries exist with different systems.
+
+E. Civilization
+A broad term referring to society or culture, not a political system or state.
+
+Best choice given the relevant knowledge:
+Only Canada matches all three criteria: constitutional monarchy, parliamentary democracy, and federation.
+
+Answer: C. canada
+","Canada is a constitutional monarchy with a parliamentary system of government.
+New Zealand's government is a parliamentary democracy with a constitutional monarchy.
+Different countries have different forms of government, such as democracies, monarchies, and dictatorships.
+A parliamentary monarchy usually has a constitution that outlines the powers of the monarch and parliament.
+The political system in Britain is a constitutional monarchy with a parliamentary system."
+4b04a6193dd78a879b7edc407683f733,Where might someone in a waiting room for lost luggage be?,"{ ""label"": [ ""A"", ""B"", ""C"", ""D"", ""E"" ], ""text"": [ ""clinic"", ""hospitals"", ""airport"", ""mailroom"", ""doctor's office"" ] }",C,"We are asked to identify where someone in a waiting room for lost luggage might be. The goal is to match the concept of lost luggage with a location that plausibly has a waiting area for handling such situations.
+
+Let’s analyze each knowledge statement for its relevance:
+
+""Waiting rooms are common in doctor's offices and airports.""
+Considered.
+Relevant. Establishes that both doctor’s offices and airports can have waiting rooms, narrowing our focus to places with such areas.
+
+""Lost or damaged luggage can be reported at the baggage claim area.""
+Not considered.
+Directly associates lost luggage with baggage claim area. But we need in turn to know where a baggage claim area is.
+
+""Checkrooms are convenient for travelers with luggage.""
+Considered.
+Mildly relevant. Refers to managing luggage, but doesn’t directly involve lost luggage or waiting rooms nor airports. But travelers with luggage rules out all other places in the available choices.
+
+""Medications and important documents are frequently carried in hand luggage.""
+Not considered.
+Unrelated to the problem — about contents of luggage, not where one goes for lost luggage.
+
+""A check-in may involve baggage handling.""
+Not considered.
+Links the process of check-in with luggage, but does not say anything about waiting rooms for lost luggages.
+
+Evaluating the Choices:
+
+A. Clinic
+Clinics may have waiting rooms, but are unrelated to luggage or its loss.
+
+B. Hospitals
+Similar to clinics — waiting rooms exist, but luggage services are irrelevant.
+
+C. Airport
+Airports have baggage claim areas where lost luggage is reported. They also have waiting areas. Directly supported by knowledge statements.
+
+D. Mailroom
+A mailroom handles packages and letters, not personal luggage.
+
+E. Doctor's office
+Has waiting rooms, but no relevance to luggage, let alone lost luggage.
+
+Best choice given the relevant knowledge:
+Only airports have both waiting rooms and facilities for dealing with lost luggage.
+
+Answer: C. airport","Waiting rooms are common in doctor's offices and airports.
+Lost or damaged luggage can be reported at the baggage claim area.
+Checkrooms are convenient for travelers with luggage.
+Medications and important documents are frequently carried in hand luggage.
+A check-in may involve baggage handling."
+b4723925948b94e3fa71dc8591fe7109,"If a person feels they are getting a job but they never get the offer, how might they feel?","{ ""label"": [ ""A"", ""B"", ""C"", ""D"", ""E"" ], ""text"": [ ""illness"", ""satisfaction"", ""gratitude"", ""fear"", ""let down"" ] }",E,"We are asked to determine how a person might feel if they believe they are getting a job but ultimately do not receive the offer. This is an emotional response to expectation followed by disappointment.
+
+Let’s analyze each knowledge statement for its relevance:
+
+""An offerer might feel disappointed if their offer is rejected.""
+Not considered.
+This refers to the person making the offer, not the one expecting to receive it. The roles are reversed from the question context.
+
+""Hopers can be found in various situations, from waiting for a job offer to wishing for better health.""
+Considered.
+Relevant. Indicates that hope is involved in waiting for a job offer, setting the stage for a potential disappointment if expectations are unmet.
+
+""People may experience velleity when they dream of a better job but never apply for one.""
+Not considered.
+Describes weak desire without action, which doesn’t match the situation — the person in the question actively expects a result, not just wishes.
+
+""People may feel disappointment in various situations, such as failing an exam or not receiving a promotion at work.""
+Considered.
+Highly relevant. Directly connects not receiving something expected in a career context to disappointment, which is closely related to feeling ""let down"".
+
+""Someone might claim a job wasn't a good fit after not getting it.""
+Considered.
+Supportive. Implies coping or rationalizing a negative emotional experience, likely stemming from feeling disappointed or let down.
+
+Evaluating the Choices:
+
+A. Illness
+A physical condition, not an emotion. Doesn’t describe how someone feels emotionally in this context.
+
+B. Satisfaction
+This is the opposite of what someone would feel if they expected something good but didn’t get it.
+
+C. Gratitude
+Gratitude implies thankfulness, which doesn’t apply when someone is denied a hoped-for outcome.
+
+D. Fear
+Fear may occur in uncertain situations, but the primary emotion after expectation followed by denial is not fear — it is disappointment or being let down.
+
+E. Let down
+This exactly captures the emotional outcome described in the question: someone had hope and expectations, but those were not fulfilled.
+
+Best choice given the relevant knowledge:
+The person expected to get a job but didn’t, leading to an emotional response best described as:
+
+Answer: E. let down
+
+","An offerer might feel disappointed if their offer is rejected.
+Hopers can be found in various situations, from waiting for a job offer to wishing for better health.
+People may experience velleity when they dream of a better job but never apply for one.
+People may feel disappointment in various situations, such as failing an exam or not receiving a promotion at work.
+Someone might claim a job wasn't a good fit after not getting it."
