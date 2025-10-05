@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="assets/sapienzanlp.png" width="125">
+  <img src="assets/sapienza.png" width="125">
 
 # Retrieval-Augmented Generation for Commonsense Reasoning: An Empirical Investigation of Challenges and Limitations
 [![PyTorch](https://img.shields.io/badge/Framework-PyTorch-red.svg?logo=pytorch)](https://pytorch.org/)
